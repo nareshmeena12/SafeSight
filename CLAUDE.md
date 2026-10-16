@@ -36,9 +36,10 @@ src/
   app/
     layout.tsx              root layout, Geist fonts, metadata
     globals.css             design tokens as CSS variables (light/dark), Tailwind theme, type scale, focus ring, paper grain
-    page.tsx                placeholder home; S10 replaces it with the landing page
+    (marketing)/            public site (S10): layout = .ss wrapper + SiteHeader/SiteFooter; page.tsx landing, about/, privacy/
+    api/pilot/route.ts      POST pilot form → zod → pilot_requests (service role), honeypot + per-IP limit
     design/                 /design: every token and component, with a System/Light/Dark preview switch
-    (auth)/login, signup    auth pages (route group, shared centred-card layout)
+    (auth)/login, signup    auth pages (route group; split layout from design/landing/Auth.dc.html)
     auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
     student/                student app (layout = AppShell + home: courses with assignments and "Continue with Sage")
     student/sage/[assignmentId]  Sage chat page (S4)
@@ -59,7 +60,8 @@ src/
     api/trace/[submissionId]/  S9: batch (autosave every 5s), submit (+ Trace agent via after()), report (teacher re-run)
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
-    auth/                   login and sign-up forms (client, useActionState)
+    auth/                   login (password + magic link) and sign-up forms (client, useActionState); field.tsx also keeps the app-style Field used on /design
+    marketing/              S10: site.css (all site styles, nested under .ss), site-header, site-footer, site-theme (light/dark switch), cta-band, survey.ts (stat placeholders), team.ts, landing/* (one file per section)
     app/                    app-shell (sidebar + top bar), nav.ts (nav config per app), nav-links, mobile-nav (sheet), user-menu, page-header, page-skeleton
     product/                mode-badge, reliance-badge, stat-card, empty-state
     sage/                   sage-chat (useChat client), markdown (GFM + KaTeX + code), hint-ladder, citation-chips, care-card
@@ -74,7 +76,9 @@ src/
     supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
     auth/roles.ts           Role type, homeForRole, canAccess, redirectAfterLogin (pure, unit-tested)
     auth/dal.ts             getCurrentUser(), requireRole([...]) — call at the top of every protected page/route
-    auth/actions.ts         login, signup, signOut server actions
+    auth/actions.ts         login, signup, sendMagicLink, signOut server actions
+    auth/join.ts            joinPendingCourse(): joins the class code typed at sign-up (metadata join_code)
+    pilot/schema.ts         pilot form zod schema, form role → pilot_role mapping (unit-tested)
     auth/schemas.ts         zod schemas for the auth forms
     reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
     ai/provider.ts          server-only: OpenAI-compatible chat + embedding models from env, aiStatus()
@@ -155,8 +159,21 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S7 teacher dashboard + S8 Lens (2026-10-16): overview, courses/assignments (AI mode picker, join code), students table, student detail, flags, flagged-chat view; weekly_metrics + Reliance Score in SQL; Lens page + overview box with 7 read-only tools, charts/tables from tool results, Draft email and Make quiz. Migration applied on hosted.
 - [ ] **Not yet verified against a real model**: no AI_* env vars in the cloud env. Sage and Lens were tested end to end with local mock providers. Once keys are set, run `pnpm sage:eval`, try the demo flow and the Lens demo question
 - [x] S9 Trace (2026-10-16): Tiptap editor with 5s autosave/event batches, paste mark, `writing_snapshots` migration (applied on hosted), submit, teacher replay with scrubber and amber pastes, Trace agent (structured JSON, template fallback)
+- [x] S10 landing (2026-10-16): landing page from design/landing (all 11 sections + animations), /about, /privacy, rebuilt /login and /signup (magic link, role cards, institution, class code), pilot form → `pilot_requests` via `/api/pilot`
+- [ ] S11 demo data — **next**
 
 ## Handoff notes
+
+- **S10 (landing) shipped** from branch `claude/eager-planck-pk12ip`. Decisions made without asking:
+  - **Styles.** `design/landing/site.css` was ported almost verbatim to `components/marketing/site.css` instead of rewriting ~1000 lines into Tailwind utilities, so the site matches the prototype exactly. Every rule is nested under `.ss` (the wrapper rendered by the `(marketing)` and `(auth)` layouts) because Next keeps route stylesheets loaded after navigation; nothing leaks into the apps. Colours map onto the `--ss-*` tokens; the site's amber is `--insight` (not `--accent`, which shadcn uses). Site-only values (`--nav-bg`, `--shadow-window`, pilot panel greens) have their own light/dark blocks in the same two-block pattern as globals.css. Fonts come from the `next/font` variables. Selector bugs from the prototype were fixed (FAQ plus icon stretched, lab/callout/alert/member icons overridden by `span` rules, Lens send arrow invisible, hover lift lost after reveal).
+  - **Theme switch.** The site and auth pages keep the prototype's moon/sun button. It sets `<html data-theme>` and stores the choice in `localStorage` (`ss-site-theme`); `SiteThemeScope` removes the attribute when leaving for the apps, which always follow the system.
+  - **Motion.** Entrance animations (hero words 60ms apart, pills, chat pop) are the prototype's CSS keyframes; scroll reveals use Motion `useInView` (`<Section>` sets `data-in`, CSS fades `.rv`/`.rc`); How-it-works line and dashboard tilt use `useScroll`; count-ups and the Trace replay use `animate()`. The hero chat typing/streaming uses timers (it is a script, not a tween). Everything shows its final state under `prefers-reduced-motion`.
+  - **Survey stats** live in `components/marketing/survey.ts` as `null` → `[XX]%` / `[N]`. Put real numbers there; they count up automatically.
+  - **Pilot form.** Roles map Professor → `teacher`, HOD → `hod`, Dean → `admin`, Other → `other` (existing `pilot_role` enum), so **no migration was needed**. The route validates with the same zod schema as the client, has a hidden honeypot field (`website`) and a best-effort in-memory limit of 5 requests / 10 min per IP. Verified end to end on hosted (test row inserted, then deleted; anon cannot read the table).
+  - **Auth.** Login has "Email me a sign-in link" and "Forgot password?", both `sendMagicLink` (`signInWithOtp`, `shouldCreateUser: false`). It always shows "Check your inbox" (except on rate limit) so it never reveals who has an account. Sign-up: teachers must give an institution (stored as user metadata `institution_name`, since `profiles.institution_id` needs an institution flow); students may give a 6-character class code (metadata `join_code`), joined via `rpc('join_course')` right after sign-up if a session exists, else in `/auth/confirm`, then cleared. A wrong code is ignored silently; the student adds it later. The magic link only works once Supabase Auth's redirect allow list includes `/auth/confirm` on each domain (see the hosted note below).
+  - **Copy changes from the prototype.** Nav "Log in" → `/login`; footer Privacy/About → the new pages. Sign-up legal line links only the privacy policy (there is no Terms page yet). Class-code placeholder `THRM01` (real codes are 6 chars; the prototype's `ME204-7KQ` would fail).
+  - **/about and /privacy** had no artboards; they reuse the site parts (page head, `.prose`, cards, `.cta-band`). The team list is `components/marketing/team.ts`, currently only "Naresh Meena — Founder": **check the role and add teammates**. The privacy page only states what PLAN.md §9 promises (180-day deletion, no training, summaries by default, RLS). **There is no contact email yet**, so "Write to us" links to the pilot form; add an address when one exists.
+  - Screens checked at 1440 and 390, light and dark, with Playwright (pilot validation, mobile menu, FAQ, compare toggle, login/sign-up validation, wrong-password message).
 
 - **S7 + S8 (teacher dashboard, Lens)** shipped together from `claude/compassionate-darwin-j3i3hi`. Decisions:
   - **Data access.** `lib/teacher/queries.ts` is the one read layer for the pages and Lens tools. Every function takes the teacher's own Supabase client (RLS) *and* filters by `courseScope()` (the teacher's courses, or null for a course that isn't theirs → 404/"not found"). Teachers can't read message rows, so per-student and per-topic counts come from SECURITY DEFINER RPCs in migration `20261020070000_teacher_dashboard.sql`: `teacher_student_activity(course?, from?, to?)` and `teacher_topic_struggles(course?, student?, from?, to?, limit?)`. Both return numbers/labels only and only for `private.my_courses()`. Tested in `tests/db/teacher-dashboard.test.ts`.

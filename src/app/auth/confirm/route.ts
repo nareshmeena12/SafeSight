@@ -1,11 +1,13 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
+import { joinPendingCourse } from "@/lib/auth/join";
 import { redirectAfterLogin, roleSchema } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 /**
  * Landing point for links in Supabase emails (sign-up confirmation, magic
- * link). Exchanges the token for a session, then sends the user home by role.
+ * link). Exchanges the token for a session, joins a pending class code, then
+ * sends the user home by role.
  */
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = request.nextUrl;
@@ -30,6 +32,8 @@ export async function GET(request: NextRequest) {
     : { data: null };
   const role = roleSchema.safeParse(profile?.role);
   if (!role.success) return NextResponse.redirect(new URL("/login", origin));
+  // A class code typed at sign-up is joined once the email is confirmed.
+  if (role.data === "student") await joinPendingCourse(supabase);
 
   return NextResponse.redirect(
     new URL(redirectAfterLogin(role.data, searchParams.get("next")), origin),
