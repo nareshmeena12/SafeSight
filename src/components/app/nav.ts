@@ -32,10 +32,10 @@ export const navigation: Record<Area, { label: string; items: NavItem[] }> = {
     label: "Teacher",
     items: [
       { label: "Overview", href: "/teacher", icon: LayoutDashboard },
-      { label: "Courses", href: "/teacher/courses", icon: Library, soon: "S7" },
-      { label: "Students", href: "/teacher/students", icon: Users, soon: "S7" },
-      { label: "Flags", href: "/teacher/flags", icon: Flag, soon: "S7" },
-      { label: "Lens", href: "/teacher/lens", icon: MessagesSquare, soon: "S8" },
+      { label: "Courses", href: "/teacher/courses", icon: Library },
+      { label: "Students", href: "/teacher/students", icon: Users },
+      { label: "Flags", href: "/teacher/flags", icon: Flag },
+      { label: "Lens", href: "/teacher/lens", icon: MessagesSquare },
     ],
   },
 };
