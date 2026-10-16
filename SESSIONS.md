@@ -26,7 +26,7 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 - [x] **S2 — Design system.** Implement `design/tokens.json` (PLAN.md §5) as CSS variables with light and dark mode. Load Instrument Serif, Geist and Geist Mono. Restyle the shadcn components to match. Build the app shell (sidebar, top bar, page header) for both apps, and a /design page that shows every component.
   *Done when:* /design looks right in both themes at 375px and 1440px.
 
-- [ ] **S3 — Database.** Supabase migrations for every table in PLAN.md §8 (plus `pilot_requests`), with row-level security on each. A test proving a student cannot read another student's messages. Seed script: one institution, one teacher, two courses, 30 students with invented Indian names.
+- [x] **S3 — Database.** Supabase migrations for every table in PLAN.md §8 (plus `pilot_requests`), with row-level security on each. A test proving a student cannot read another student's messages. Seed script: one institution, one teacher, two courses, 30 students with invented Indian names.
   *Done when:* migrations apply cleanly on a fresh project and the RLS test passes.
 
 - [ ] **S4 — Sage chat.** /student/sage/[assignmentId] with the Vercel AI SDK and an OpenAI-compatible provider (base URL and model from env). Streaming, markdown, maths and code rendering, the hint ladder and modes from PLAN.md §4 in the system prompt, mode badge in the header. Save every message.

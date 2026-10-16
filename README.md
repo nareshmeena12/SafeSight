@@ -32,7 +32,7 @@ Local development (needs Node 20+, pnpm and Docker):
 pnpm install
 cp .env.example .env.local   # fill in values (local keys come from `pnpm db:start`)
 pnpm db:start                # local Supabase in Docker, applies supabase/migrations
-pnpm seed:users              # demo teacher, student and admin accounts
+pnpm seed                    # demo institution, teacher, 2 courses, 30 students, admin
 pnpm dev
 ```
 
