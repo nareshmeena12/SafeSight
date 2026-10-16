@@ -29,11 +29,11 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 - [x] **S3 — Database.** Supabase migrations for every table in PLAN.md §8 (plus `pilot_requests`), with row-level security on each. A test proving a student cannot read another student's messages. Seed script: one institution, one teacher, two courses, 30 students with invented Indian names.
   *Done when:* migrations apply cleanly on a fresh project and the RLS test passes.
 
-- [ ] **S4 — Sage chat.** /student/sage/[assignmentId] with the Vercel AI SDK and an OpenAI-compatible provider (base URL and model from env). Streaming, markdown, maths and code rendering, the hint ladder and modes from PLAN.md §4 in the system prompt, mode badge in the header. Save every message.
+- [x] **S4 — Sage chat.** /student/sage/[assignmentId] with the Vercel AI SDK and an OpenAI-compatible provider (base URL and model from env). Streaming, markdown, maths and code rendering, the hint ladder and modes from PLAN.md §4 in the system prompt, mode badge in the header. Save every message.
 
-- [ ] **S5 — Labels and flags.** `classify_message` with structured JSON output; save intent and hint level per message. `flag_to_teacher` rules and a 60 messages/hour/student rate limit. 30 trick prompts plus a script that lists any reply that gives away a full answer.
+- [x] **S5 — Labels and flags.** `classify_message` with structured JSON output; save intent and hint level per message. `flag_to_teacher` rules and a 60 messages/hour/student rate limit. 30 trick prompts plus a script that lists any reply that gives away a full answer.
 
-- [ ] **S6 — Notes search.** Teacher PDF upload to Supabase Storage; extract text, chunk (~500 tokens, with page numbers), embed into `material_chunks` with pgvector. `search_course_material` tool for Sage; cited pages as chips under replies.
+- [x] **S6 — Notes search.** Teacher PDF upload to Supabase Storage; extract text, chunk (~500 tokens, with page numbers), embed into `material_chunks` with pgvector. `search_course_material` tool for Sage; cited pages as chips under replies.
 
 - [x] **S7 — Teacher dashboard.** Overview, courses and assignments (AI mode picker, join code), students table, student detail, flags. Compute `weekly_metrics` and the Reliance Score (PLAN.md §4).
 
