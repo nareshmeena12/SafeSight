@@ -16,10 +16,6 @@ import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Chat", robots: { index: false } };
 
-// The app shell's NavLinks reads usePathname() outside Suspense, which fails the
-// build for routes with dynamic params; render on request (same as S9's pages).
-export const instant = false;
-
 export default function ConversationPage({ params }: PageProps<"/teacher/conversations/[conversationId]">) {
   return (
     <Suspense fallback={<PageSkeleton />}>

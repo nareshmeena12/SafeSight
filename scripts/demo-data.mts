@@ -51,7 +51,6 @@ import {
   PS3_ID,
   RIYA_EMAIL,
   db,
-  deleteIn,
   demoStudents,
   fail,
   insertAll,
@@ -299,6 +298,7 @@ function simulateConversation(studentId: string, a: Assignment, start: number, t
       reply = sageReply(rnd, topic ?? topics.signConvention, hint ?? 1, {
         insisted: turn.kind === "seek" || turn.kind === "override",
         thanks: turn.kind === "thanks",
+        sameStep: hint !== null && hint === level,
       });
     const cite =
       a.course === COURSE.thermo && topic?.notesPage && hint && hint >= 2 && hint <= 4 && t > NOTES_UPLOADED
@@ -499,7 +499,7 @@ function traceWork(
 const students = await demoStudents();
 const { data: profiles, error: profilesError } = await db.from("profiles").select("id, full_name").in("id", [...students.values()]);
 fail("profiles", profilesError);
-const nameOf = new Map(profiles.map((p) => [p.id, p.full_name]));
+const nameOf = new Map((profiles ?? []).map((p) => [p.id, p.full_name]));
 const riyaId = students.get(RIYA_EMAIL);
 if (!riyaId || students.size < 30) {
   console.error(`Expected the 30 seeded students (found ${students.size}). Run \`pnpm seed\` first.`);
@@ -512,7 +512,7 @@ for (const id of ids) {
   const fullName = nameOf.get(id) ?? "";
   pattern[id] = heavy.includes(fullName) ? "heavy" : light.includes(fullName) ? "light" : "healthy";
 }
-const inCourse = (course: string, student: string) => enrolled.some((e) => e.course_id === course && e.student_id === student);
+const inCourse = (course: string, student: string) => (enrolled ?? []).some((e) => e.course_id === course && e.student_id === student);
 
 // Sage conversations, generated in time order per student so flag de-duplication matches the app.
 type Planned = { student: string; a: Assignment; start: number; turns: Turn[] };

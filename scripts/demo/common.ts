@@ -75,7 +75,8 @@ export async function insertAll<T extends keyof Database["public"]["Tables"]>(
 /** Deletes in chunks of ids (URL length). */
 export async function deleteIn<T extends keyof Database["public"]["Tables"]>(table: T, column: string, ids: string[]) {
   for (let i = 0; i < ids.length; i += 100) {
-    const { error } = await db.from(table).delete().in(column, ids.slice(i, i + 100));
+    // Column names aren't narrowed per table here; callers pass real columns.
+    const { error } = await db.from(table).delete().in(column as never, ids.slice(i, i + 100) as never);
     fail(`delete ${table}`, error);
   }
 }

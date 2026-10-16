@@ -5,7 +5,11 @@ import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { isActive, navigation, type Area } from "./nav";
 
-/** The list of links for one app. Used by the sidebar and the mobile sheet. */
+/**
+ * The list of links for one app. Used by the sidebar and the mobile sheet.
+ * Reads the current path, so render it inside <Suspense> with <NavList> (no
+ * active item) as the fallback; that keeps dynamic routes prerenderable.
+ */
 export function NavLinks({
   area,
   onNavigate,
@@ -17,7 +21,11 @@ export function NavLinks({
   currentPath?: string;
 }) {
   const pathname = usePathname();
-  const path = currentPath ?? pathname;
+  return <NavList area={area} onNavigate={onNavigate} path={currentPath ?? pathname} />;
+}
+
+/** The links themselves, for a known path ("" = none active). */
+export function NavList({ area, onNavigate, path }: { area: Area; onNavigate?: () => void; path: string }) {
   const root = `/${area}`;
 
   return (

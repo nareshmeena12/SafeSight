@@ -20,10 +20,6 @@ import { conversationsForFlags, getStudentDetail } from "@/lib/teacher/queries";
 
 export const metadata: Metadata = { title: "Student", robots: { index: false } };
 
-// The app shell's NavLinks reads usePathname() outside Suspense, which fails the
-// build for routes with dynamic params; render on request (same as S9's pages).
-export const instant = false;
-
 export default function StudentPage({ params }: PageProps<"/teacher/students/[studentId]">) {
   return (
     <Suspense fallback={<PageSkeleton />}>

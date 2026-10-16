@@ -382,7 +382,12 @@ const holdingGround = [
 const pick = <T,>(rnd: () => number, list: readonly T[]): T => list[Math.floor(rnd() * list.length)];
 
 /** Sage's reply for a hint-ladder step (mirrors the system prompt's rules). */
-export function sageReply(rnd: () => number, topic: Topic, level: number, opts: { insisted: boolean; thanks: boolean }) {
+export function sageReply(
+  rnd: () => number,
+  topic: Topic,
+  level: number,
+  opts: { insisted: boolean; thanks: boolean; sameStep: boolean },
+) {
   if (opts.thanks) {
     return pick(rnd, [
       "Glad it clicked! If you get stuck on the next part, show me your working and we'll check it together.",
@@ -390,6 +395,14 @@ export function sageReply(rnd: () => number, topic: Topic, level: number, opts: 
     ]);
   }
   const lead = opts.insisted ? pick(rnd, holdingGround) : pick(rnd, openers);
+  // Staying on the same step: don't repeat the last reply word for word.
+  if (opts.sameStep && level >= 2 && level <= 4) {
+    return `${opts.insisted ? `${pick(rnd, holdingGround)} ` : ""}${pick(rnd, [
+      `Let's stay with this step a moment. ${topic.steps[0]} What do you get?`,
+      `You're close. Take the first step on your own numbers — ${topic.steps[0].charAt(0).toLowerCase()}${topic.steps[0].slice(1)} — and show me what you get.`,
+      "Try it on your problem now, even roughly. Share your working and I'll check it line by line.",
+    ])}`;
+  }
   switch (level) {
     case 1:
       return `${lead} Before we start: what have you tried so far, and which part of this feels unclear?`;

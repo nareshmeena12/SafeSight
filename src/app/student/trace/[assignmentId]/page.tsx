@@ -16,10 +16,6 @@ import { getOrStartDraft, getReplay } from "@/lib/trace/queries";
 import { submissionIdSchema } from "@/lib/trace/schemas";
 import { TRACE_TIME_ZONE } from "@/lib/trace/summary";
 
-// The app shell's nav reads the pathname outside <Suspense>, which can't be
-// prerendered for an unknown dynamic param; let this route render on request.
-export const instant = false;
-
 export const metadata: Metadata = { title: "Trace editor" };
 
 const dateFormat = new Intl.DateTimeFormat("en-IN", {

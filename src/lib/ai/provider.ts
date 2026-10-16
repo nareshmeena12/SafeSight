@@ -33,7 +33,7 @@ const aiEnvSchema = z.object({
   EMBEDDING_API_KEY: optional,
   AI_STRUCTURED_OUTPUTS: optional,
   DEMO_MODE: optional,
-  AI_SLOW_MS: optional.pipe(z.coerce.number().int().min(500).max(60_000).optional()),
+  AI_SLOW_MS: optional.pipe(z.coerce.number<string | undefined>().int().min(500).max(60_000).optional()),
 });
 
 function aiEnv() {
