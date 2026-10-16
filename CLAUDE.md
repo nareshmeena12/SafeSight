@@ -26,7 +26,41 @@ SafeSight is an AI tutor for Indian colleges that coaches students instead of do
 | Validation | zod on every server input |
 | Hosting | Vercel, auto-deploy from `main` |
 
-Package manager: **pnpm**. Node 20+.
+Package manager: **pnpm**. Node 20+. Next.js **16** (see `AGENTS.md`: read `node_modules/next/dist/docs/` before using an API you are unsure of; `middleware.ts` is now `proxy.ts`, and Cache Components is on).
+
+## Folder structure
+
+```
+src/
+  proxy.ts                  refreshes the Supabase session; signed-out visitors of /student, /teacher → /login?next=
+  app/
+    layout.tsx              root layout, Geist fonts, metadata
+    globals.css             Tailwind v4 + shadcn variables (dark mode = prefers-color-scheme). S2 swaps in our tokens
+    page.tsx                placeholder home; S10 replaces it with the landing page
+    (auth)/login, signup    auth pages (route group, shared centred-card layout)
+    auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
+    student/                student app (layout + home)
+    teacher/                teacher app (layout + overview); admins land here too until v2
+  components/
+    ui/                     shadcn/ui (radix base, "nova" preset). Add more with `pnpm dlx shadcn@latest add <name>`
+    auth/                   login and sign-up forms (client, useActionState)
+    app/app-header.tsx      placeholder top bar + page skeleton; S2 builds the real shell
+    logo.tsx                lens mark + wordmark
+  lib/
+    env.ts                  zod-checked public env
+    supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only)
+    auth/roles.ts           Role type, homeForRole, canAccess, redirectAfterLogin (pure, unit-tested)
+    auth/dal.ts             getCurrentUser(), requireRole([...]) — call at the top of every protected page/route
+    auth/actions.ts         login, signup, signOut server actions
+    auth/schemas.ts         zod schemas for the auth forms
+supabase/
+  config.toml               local Supabase (CLI is a devDependency)
+  migrations/               SQL migrations, applied in order
+  seed.sql                  SQL seed for `supabase db reset` (S3 fills it)
+scripts/seed-users.mts      demo login accounts via the Auth admin API
+```
+
+Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed:users`, `db:start`, `db:reset`.
 
 ## Routes (planned)
 
@@ -74,12 +108,18 @@ Package manager: **pnpm**. Node 20+.
 ## Status
 
 - [x] Day 0: repo created with plan, design reference and this file (2026-10-16)
-- [ ] S1 scaffold — **next**
-
-No application code exists yet.
+- [x] S1 scaffold (2026-10-16): Next.js 16 + Tailwind v4 + shadcn/ui, Supabase email/password login with student/teacher/admin roles, role redirects, demo users, lint/typecheck/test scripts
+- [ ] S2 design system — **next**
 
 ## Handoff notes
 
+- **Auth and roles.** `public.profiles` (migration `20261016000000_profiles.sql`) holds `role` (`user_role` enum) and `full_name`; a trigger creates it on sign-up. Sign-up may request `student` or `teacher` only; anything else becomes `student`. Users can only *select* their own profile — no insert/update policies, so roles change only through the service role. `institution_id` exists without a foreign key; S3 adds `institutions` and the FK, and policies that let teachers read their students' profiles.
+- **Routing.** Login → `redirectAfterLogin(role, next)`: students `/student`, teachers and admins `/teacher`. The proxy only does an optimistic signed-in check; every protected page must call `requireRole([...])` itself (it also bounces the wrong role to its own home). Do the same in every API route.
+- **Cache Components is on** (Next 16 default here). Anything that reads cookies/session (`requireRole`, `getCurrentUser`) must render inside a `<Suspense>` boundary — see `app/student/page.tsx` for the pattern. Next keeps the previous route mounted but hidden (`<Activity>`), so in browser tests select `h1:visible`, not `h1`.
+- **Env.** The cloud environment already sets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SITE_URL` for the **hosted** project; real process env beats `.env.local`. To work against local Supabase in a cloud session, start Docker (`dockerd &`), run `pnpm db:start`, then `set -a; . ./.env.local; set +a` with the local keys before `pnpm build`/`pnpm start`. `NEXT_PUBLIC_*` values are inlined at build time, so rebuild after switching.
+- **Hosted Supabase has not been migrated.** S1 was verified end-to-end against local Supabase only. Before the Vercel preview can log anyone in: apply `supabase/migrations` to the hosted project (`supabase link` + `supabase db push`, or paste the SQL into the SQL editor), then run `SEED_PASSWORD=… pnpm seed:users`. In Supabase Auth settings, set the Site URL and add the Vercel domains (`https://*.vercel.app/**`) to the redirect allow list.
+- **Demo accounts** (`pnpm seed:users`): `teacher@demo.safesight.in` (Kavita Sharma), `riya@demo.safesight.in` (Riya Sharma), `admin@demo.safesight.in` (Arjun Mehta). Password `safesight-demo` locally; `SEED_PASSWORD` is required for a hosted project.
+- **Styling is shadcn's neutral default** for now (dark mode already follows the system). S2 replaces the variables in `globals.css` with `design/tokens.json`, loads Instrument Serif, and builds the real app shell. Auth pages are functional placeholders; S10 rebuilds them from `design/landing/Auth.dc.html` (magic link, password toggle, institution field).
 - The landing-page design was finished in Claude Design. `design/landing/` holds the prototype source (`.dc.html` artboards plus `site.css`). Treat it as the visual spec for S10: copy, layout, spacing, animations and mobile layouts. Rebuild it in Next.js + Tailwind + Motion; do not ship the prototype files.
 - The prototype's `.dc.html` files use a Claude Design runtime (`<x-dc>`, `{{holes}}`, `<sc-if>`, `<sc-for>`, a `class Component extends DCLogic` script). Read them for structure and behaviour, not as React code.
 - `design/tokens.json` is the design-system export (colour, type, spacing, radius, shadow tokens with usage notes).

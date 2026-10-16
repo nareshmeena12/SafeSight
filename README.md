@@ -2,7 +2,7 @@
 
 **AI that teaches, not answers.** SafeSight gives every student a tutor that builds real understanding, and gives every teacher a clear view of how AI is used in their class. Built at IIT Mandi.
 
-> Status: Day 0. The plan and design are done; application code starts with session S1.
+> Status: S1 scaffold done (Next.js app, Supabase login with roles). See `SESSIONS.md` for what's next.
 
 ## What's in this repo
 
@@ -26,13 +26,17 @@ All building happens in Claude Code cloud sessions on this repo:
 2. Start with: `Read CLAUDE.md and PLAN.md first.` then paste the next prompt from `SESSIONS.md`.
 3. Review the PR and the Vercel preview on phone and laptop, then merge.
 
-Local development (once S1 exists):
+Local development (needs Node 20+, pnpm and Docker):
 
 ```bash
 pnpm install
-cp .env.example .env.local   # fill in values
+cp .env.example .env.local   # fill in values (local keys come from `pnpm db:start`)
+pnpm db:start                # local Supabase in Docker, applies supabase/migrations
+pnpm seed:users              # demo teacher, student and admin accounts
 pnpm dev
 ```
+
+Checks: `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm build`.
 
 ## Team
 

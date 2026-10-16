@@ -1,0 +1,3 @@
+-- SQL seed for `supabase db reset`. Empty for now: S3 adds the institution,
+-- courses and students. Demo login accounts come from `pnpm seed:users`
+-- (scripts/seed-users.mts), which uses the Auth admin API.
