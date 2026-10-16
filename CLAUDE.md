@@ -36,15 +36,17 @@ src/
   app/
     layout.tsx              root layout, Geist fonts, metadata
     globals.css             design tokens as CSS variables (light/dark), Tailwind theme, type scale, focus ring, paper grain
-    page.tsx                placeholder home; S10 replaces it with the landing page
+    (marketing)/            public site (S10): layout = .ss wrapper + SiteHeader/SiteFooter; page.tsx landing, about/, privacy/
+    api/pilot/route.ts      POST pilot form → zod → pilot_requests (service role), honeypot + per-IP limit
     design/                 /design: every token and component, with a System/Light/Dark preview switch
-    (auth)/login, signup    auth pages (route group, shared centred-card layout)
+    (auth)/login, signup    auth pages (route group; split layout from design/landing/Auth.dc.html)
     auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
     student/                student app (layout = AppShell + home)
     teacher/                teacher app (layout = AppShell + overview); admins land here too until v2
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
-    auth/                   login and sign-up forms (client, useActionState)
+    auth/                   login (password + magic link) and sign-up forms (client, useActionState); field.tsx also keeps the app-style Field used on /design
+    marketing/              S10: site.css (all site styles, nested under .ss), site-header, site-footer, site-theme (light/dark switch), cta-band, survey.ts (stat placeholders), team.ts, landing/* (one file per section)
     app/                    app-shell (sidebar + top bar), nav.ts (nav config per app), nav-links, mobile-nav (sheet), user-menu, page-header, page-skeleton
     product/                mode-badge, reliance-badge, stat-card, empty-state
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
@@ -54,7 +56,9 @@ src/
     supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
     auth/roles.ts           Role type, homeForRole, canAccess, redirectAfterLogin (pure, unit-tested)
     auth/dal.ts             getCurrentUser(), requireRole([...]) — call at the top of every protected page/route
-    auth/actions.ts         login, signup, signOut server actions
+    auth/actions.ts         login, signup, sendMagicLink, signOut server actions
+    auth/join.ts            joinPendingCourse(): joins the class code typed at sign-up (metadata join_code)
+    pilot/schema.ts         pilot form zod schema, form role → pilot_role mapping (unit-tested)
     auth/schemas.ts         zod schemas for the auth forms
     reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
 supabase/
@@ -118,9 +122,21 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S1 scaffold (2026-10-16): Next.js 16 + Tailwind v4 + shadcn/ui, Supabase email/password login with student/teacher/admin roles, role redirects, demo users, lint/typecheck/test scripts
 - [x] S2 design system (2026-10-16): tokens as CSS variables with light/dark, Instrument Serif + Geist + Geist Mono, restyled shadcn components, app shell for both apps, /design page
 - [x] S3 database (2026-10-16): 15 tables with RLS (PLAN.md §8 + pilot_requests), RLS tests, seed (1 institution, 1 teacher, 2 courses, 5 assignments, 30 students); applied and seeded on the hosted project
-- [ ] S4 Sage chat — **next**
+- [x] S10 landing (2026-10-16): landing page from design/landing (all 11 sections + animations), /about, /privacy, rebuilt /login and /signup (magic link, role cards, institution, class code), pilot form → `pilot_requests` via `/api/pilot`
+- [ ] S4 Sage chat — **next** (S4–S9 run in parallel sessions)
 
 ## Handoff notes
+
+- **S10 (landing) shipped** from branch `claude/eager-planck-pk12ip`. Decisions made without asking:
+  - **Styles.** `design/landing/site.css` was ported almost verbatim to `components/marketing/site.css` instead of rewriting ~1000 lines into Tailwind utilities, so the site matches the prototype exactly. Every rule is nested under `.ss` (the wrapper rendered by the `(marketing)` and `(auth)` layouts) because Next keeps route stylesheets loaded after navigation; nothing leaks into the apps. Colours map onto the `--ss-*` tokens; the site's amber is `--insight` (not `--accent`, which shadcn uses). Site-only values (`--nav-bg`, `--shadow-window`, pilot panel greens) have their own light/dark blocks in the same two-block pattern as globals.css. Fonts come from the `next/font` variables. Selector bugs from the prototype were fixed (FAQ plus icon stretched, lab/callout/alert/member icons overridden by `span` rules, Lens send arrow invisible, hover lift lost after reveal).
+  - **Theme switch.** The site and auth pages keep the prototype's moon/sun button. It sets `<html data-theme>` and stores the choice in `localStorage` (`ss-site-theme`); `SiteThemeScope` removes the attribute when leaving for the apps, which always follow the system.
+  - **Motion.** Entrance animations (hero words 60ms apart, pills, chat pop) are the prototype's CSS keyframes; scroll reveals use Motion `useInView` (`<Section>` sets `data-in`, CSS fades `.rv`/`.rc`); How-it-works line and dashboard tilt use `useScroll`; count-ups and the Trace replay use `animate()`. The hero chat typing/streaming uses timers (it is a script, not a tween). Everything shows its final state under `prefers-reduced-motion`.
+  - **Survey stats** live in `components/marketing/survey.ts` as `null` → `[XX]%` / `[N]`. Put real numbers there; they count up automatically.
+  - **Pilot form.** Roles map Professor → `teacher`, HOD → `hod`, Dean → `admin`, Other → `other` (existing `pilot_role` enum), so **no migration was needed**. The route validates with the same zod schema as the client, has a hidden honeypot field (`website`) and a best-effort in-memory limit of 5 requests / 10 min per IP. Verified end to end on hosted (test row inserted, then deleted; anon cannot read the table).
+  - **Auth.** Login has "Email me a sign-in link" and "Forgot password?", both `sendMagicLink` (`signInWithOtp`, `shouldCreateUser: false`). It always shows "Check your inbox" (except on rate limit) so it never reveals who has an account. Sign-up: teachers must give an institution (stored as user metadata `institution_name`, since `profiles.institution_id` needs an institution flow); students may give a 6-character class code (metadata `join_code`), joined via `rpc('join_course')` right after sign-up if a session exists, else in `/auth/confirm`, then cleared. A wrong code is ignored silently; the student adds it later. The magic link only works once Supabase Auth's redirect allow list includes `/auth/confirm` on each domain (see the hosted note below).
+  - **Copy changes from the prototype.** Nav "Log in" → `/login`; footer Privacy/About → the new pages. Sign-up legal line links only the privacy policy (there is no Terms page yet). Class-code placeholder `THRM01` (real codes are 6 chars; the prototype's `ME204-7KQ` would fail).
+  - **/about and /privacy** had no artboards; they reuse the site parts (page head, `.prose`, cards, `.cta-band`). The team list is `components/marketing/team.ts`, currently only "Naresh Meena — Founder": **check the role and add teammates**. The privacy page only states what PLAN.md §9 promises (180-day deletion, no training, summaries by default, RLS). **There is no contact email yet**, so "Write to us" links to the pilot form; add an address when one exists.
+  - Screens checked at 1440 and 390, light and dark, with Playwright (pilot validation, mobile menu, FAQ, compare toggle, login/sign-up validation, wrong-password message).
 
 - **S2 and S3 shipped together** in one PR from branch `claude/jolly-mayer-zxechp` (the cloud session's assigned branch), one commit per session.
 - **Auth and roles.** `public.profiles` (migration `20261016000000_profiles.sql`) holds `role` (`user_role` enum) and `full_name`; a trigger creates it on sign-up. Sign-up may request `student` or `teacher` only; anything else becomes `student`. No insert/update policies on profiles, so roles change only through the service role. Users read their own profile; teachers read their enrolled students'; students read their teachers'. `institution_id` → `institutions` (set by the seed; sign-up leaves it null until an institution flow exists).

@@ -4,9 +4,11 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { redirectAfterLogin, roleSchema } from "./roles";
+import { joinPendingCourse } from "./join";
 import {
   fieldErrorsFrom,
   loginSchema,
+  magicLinkSchema,
   signupSchema,
   type AuthFormState,
 } from "./schemas";
@@ -64,15 +66,22 @@ export async function signup(
   if (!parsed.success) {
     return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
   }
-  const { fullName, email, password, role } = parsed.data;
+  const { fullName, email, password, role, institution, joinCode } = parsed.data;
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
     options: {
-      // Read by the handle_new_user trigger; it only accepts student or teacher.
-      data: { full_name: fullName, role },
+      // full_name and role are read by the handle_new_user trigger (it only
+      // accepts student or teacher). institution_name and join_code are kept
+      // in metadata: see lib/auth/join.ts.
+      data: {
+        full_name: fullName,
+        role,
+        ...(institution ? { institution_name: institution } : {}),
+        ...(joinCode ? { join_code: joinCode } : {}),
+      },
       emailRedirectTo: `${await siteUrl()}/auth/confirm`,
     },
   });
@@ -88,10 +97,44 @@ export async function signup(
     };
   }
 
-  // With email confirmation on there is no session yet.
+  // With email confirmation on there is no session yet; the class code is
+  // joined when the link is opened (app/auth/confirm).
   if (!data.session) return { status: "check-email", email };
 
+  await joinPendingCourse(supabase);
   redirect(redirectAfterLogin(role));
+}
+
+/** "Email me a sign-in link" and "Forgot password?" on the log-in page. */
+export async function sendMagicLink(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const parsed = magicLinkSchema.safeParse(Object.fromEntries(formData));
+  if (!parsed.success) {
+    return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
+  }
+  const { email, next } = parsed.data;
+
+  const supabase = await createClient();
+  const redirectTo = new URL("/auth/confirm", await siteUrl());
+  if (next) redirectTo.searchParams.set("next", next);
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: { shouldCreateUser: false, emailRedirectTo: redirectTo.toString() },
+  });
+
+  // Only rate limits are reported. Any other error (such as an unknown
+  // address) shows the same "check your inbox" screen, so the form doesn't
+  // reveal who has an account.
+  if (error?.status === 429) {
+    return {
+      status: "error",
+      email,
+      message: "We've just sent you a link. Please wait a minute before asking for another.",
+    };
+  }
+  return { status: "link-sent", email };
 }
 
 export async function signOut() {
