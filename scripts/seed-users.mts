@@ -23,8 +23,10 @@ if (!url || !serviceRoleKey) {
 
 const isLocal = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?/.test(url);
 const password = process.env.SEED_PASSWORD ?? (isLocal ? "safesight-demo" : "");
-if (password.length < 8) {
-  console.error("Set SEED_PASSWORD (8+ characters) to seed a hosted project.");
+// Demo accounts only: 6 is Supabase Auth's floor. Real sign-ups still need 8
+// (signupSchema). Change the demo password before any real users join.
+if (password.length < 6) {
+  console.error("Set SEED_PASSWORD (6+ characters) to seed a hosted project.");
   process.exit(1);
 }
 
