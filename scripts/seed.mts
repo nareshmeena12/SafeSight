@@ -233,7 +233,25 @@ await upsert(
   "course_id,student_id",
 );
 
-await upsert("assignments", [...assignments]);
+await upsert(
+  "assignments",
+  assignments.map(({ id, course_id, title, instructions, ai_mode, due_at }) => ({
+    id,
+    course_id,
+    title,
+    instructions,
+    ai_mode,
+    due_at,
+  })),
+);
+// Teacher notes are teacher-only (S4): they live in their own table.
+await upsert(
+  "assignment_teacher_notes",
+  assignments
+    .filter((a) => a.teacher_notes)
+    .map((a) => ({ assignment_id: a.id, notes: a.teacher_notes })),
+  "assignment_id",
+);
 
 console.log(`Institution  ${institution.name}, ${institution.city}`);
 console.log(`Teacher      ${teacher.fullName} <${teacher.email}>`);
