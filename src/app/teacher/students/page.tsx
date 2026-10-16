@@ -128,9 +128,13 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
                 <SortHead {...sortState} k="conversations" className="hidden sm:table-cell">
                   Conversations
                 </SortHead>
-                <SortHead {...sortState} k="reliance">Reliance Score</SortHead>
+                <SortHead {...sortState} k="reliance">
+                  <span className="sm:hidden">Score</span>
+                  <span className="hidden sm:inline">Reliance Score</span>
+                </SortHead>
                 <SortHead {...sortState} k="flags" className="pr-4 sm:pr-2">
-                  Open flags
+                  <span className="sm:hidden">Flags</span>
+                  <span className="hidden sm:inline">Open flags</span>
                 </SortHead>
                 <SortHead {...sortState} k="active" className="hidden pr-6 sm:table-cell">
                   Last active

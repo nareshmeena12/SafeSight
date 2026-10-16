@@ -2,7 +2,7 @@
 
 **AI that teaches, not answers.** SafeSight gives every student a tutor that builds real understanding, and gives every teacher a clear view of how AI is used in their class. Built at IIT Mandi.
 
-> Status: S1 scaffold done (Next.js app, Supabase login with roles). See `SESSIONS.md` for what's next.
+> Status: core build done (S1–S12: Sage, Lens, Trace, teacher dashboard, landing site, demo data). See `SESSIONS.md` for what's next and [`docs/DEMO.md`](docs/DEMO.md) for the demo runbook.
 
 ## What's in this repo
 

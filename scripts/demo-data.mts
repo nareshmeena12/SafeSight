@@ -49,6 +49,7 @@ import {
   NOTES_MATERIAL_ID,
   NOTES_TITLE,
   PS3_ID,
+  PS3_TITLE,
   RIYA_EMAIL,
   db,
   demoStudents,
@@ -644,6 +645,14 @@ for (let i = 0; i < ids.length; i += 50) {
   fail("clear flags", (await db.from("flags").delete().in("student_id", chunk).in("course_id", DEMO_COURSES)).error);
   fail("clear chats", (await db.from("conversations").delete().in("student_id", chunk).in("assignment_id", assignmentIds)).error);
   fail("clear work", (await db.from("submissions").delete().in("student_id", chunk).in("assignment_id", assignmentIds)).error);
+}
+
+// A problem set 3 or notes created live in a rehearsal would sit next to the fixed ones.
+fail("old PS3", (await db.from("assignments").delete().eq("course_id", COURSE.thermo).ilike("title", PS3_TITLE).neq("id", PS3_ID)).error);
+const { data: oldNotes } = await db.from("materials").select("id, file_path").eq("course_id", COURSE.thermo).neq("id", NOTES_MATERIAL_ID);
+if (oldNotes?.length) {
+  await db.storage.from(MATERIALS_BUCKET).remove(oldNotes.map((m) => m.file_path));
+  fail("old notes", (await db.from("materials").delete().in("id", oldNotes.map((m) => m.id))).error);
 }
 
 // Lecture notes PDF → Storage → chunks (keyword search; "Read again" adds vectors once embeddings are set).

@@ -5,16 +5,18 @@ import { BookOpen } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { EmptyState } from "@/components/product/empty-state";
-import { RelianceBadge } from "@/components/product/reliance-badge";
 import { StatCard } from "@/components/product/stat-card";
 import { RelianceLineChart } from "@/components/teacher/charts";
 import { flagTypeLabels } from "@/components/teacher/flag-meta";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { relianceBand } from "@/lib/reliance";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgo, formatShortDate, weeksAgo } from "@/lib/teacher/dates";
 
 export const metadata: Metadata = { title: "My learning" };
+
+const bandLabel = { low: "Low", medium: "Medium", high: "High" } as const;
 
 export default function MyLearningPage() {
   return (
@@ -72,13 +74,10 @@ async function MyLearning() {
   for (const m of messages ?? []) if (m.topic) topicCounts.set(m.topic, (topicCounts.get(m.topic) ?? 0) + 1);
   const topics = [...topicCounts].sort((a, b) => b[1] - a[1]).slice(0, 6);
 
-  // One point per week: the average across the student's courses.
-  const weeks = new Map<string, number[]>();
-  for (const m of metrics ?? []) weeks.set(m.week, [...(weeks.get(m.week) ?? []), m.reliance_score]);
-  const trend = [...weeks].map(([week, scores]) => ({
-    label: formatShortDate(week),
-    value: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-  }));
+  // One point per week: the higher score across the student's courses (what the teacher's table shows).
+  const weeks = new Map<string, number>();
+  for (const m of metrics ?? []) weeks.set(m.week, Math.max(weeks.get(m.week) ?? 0, m.reliance_score));
+  const trend = [...weeks].map(([week, score]) => ({ label: formatShortDate(week), value: Math.round(score) }));
   const latest = trend.at(-1)?.value ?? null;
 
   if (!asked && !trend.length && !submitted) {
@@ -108,8 +107,12 @@ async function MyLearning() {
         <StatCard label="Writing submitted" value={submitted ?? 0} note="in Trace" />
         <StatCard
           label="Reliance Score"
-          value={latest === null ? "—" : <RelianceBadge score={latest} />}
-          note="this week · lower means you did more of the thinking"
+          value={latest ?? "—"}
+          note={
+            latest === null
+              ? "appears after a week with Sage"
+              : `${bandLabel[relianceBand(latest)]} band this week · lower means you did more of the thinking`
+          }
         />
       </div>
 
