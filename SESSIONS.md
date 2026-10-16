@@ -23,7 +23,7 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 - [x] **S1 — Scaffold.** Create a Next.js project (App Router, TypeScript, pnpm) with Tailwind and shadcn/ui. Set up Supabase email login with three roles: student, teacher, admin. After login, send students to /student and teachers to /teacher. Keep `.env.example` in sync. Add `lint`, `typecheck` and `test` scripts. Update CLAUDE.md with the folder structure.
   *Done when:* `pnpm build` passes, a seeded teacher and student can log in and land on their area, Vercel preview deploys.
 
-- [ ] **S2 — Design system.** Implement `design/tokens.json` (PLAN.md §5) as CSS variables with light and dark mode. Load Instrument Serif, Geist and Geist Mono. Restyle the shadcn components to match. Build the app shell (sidebar, top bar, page header) for both apps, and a /design page that shows every component.
+- [x] **S2 — Design system.** Implement `design/tokens.json` (PLAN.md §5) as CSS variables with light and dark mode. Load Instrument Serif, Geist and Geist Mono. Restyle the shadcn components to match. Build the app shell (sidebar, top bar, page header) for both apps, and a /design page that shows every component.
   *Done when:* /design looks right in both themes at 375px and 1440px.
 
 - [ ] **S3 — Database.** Supabase migrations for every table in PLAN.md §8 (plus `pilot_requests`), with row-level security on each. A test proving a student cannot read another student's messages. Seed script: one institution, one teacher, two courses, 30 students with invented Indian names.

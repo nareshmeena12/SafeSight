@@ -16,7 +16,6 @@ export function Field({ name, label, error, hint, ...input }: FieldProps) {
       <Input
         id={name}
         name={name}
-        className="h-11"
         aria-invalid={error ? true : undefined}
         aria-describedby={describedBy}
         {...input}
@@ -39,7 +38,7 @@ export function FormMessage({ message }: { message?: string }) {
   return (
     <p
       role="alert"
-      className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
+      className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive"
     >
       {message}
     </p>

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { PageSkeleton } from "@/components/app/app-header";
+import { BookOpen } from "lucide-react";
+import { PageHeader } from "@/components/app/page-header";
+import { PageSkeleton } from "@/components/app/page-skeleton";
+import { EmptyState } from "@/components/product/empty-state";
 import { requireRole } from "@/lib/auth/dal";
 
 export const metadata: Metadata = { title: "Home" };
@@ -18,21 +21,16 @@ async function StudentHomeContent() {
   const firstName = user.fullName.split(" ")[0];
 
   return (
-    <div className="grid gap-6">
-      <div>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {firstName ? `Hi ${firstName}, welcome back` : "Welcome back"}
-        </h1>
-        <p className="mt-2 text-muted-foreground">
-          Let&apos;s work through your courses together.
-        </p>
-      </div>
-      <section className="rounded-2xl border border-dashed p-8 text-center">
-        <h2 className="font-medium">No courses yet</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Your courses will appear here once you join one with your teacher&apos;s class code.
-        </p>
-      </section>
-    </div>
+    <>
+      <PageHeader
+        title={firstName ? `Hi ${firstName}, welcome back` : "Welcome back"}
+        description="Let's work through your courses together."
+      />
+      <EmptyState
+        icon={BookOpen}
+        title="No courses yet"
+        description="Your courses will appear here once you join one with your teacher's class code."
+      />
+    </>
   );
 }

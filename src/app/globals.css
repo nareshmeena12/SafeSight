@@ -2,132 +2,317 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-/* Dark mode follows the system setting (PLAN.md §5). */
-@custom-variant dark (@media (prefers-color-scheme: dark));
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
-  --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
-}
-
-:root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+/*
+ * SafeSight design system (design/tokens.json, PLAN.md §5).
+ *
+ * Theme: follows the system setting. `data-theme="light" | "dark"` on <html>
+ * forces one (the /design page uses it to preview both).
+ *
+ * Naming: the brand tokens keep their names (`surface`, `text-muted`,
+ * `primary-soft`, ...). Insight amber is exposed as `insight` because shadcn
+ * already uses `accent` for neutral hover fills; use `bg-insight` once per
+ * screen at most.
+ */
+@custom-variant dark {
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme="light"]), :root:not([data-theme="light"]) *) {
+      @slot;
+    }
+  }
+  &:where([data-theme="dark"], [data-theme="dark"] *) {
+    @slot;
   }
 }
+
+/* ---------- tokens ---------- */
+
+:root {
+  color-scheme: light;
+
+  /* Brand (tokens.json) */
+  --ss-background: #faf8f3;
+  --ss-surface: #ffffff;
+  --ss-text: #14161f;
+  --ss-text-muted: #6b6f7b;
+  --ss-border: #e7e3da;
+  --ss-primary: #1f6f5c;
+  --ss-on-primary: #ffffff;
+  --ss-primary-soft: #e5efea;
+  --ss-accent: #f2a93b;
+  --ss-on-accent: #14161f;
+  --ss-accent-soft: #fdf0da;
+  --ss-good: #2e9d6a;
+  --ss-warning: #d99a00;
+  --ss-critical: #d14b45;
+  --ss-shadow-lift: 0 12px 32px -16px #14161f33;
+  --ss-focus-ring: 0 0 0 2px #faf8f3, 0 0 0 4px #1f6f5c;
+
+  /* Derived (from design/landing/site.css): stronger border, hover tint,
+     neutral fill for skeletons, primary hover. */
+  --ss-border-strong: #d5cfc2;
+  --ss-primary-hover: #195d4d;
+  --ss-muted: #f2efe8;
+  --ss-hover: rgb(20 22 31 / 0.045);
+  --ss-glow: rgb(31 111 92 / 0.17);
+  --ss-grain-opacity: 0.05;
+
+  /* shadcn variables, mapped onto the brand */
+  --background: var(--ss-background);
+  --foreground: var(--ss-text);
+  --card: var(--ss-surface);
+  --card-foreground: var(--ss-text);
+  --popover: var(--ss-surface);
+  --popover-foreground: var(--ss-text);
+  --primary: var(--ss-primary);
+  --primary-foreground: var(--ss-on-primary);
+  --secondary: var(--ss-surface);
+  --secondary-foreground: var(--ss-text);
+  --muted: var(--ss-muted);
+  --muted-foreground: var(--ss-text-muted);
+  --accent: var(--ss-primary-soft);
+  --accent-foreground: var(--ss-text);
+  --destructive: var(--ss-critical);
+  --border: var(--ss-border);
+  --input: var(--ss-border);
+  --ring: var(--ss-primary);
+  --chart-1: var(--ss-primary);
+  --chart-2: var(--ss-text-muted);
+  --chart-3: var(--ss-good);
+  --chart-4: var(--ss-warning);
+  --chart-5: var(--ss-accent);
+  --radius: 16px;
+  --sidebar: var(--ss-background);
+  --sidebar-foreground: var(--ss-text);
+  --sidebar-primary: var(--ss-primary);
+  --sidebar-primary-foreground: var(--ss-on-primary);
+  --sidebar-accent: var(--ss-primary-soft);
+  --sidebar-accent-foreground: var(--ss-primary);
+  --sidebar-border: var(--ss-border);
+  --sidebar-ring: var(--ss-primary);
+}
+
+/* Dark tokens: kept in two identical blocks (system setting, forced). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --ss-background: #0e1015;
+    --ss-surface: #171a22;
+    --ss-text: #ecedee;
+    --ss-text-muted: #9ba0ab;
+    --ss-border: #262a35;
+    --ss-primary: #4fb59a;
+    --ss-on-primary: #0e1015;
+    --ss-primary-soft: #15302a;
+    --ss-accent: #f5b95a;
+    --ss-on-accent: #14161f;
+    --ss-accent-soft: #33270f;
+    --ss-good: #4cc28b;
+    --ss-warning: #e8b030;
+    --ss-critical: #e8706a;
+    --ss-shadow-lift: 0 12px 32px -16px #000000cc;
+    --ss-focus-ring: 0 0 0 2px #0e1015, 0 0 0 4px #4fb59a;
+    --ss-border-strong: #353a47;
+    --ss-primary-hover: #66c4ab;
+    --ss-muted: #222632;
+    --ss-hover: rgb(255 255 255 / 0.05);
+    --ss-glow: rgb(79 181 154 / 0.13);
+    --ss-grain-opacity: 0.04;
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --ss-background: #0e1015;
+  --ss-surface: #171a22;
+  --ss-text: #ecedee;
+  --ss-text-muted: #9ba0ab;
+  --ss-border: #262a35;
+  --ss-primary: #4fb59a;
+  --ss-on-primary: #0e1015;
+  --ss-primary-soft: #15302a;
+  --ss-accent: #f5b95a;
+  --ss-on-accent: #14161f;
+  --ss-accent-soft: #33270f;
+  --ss-good: #4cc28b;
+  --ss-warning: #e8b030;
+  --ss-critical: #e8706a;
+  --ss-shadow-lift: 0 12px 32px -16px #000000cc;
+  --ss-focus-ring: 0 0 0 2px #0e1015, 0 0 0 4px #4fb59a;
+  --ss-border-strong: #353a47;
+  --ss-primary-hover: #66c4ab;
+  --ss-muted: #222632;
+  --ss-hover: rgb(255 255 255 / 0.05);
+  --ss-glow: rgb(79 181 154 / 0.13);
+  --ss-grain-opacity: 0.04;
+}
+
+/* ---------- Tailwind theme ---------- */
+
+@theme inline {
+  /* Fonts (next/font variables set in app/layout.tsx) */
+  --font-sans: var(--font-geist), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+  --font-serif: var(--font-instrument-serif), "Iowan Old Style", Georgia, serif;
+  --font-heading: var(--font-serif);
+
+  /* Brand colours */
+  --color-surface: var(--ss-surface);
+  --color-text: var(--ss-text);
+  --color-text-muted: var(--ss-text-muted);
+  --color-border-strong: var(--ss-border-strong);
+  --color-primary-soft: var(--ss-primary-soft);
+  --color-primary-hover: var(--ss-primary-hover);
+  --color-insight: var(--ss-accent);
+  --color-on-insight: var(--ss-on-accent);
+  --color-insight-soft: var(--ss-accent-soft);
+  --color-good: var(--ss-good);
+  --color-warning: var(--ss-warning);
+  --color-critical: var(--ss-critical);
+  --color-hover: var(--ss-hover);
+  --color-glow: var(--ss-glow);
+
+  /* shadcn colours */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Radius: rounded-sm/md/lg/xl = tokens radius-sm/md/lg/xl */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 24px;
+  --radius-3xl: 24px;
+  --radius-4xl: 9999px;
+
+  /* Shadows: borders first; one lift on hover */
+  --shadow-lift: var(--ss-shadow-lift);
+  --shadow-focus: var(--ss-focus-ring);
+
+  /* Motion */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.2, 1);
+
+  /* Type scale (tokens.json → type.groups) */
+  --text-display: 56px;
+  --text-display--line-height: 58px;
+  --text-display--letter-spacing: -0.02em;
+  --text-headline: 38px;
+  --text-headline--line-height: 42px;
+  --text-headline--letter-spacing: -0.015em;
+  --text-headline-sm: 36px;
+  --text-headline-sm--line-height: 42px;
+  --text-headline-sm--letter-spacing: -0.01em;
+  --text-lead: 18px;
+  --text-lead--line-height: 28px;
+  --text-title: 18px;
+  --text-title--line-height: 28px;
+  --text-title--font-weight: 600;
+  --text-body: 16px;
+  --text-body--line-height: 1.6;
+  --text-label: 14px;
+  --text-label--line-height: 20px;
+  --text-label--font-weight: 500;
+  --text-small: 14px;
+  --text-small--line-height: 22px;
+  --text-eyebrow: 12px;
+  --text-eyebrow--line-height: 16px;
+  --text-eyebrow--letter-spacing: 0.04em;
+  --text-eyebrow--font-weight: 500;
+  --text-mono: 13px;
+  --text-mono--line-height: 20px;
+  --text-mono-stat: 32px;
+  --text-mono-stat--line-height: 36px;
+  --text-mono-stat--letter-spacing: -0.02em;
+  --text-mono-stat--font-weight: 500;
+}
+
+/* Desktop sizes for the marketing headline styles; mobile sizes are above. */
+@media (min-width: 768px) {
+  :root {
+    --text-display: 96px;
+    --text-display--line-height: 96px;
+    --text-headline: 56px;
+    --text-headline--line-height: 60px;
+    --text-lead: 20px;
+    --text-lead--line-height: 32px;
+  }
+}
+
+/* ---------- base ---------- */
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
-  }
-  body {
-    @apply bg-background text-foreground;
+    @apply border-border;
   }
   html {
     @apply font-sans;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    position: relative;
+    @apply bg-background text-body text-foreground;
+  }
+  /* Paper grain on the page ground (brand.md: SVG noise, ~3–5%). */
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: var(--ss-grain-opacity);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size: 240px 240px;
+  }
+  /* One focus style everywhere (tokens.json → focus-ring). */
+  :focus-visible {
+    outline: none;
+    box-shadow: var(--ss-focus-ring);
+  }
+  ::selection {
+    background: var(--ss-primary-soft);
+  }
+  a {
+    text-underline-offset: 3px;
+  }
+}
+
+/* Motion off when the visitor asks for it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

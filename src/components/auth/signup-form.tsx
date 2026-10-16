@@ -41,7 +41,7 @@ export function SignupForm() {
           {roleOptions.map((option, i) => (
             <label
               key={option.value}
-              className="flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border p-3 has-checked:border-primary has-checked:bg-primary/5 has-focus-visible:ring-3 has-focus-visible:ring-ring/50"
+              className="flex min-h-11 cursor-pointer items-start gap-3 rounded-md border bg-surface p-3 has-checked:border-primary has-checked:bg-primary-soft"
             >
               <input
                 type="radio"
@@ -88,7 +88,7 @@ export function SignupForm() {
         hint="At least 8 characters."
         error={state.fieldErrors?.password}
       />
-      <Button type="submit" size="lg" className="h-11" disabled={pending}>
+      <Button type="submit" size="lg" disabled={pending}>
         {pending ? "Creating your account…" : "Create account"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">
