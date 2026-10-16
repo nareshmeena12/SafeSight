@@ -43,9 +43,9 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 - [x] **S10 — Landing page.** Build the public landing page, /login and /signup from `design/landing/` (read `design/README.md` first). Match copy, layout, mobile layouts and animations; use Motion. Pilot form saves to `pilot_requests` through a zod-validated API route. Also /about and /privacy.
 
-- [ ] **S11 — Demo data.** Four weeks of realistic activity for the 30 seeded students: 5 heavy copiers, 15 healthy learners, 10 light users. Conversations, submissions with writing events, flags.
+- [x] **S11 — Demo data.** Four weeks of realistic activity for the 30 seeded students: 5 heavy copiers, 15 healthy learners, 10 light users. Conversations, submissions with writing events, flags.
 
-- [ ] **S12 — Polish and launch.** Empty states, loading skeletons, 375px layouts, dark-mode contrast, friendly errors. Demo mode (fallback model if the first is slow). Deploy to production and fix errors.
+- [x] **S12 — Polish and launch.** Empty states, loading skeletons, 375px layouts, dark-mode contrast, friendly errors. Demo mode (fallback model if the first is slow). Deploy to production and fix errors.
 
 ## Live Lab Mode (after the core)
 

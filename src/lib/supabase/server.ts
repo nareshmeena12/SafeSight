@@ -1,6 +1,7 @@
 import "server-only";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import { publicEnv } from "@/lib/env";
 import type { Database } from "./database.types";
 
@@ -9,6 +10,10 @@ import type { Database } from "./database.types";
  * acting as the signed-in user (row-level security applies).
  */
 export async function createClient() {
+  // Supabase Auth reads the clock (Date.now) to check the session's expiry.
+  // Mark this as request-time work so Cache Components never meets it while
+  // prerendering (it logged "unstable value Date.now()" on every app page).
+  await connection();
   const env = publicEnv();
   const cookieStore = await cookies();
 

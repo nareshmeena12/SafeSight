@@ -33,8 +33,12 @@ import { heuristicLabels } from "@/lib/sage/labels";
 import { buildSagePrompt, examModeReply } from "@/lib/sage/prompt";
 import { SEARCH_TOOL, sageRequestSchema, type Citation, type SageUIMessage } from "@/lib/sage/types";
 import { createClient } from "@/lib/supabase/server";
+import { refreshCurrentWeek } from "@/lib/teacher/refresh";
 
 export const maxDuration = 60;
+
+/** Cited pages shown under a reply, per notes search. */
+const CHIPS_PER_SEARCH = 2;
 
 /** Friendly plain-text errors: useChat shows the body as the error message. */
 function reply(status: number, message: string) {
@@ -102,6 +106,8 @@ export async function POST(req: Request) {
     labelStudentMessage(messageId, labels),
     raiseFlags({ studentId: user.id, courseId: policy.course.id, messageId, decisions }),
   ]);
+  // Keep this week's Reliance Score current for the teacher's dashboard.
+  after(() => refreshCurrentWeek(policy.course.id));
 
   const showCare = labels.distress !== "none" || labels.intent === "distress";
   const startMessage = (writer: UIMessageStreamWriter<SageUIMessage>) => {
@@ -137,7 +143,8 @@ export async function POST(req: Request) {
           }),
           execute: async ({ query }) => {
             const passages = await searchCourseMaterial(policy.course.id, query);
-            for (const p of passages) {
+            // Chips show the best matches only; the model still reads all passages.
+            for (const p of passages.slice(0, CHIPS_PER_SEARCH)) {
               if (!citations.some((c) => c.materialId === p.materialId && c.page === p.page)) {
                 citations.push({ materialId: p.materialId, title: p.title, page: p.page });
               }
@@ -171,7 +178,7 @@ export async function POST(req: Request) {
   after(() => Promise.race([saved, new Promise((r) => setTimeout(r, (maxDuration - 5) * 1000))]));
   const save = async (text: string) => {
     try {
-      await logSageReply({ id: replyId, conversationId, content: text.trim(), hintLevel, citations: citations.slice(0, 4) });
+      await logSageReply({ id: replyId, conversationId, content: text.trim(), hintLevel, citations: citations.slice(0, 3) });
     } finally {
       markSaved();
     }
@@ -201,7 +208,7 @@ export async function POST(req: Request) {
           stream: result.stream,
           sendStart: false,
           messageMetadata: ({ part }) =>
-            part.type === "finish" ? { conversationId, hintLevel, citations: citations.slice(0, 4) } : undefined,
+            part.type === "finish" ? { conversationId, hintLevel, citations: citations.slice(0, 3) } : undefined,
         }),
       );
     },

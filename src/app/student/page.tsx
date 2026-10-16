@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, BookOpen } from "lucide-react";
+import { ArrowRight, BookOpen, NotebookPen } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { FadeUp } from "@/components/motion/fade-up";
@@ -29,6 +29,7 @@ async function StudentHomeContent() {
 
   // Row-level security limits both queries to the student's own courses.
   const supabase = await createClient();
+  const now = new Date().getTime();
   const [{ data: courses }, { data: assignments }] = await Promise.all([
     supabase.from("courses").select("id, name, code").order("code"),
     supabase
@@ -53,6 +54,8 @@ async function StudentHomeContent() {
         <div className="grid gap-6 lg:grid-cols-2">
           {courses.map((course, i) => {
             const list = (assignments ?? []).filter((a) => a.course_id === course.id);
+            const upcoming = list.filter((a) => !a.due_at || Date.parse(a.due_at) >= now);
+            const earlier = list.filter((a) => a.due_at && Date.parse(a.due_at) < now).reverse();
             return (
               <FadeUp key={course.id} delay={i * 0.05}>
                 <section className="h-full rounded-lg border bg-surface p-6" aria-labelledby={`course-${course.id}`}>
@@ -62,10 +65,10 @@ async function StudentHomeContent() {
                   <h2 id={`course-${course.id}`} className="mt-1 text-title">
                     {course.name}
                   </h2>
-                  {list.length ? (
+                  {upcoming.length ? (
                     <ul className="mt-4 divide-y border-t">
-                      {list.map((a) => (
-                        <li key={a.id} className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:justify-between">
+                      {upcoming.map((a) => (
+                        <li key={a.id} className="flex flex-col gap-3 py-4">
                           <div className="min-w-0">
                             <p className="text-label">{a.title}</p>
                             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-small text-muted-foreground">
@@ -74,21 +77,51 @@ async function StudentHomeContent() {
                             </div>
                           </div>
                           {a.ai_mode !== "exam" ? (
-                            <Button asChild variant="secondary" className="self-start sm:self-auto">
-                              <Link href={`/student/sage/${a.id}`}>
-                                Continue with Sage
-                                <ArrowRight aria-hidden="true" />
-                              </Link>
-                            </Button>
+                            <div className="flex flex-wrap gap-2">
+                              <Button asChild variant="secondary">
+                                <Link href={`/student/sage/${a.id}`}>
+                                  Continue with Sage
+                                  <ArrowRight aria-hidden="true" />
+                                </Link>
+                              </Button>
+                              <Button asChild variant="ghost">
+                                <Link href={`/student/trace/${a.id}`}>
+                                  <NotebookPen aria-hidden="true" />
+                                  Write in Trace
+                                </Link>
+                              </Button>
+                            </div>
                           ) : (
-                            <span className="text-small text-muted-foreground">Sage is off for exams</span>
+                            <span className="text-small text-muted-foreground">Sage is off for exams. All the best!</span>
                           )}
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <p className="mt-4 text-small text-muted-foreground">No assignments yet.</p>
+                    <p className="mt-4 text-small text-muted-foreground">Nothing due right now. Enjoy the breather.</p>
                   )}
+                  {earlier.length ? (
+                    <details className="group mt-2 border-t pt-2">
+                      <summary className="flex min-h-11 cursor-pointer items-center text-small text-muted-foreground hover:text-foreground">
+                        Earlier work ({earlier.length})
+                      </summary>
+                      <ul className="grid gap-1 pb-2">
+                        {earlier.map((a) => (
+                          <li key={a.id} className="flex flex-wrap items-center justify-between gap-x-3">
+                            <span className="text-small">{a.title}</span>
+                            {a.ai_mode !== "exam" ? (
+                              <Link
+                                href={`/student/sage/${a.id}`}
+                                className="inline-flex min-h-11 items-center text-small text-primary hover:underline"
+                              >
+                                Review with Sage
+                              </Link>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </section>
               </FadeUp>
             );

@@ -251,7 +251,7 @@ type EventRow = { type: ClientEvent["type"] | "joined" | "rejoined" | "left" | "
 async function insertEvents(db: Admin, sessionId: string, seatId: string, rows: EventRow[]) {
   if (rows.length === 0) return;
   const { error } = await db.from("lab_events").insert(
-    rows.map((r) => ({ session_id: sessionId, seat_id: seatId, type: r.type, detail: r.detail as NonNullable<Json>, at: r.at })),
+    rows.map((r) => ({ session_id: sessionId, seat_id: seatId, type: r.type, detail: r.detail as Json, at: r.at })),
   );
   if (error) throw error;
 }

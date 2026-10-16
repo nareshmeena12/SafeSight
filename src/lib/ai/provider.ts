@@ -1,14 +1,17 @@
 import "server-only";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
+import { wrapLanguageModel } from "ai";
 import { z } from "zod";
+import { fallbackMiddleware, type FallbackState } from "./fallback";
 
 /**
  * The model provider (OpenAI-compatible: DeepInfra or OpenRouter). Server
  * only: keys never reach the browser, and every model call lives in a route
  * handler or a script.
  *
- *   AI_BASE_URL, AI_API_KEY, AI_MODEL       chat model (Sage, labels)
- *   AI_FALLBACK_MODEL                       used when DEMO_MODE=true (S12 adds slow-model fallback)
+ *   AI_BASE_URL, AI_API_KEY, AI_MODEL       chat model (Sage, labels, Lens, Trace)
+ *   DEMO_MODE=true + AI_FALLBACK_MODEL      demo mode: switch to the fallback model when the
+ *                                           main one is slow (AI_SLOW_MS, default 5000) or fails
  *   EMBEDDING_MODEL                         1024-dimension model, e.g. BAAI/bge-m3
  *   EMBEDDING_BASE_URL, EMBEDDING_API_KEY   optional; default to AI_BASE_URL / AI_API_KEY
  *   AI_STRUCTURED_OUTPUTS=true              send json_schema instead of json_object
@@ -30,6 +33,7 @@ const aiEnvSchema = z.object({
   EMBEDDING_API_KEY: optional,
   AI_STRUCTURED_OUTPUTS: optional,
   DEMO_MODE: optional,
+  AI_SLOW_MS: optional.pipe(z.coerce.number<string | undefined>().int().min(500).max(60_000).optional()),
 });
 
 function aiEnv() {
@@ -43,6 +47,7 @@ function aiEnv() {
     EMBEDDING_API_KEY: process.env.EMBEDDING_API_KEY,
     AI_STRUCTURED_OUTPUTS: process.env.AI_STRUCTURED_OUTPUTS,
     DEMO_MODE: process.env.DEMO_MODE,
+    AI_SLOW_MS: process.env.AI_SLOW_MS,
   });
 }
 
@@ -58,6 +63,8 @@ export function aiStatus() {
   const env = aiEnv();
   return {
     chat: Boolean(env.AI_BASE_URL && env.AI_API_KEY && env.AI_MODEL),
+    /** Demo mode is on and has a fallback model to switch to. */
+    demoFallback: demoFallbackModel(env) !== null,
     embeddings: Boolean(
       (env.EMBEDDING_BASE_URL ?? env.AI_BASE_URL) &&
         (env.EMBEDDING_API_KEY ?? env.AI_API_KEY) &&
@@ -66,7 +73,23 @@ export function aiStatus() {
   };
 }
 
-/** The chat model for Sage and the labeller. Throws if unconfigured. */
+const DEFAULT_SLOW_MS = 5_000;
+/** After the main model was slow, demo mode uses the fallback for this long. */
+const FALLBACK_STICKY_MS = 5 * 60_000;
+/** Per server instance, shared by every chatModel() call. */
+const fallbackState: FallbackState = { skipMainUntil: 0 };
+
+function demoFallbackModel(env: ReturnType<typeof aiEnv>) {
+  const on = env.DEMO_MODE === "true" && env.AI_FALLBACK_MODEL && env.AI_FALLBACK_MODEL !== env.AI_MODEL;
+  return on ? env.AI_FALLBACK_MODEL! : null;
+}
+
+/**
+ * The chat model for Sage, the labeller, Lens and the Trace agent. Throws if
+ * unconfigured. In demo mode it switches to AI_FALLBACK_MODEL whenever the
+ * main model takes longer than AI_SLOW_MS to start answering, or fails, and
+ * then stays on the fallback for 5 minutes.
+ */
 export function chatModel() {
   const env = aiEnv();
   const missing = [
@@ -82,8 +105,20 @@ export function chatModel() {
     apiKey: env.AI_API_KEY,
     supportsStructuredOutputs: env.AI_STRUCTURED_OUTPUTS === "true",
   });
-  const demo = env.DEMO_MODE === "true" && env.AI_FALLBACK_MODEL;
-  return provider.chatModel(demo ? env.AI_FALLBACK_MODEL! : env.AI_MODEL!);
+  const main = provider.chatModel(env.AI_MODEL!);
+  const fallback = demoFallbackModel(env);
+  if (!fallback) return main;
+  const slowMs = env.AI_SLOW_MS ?? DEFAULT_SLOW_MS;
+  return wrapLanguageModel({
+    model: main,
+    middleware: fallbackMiddleware({
+      fallback: provider.chatModel(fallback),
+      slowMs,
+      stickyMs: FALLBACK_STICKY_MS,
+      state: fallbackState,
+      onSwitch: (reason) => console.warn(`demo mode: ${env.AI_MODEL} → ${fallback} (${reason})`),
+    }),
+  });
 }
 
 /** The embedding model for notes search, or null if unconfigured. */

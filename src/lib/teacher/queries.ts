@@ -147,23 +147,19 @@ async function weeklyMetrics(db: Db, courseIds: string[], sinceWeek: string): Pr
   return data;
 }
 
-/** Latest weekly Reliance Score per student (averaged over their courses). */
+/**
+ * Latest weekly Reliance Score per student. A student in two of the teacher's
+ * courses gets the higher score from their latest week, so a quiet week in
+ * one course never hides heavy reliance in the other.
+ */
 function latestScores(rows: MetricRow[]): Map<string, { score: number; week: string }> {
-  const perPair = new Map<string, MetricRow>();
-  for (const row of rows) {
-    const key = `${row.student_id}:${row.course_id}`;
-    const prev = perPair.get(key);
-    if (!prev || row.week > prev.week) perPair.set(key, row);
-  }
-  const perStudent = new Map<string, MetricRow[]>();
-  for (const row of perPair.values()) {
-    perStudent.set(row.student_id, [...(perStudent.get(row.student_id) ?? []), row]);
-  }
   const result = new Map<string, { score: number; week: string }>();
-  for (const [studentId, list] of perStudent) {
-    const week = list.reduce((w, r) => (r.week > w ? r.week : w), list[0].week);
-    result.set(studentId, { score: round1(mean(list.map((r) => r.reliance_score)) ?? 0), week });
+  for (const row of rows) {
+    const prev = result.get(row.student_id);
+    if (!prev || row.week > prev.week) result.set(row.student_id, { score: row.reliance_score, week: row.week });
+    else if (row.week === prev.week && row.reliance_score > prev.score) prev.score = row.reliance_score;
   }
+  for (const v of result.values()) v.score = round1(v.score);
   return result;
 }
 

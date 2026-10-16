@@ -57,7 +57,7 @@ export async function writeLabReports(session: { id: string } & SessionTimes): P
       seat_id: seat.id,
       session_id: session.id,
       student_id: seat.student_id,
-      metrics: metrics as unknown as NonNullable<Json>,
+      metrics: metrics as unknown as Json,
       summary: labSummary(metrics),
       created_at: new Date().toISOString(),
     };

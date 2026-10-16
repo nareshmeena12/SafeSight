@@ -20,10 +20,6 @@ import { z } from "zod";
 
 export const metadata: Metadata = { title: "Course" };
 
-// The app shell's NavLinks reads usePathname() outside Suspense, which fails the
-// build for routes with dynamic params; render on request (same as S9's pages).
-export const instant = false;
-
 export default function CoursePage({ params }: PageProps<"/teacher/courses/[courseId]">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
