@@ -35,9 +35,9 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 - [ ] **S6 — Notes search.** Teacher PDF upload to Supabase Storage; extract text, chunk (~500 tokens, with page numbers), embed into `material_chunks` with pgvector. `search_course_material` tool for Sage; cited pages as chips under replies.
 
-- [ ] **S7 — Teacher dashboard.** Overview, courses and assignments (AI mode picker, join code), students table, student detail, flags. Compute `weekly_metrics` and the Reliance Score (PLAN.md §4).
+- [x] **S7 — Teacher dashboard.** Overview, courses and assignments (AI mode picker, join code), students table, student detail, flags. Compute `weekly_metrics` and the Reliance Score (PLAN.md §4).
 
-- [ ] **S8 — Lens.** Box on the overview and a full page. Tools from PLAN.md §4, read-only and limited to the teacher's own courses. Answers can include a table or small Recharts chart. Draft email and Make quiz buttons.
+- [x] **S8 — Lens.** Box on the overview and a full page. Tools from PLAN.md §4, read-only and limited to the teacher's own courses. Answers can include a table or small Recharts chart. Draft email and Make quiz buttons.
 
 - [ ] **S9 — Trace.** Tiptap editor with autosave; record type, paste, delete and focus events, batched every 5s to `writing_events`. Submission, teacher replay page with scrubber and amber paste events, and the Trace agent's neutral integrity report.
 

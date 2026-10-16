@@ -41,12 +41,22 @@ src/
     (auth)/login, signup    auth pages (route group, shared centred-card layout)
     auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
     student/                student app (layout = AppShell + home)
-    teacher/                teacher app (layout = AppShell + overview); admins land here too until v2
+    teacher/                teacher app; admins land here too until v2
+      page.tsx              overview: stat cards, Lens box, weekly trend, top topics (?course=)
+      courses/, courses/[courseId]   courses, join code, assignments with AI mode picker, roster
+      students/, students/[studentId] sortable table (?sort=&dir=&course=), student detail
+      flags/                flags with status/type filters, resolve/reopen
+      conversations/[conversationId] a flagged or shared chat (RLS decides what text shows)
+      lens/                 Lens full page (?q= asks straight away, ?course= scopes it)
+    api/lens/route.ts       Lens chat (teachers only; streamText + read-only tools)
+    api/cron/weekly-metrics nightly refresh_weekly_metrics (vercel.json cron, CRON_SECRET)
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
     auth/                   login and sign-up forms (client, useActionState)
     app/                    app-shell (sidebar + top bar), nav.ts (nav config per app), nav-links, mobile-nav (sheet), user-menu, page-header, page-skeleton
     product/                mode-badge, reliance-badge, stat-card, empty-state
+    teacher/                charts (Recharts), topic-list, course-filter, flag-list/flag-meta, course/assignment dialogs, join-code, refresh-metrics
+    lens/                   lens-chat (useChat), tool-views (charts/tables/drafts/quiz from tool results), lens-box, markdown, suggestions
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
   lib/
@@ -57,17 +67,21 @@ src/
     auth/actions.ts         login, signup, signOut server actions
     auth/schemas.ts         zod schemas for the auth forms
     reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
+    teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts
+    lens/                   model.ts (provider from env), tools.ts (7 read-only tools), prompt.ts, rate-limit.ts
 supabase/
   config.toml               local Supabase (CLI is a devDependency)
   migrations/               SQL migrations, applied in order
   migrations/…_core_schema   S3: all PLAN.md §8 tables + pilot_requests, RLS, private.* helpers, join_course()
   seed.sql                  empty on purpose — demo data comes from `pnpm seed`
+scripts/refresh-metrics.mts `pnpm metrics`: recompute weekly_metrics for every course
 scripts/seed.mts            demo data (institution, users, courses, enrollments, assignments) via the service role
 scripts/db-push-hosted.mts  applies pending migrations to the hosted project via the Management API
 tests/db/rls.test.ts        RLS tests against local Supabase (skipped when it isn't running)
+tests/db/teacher-dashboard.test.ts  teacher RPC scoping and the Reliance Score formula
 ```
 
-Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
+Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
 
 ## Routes (planned)
 
@@ -118,9 +132,23 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S1 scaffold (2026-10-16): Next.js 16 + Tailwind v4 + shadcn/ui, Supabase email/password login with student/teacher/admin roles, role redirects, demo users, lint/typecheck/test scripts
 - [x] S2 design system (2026-10-16): tokens as CSS variables with light/dark, Instrument Serif + Geist + Geist Mono, restyled shadcn components, app shell for both apps, /design page
 - [x] S3 database (2026-10-16): 15 tables with RLS (PLAN.md §8 + pilot_requests), RLS tests, seed (1 institution, 1 teacher, 2 courses, 5 assignments, 30 students); applied and seeded on the hosted project
-- [ ] S4 Sage chat — **next**
+- [ ] S4–S6 Sage, labels, notes search — in a parallel PR (`claude/wonderful-meitner-pti3jr`)
+- [x] S7 teacher dashboard + S8 Lens (2026-10-16): overview, courses/assignments (AI mode picker, join code), students table, student detail, flags, flagged-chat view; weekly_metrics + Reliance Score in SQL; Lens page + overview box with 7 read-only tools, charts/tables from tool results, Draft email and Make quiz. Migration applied on hosted.
 
 ## Handoff notes
+
+- **S7 + S8 (teacher dashboard, Lens)** shipped together from `claude/compassionate-darwin-j3i3hi`. Decisions:
+  - **Data access.** `lib/teacher/queries.ts` is the one read layer for the pages and Lens tools. Every function takes the teacher's own Supabase client (RLS) *and* filters by `courseScope()` (the teacher's courses, or null for a course that isn't theirs → 404/"not found"). Teachers can't read message rows, so per-student and per-topic counts come from SECURITY DEFINER RPCs in migration `20261020070000_teacher_dashboard.sql`: `teacher_student_activity(course?, from?, to?)` and `teacher_topic_struggles(course?, student?, from?, to?, limit?)`. Both return numbers/labels only and only for `private.my_courses()`. Tested in `tests/db/teacher-dashboard.test.ts`.
+  - **Reliance Score** is computed in SQL by `refresh_weekly_metrics(course?, weeks=8)`: weeks start Monday **India time**; *a* = answer_seeking share of student messages; *p* = mean `integrity_reports.paste_ratio` of work submitted that week; *e* = share of assignments used that week where a message with `hint_level ≥ 4` came before any attempt (`attempted = true` or `intent = concept_question`; unlabelled messages count as attempts). **A part with no data is dropped and the other weights rescaled** (a student who only chats is scored on 0.5a+0.2e over 0.7), so missing Trace data doesn't cap the score. Teachers may refresh their own courses ("Update numbers" on the overview); the service role refreshes all (`pnpm metrics`, and the nightly Vercel cron at 02:00 IST → `/api/cron/weekly-metrics`, needs `CRON_SECRET` in Vercel). The weekly row is deleted and rewritten for the window, so re-running is safe. **S11: run `pnpm metrics --weeks 6` after generating demo activity.** Student messages need `topic` set (S5 does) for "struggling topics" to show.
+  - **Overview numbers**: active students / conversations / messages = last 7 days, live from messages; average Reliance = the latest week with metrics; open flags (amber marker, the one highlight). Students table: last 30 days + latest weekly score (averaged across the student's courses when "All courses").
+  - **Chat privacy**: `/teacher/conversations/[id]` shows text only when RLS allows it (flagged in the teacher's course, or shared); otherwise a "This chat is private" state. Flag cards link there via the flagged message's conversation.
+  - **Teacher notes** are written to `assignment_teacher_notes` (S4–S6's teacher-only table), not `assignments`. Because that PR isn't merged yet, my migration **repeats S4–S6's DDL for message labels (`topic`, `attempted`, `citations` + the student insert policy) and the notes table inside guarded blocks** that skip themselves when `20261018040000_sage_notes_search` already ran (it runs first by timestamp, and hosted already has it). `scripts/seed.mts` carries the byte-identical notes change from that branch, so the two merge cleanly. `database.types.ts` will conflict — regenerate with `pnpm db:types` after merging.
+  - **Lens** (`/api/lens`): teachers/admins only, zod body `{messages, courseId?}`, `safeValidateUIMessages` against the tools, `streamText` with `isStepCount(6)`, temperature 0.3. Model from `AI_BASE_URL`/`AI_API_KEY`/`AI_MODEL` (`AI_FALLBACK_MODEL` when `DEMO_MODE=true`) via `lib/lens/model.ts`; without them it answers 503 with a friendly sentence. S4's `lib/ai/provider.ts` does the same job — fold Lens onto it in S12. Tools: the 7 from PLAN.md §4, all read-only. `draft_message` and `generate_quiz` have the model put the email/quiz into the tool **input**; the tool validates it (quiz = exactly 5 × 4 options) and the UI renders a card with Copy / "Open in email app" / Show answers. Nothing is sent or saved. Charts and tables are drawn by the client from **tool outputs** (`components/lens/tool-views.tsx`), never from model text, so numbers can't be invented. Lens chats aren't stored (reload = fresh). Rate limit: 40 requests per 10 min per teacher, in memory (per instance).
+  - **Tested end to end** with a mock OpenAI-compatible server (tool calls → charts → markdown table → Make quiz). No real model key exists in this cloud env, so the prompt is untested against a real model — try the demo question from PLAN.md §12 once a key is set.
+  - **Dynamic routes** (`courses/[courseId]`, `students/[studentId]`, `conversations/[conversationId]`) set `export const instant = false`, the same workaround S4/S9 used for the shell's `usePathname()` outside Suspense.
+  - **Node 22+**: AI SDK 7 needs it; `engines.node` is now `>=22` (Vercel's default is fine).
+  - Not added to /design (left alone: other sessions own it): the teacher charts, TopicList, FlagList, LensBox.
+  - Not done: course delete, removing students from a roster, Lens chat history, a students-table CSV export. `/teacher/materials` (S6) is linked from the course page ("Notes and PDFs") but isn't in the sidebar.
 
 - **S2 and S3 shipped together** in one PR from branch `claude/jolly-mayer-zxechp` (the cloud session's assigned branch), one commit per session.
 - **Auth and roles.** `public.profiles` (migration `20261016000000_profiles.sql`) holds `role` (`user_role` enum) and `full_name`; a trigger creates it on sign-up. Sign-up may request `student` or `teacher` only; anything else becomes `student`. No insert/update policies on profiles, so roles change only through the service role. Users read their own profile; teachers read their enrolled students'; students read their teachers'. `institution_id` → `institutions` (set by the seed; sign-up leaves it null until an institution flow exists).
