@@ -10,8 +10,8 @@ export function TopicList({ topics }: { topics: TopicStruggle[] }) {
     <ol className="grid gap-4">
       {topics.map((t, i) => (
         <li key={t.topic} className="grid gap-1.5">
-          <div className="flex items-baseline justify-between gap-3">
-            <span className="min-w-0 truncate">
+          <div className="flex flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+            <span className="min-w-0 sm:truncate">
               <span className="mr-2 font-mono text-small text-muted-foreground">{i + 1}</span>
               {t.topic}
             </span>

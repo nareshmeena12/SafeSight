@@ -57,7 +57,7 @@ async function MaterialsContent() {
         />
       ) : (
         <div className="grid gap-8 lg:grid-cols-12">
-          <div className="lg:col-span-5">
+          <div className="min-w-0 lg:col-span-5">
             <UploadForm courses={courses.map((c) => ({ id: c.id, label: c.code ? `${c.code} · ${c.name}` : c.name }))} />
             {!vectors ? (
               <p className="mt-3 text-small text-muted-foreground">
@@ -66,7 +66,7 @@ async function MaterialsContent() {
               </p>
             ) : null}
           </div>
-          <div className="lg:col-span-7">
+          <div className="min-w-0 lg:col-span-7">
             {courses.map((course) => {
               const list = (materials ?? []).filter((m) => m.course_id === course.id);
               return (

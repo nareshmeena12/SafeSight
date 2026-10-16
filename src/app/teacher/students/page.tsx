@@ -107,7 +107,7 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
       <PageHeader
         eyebrow="Students"
         title="Your students"
-        description="Sage use over the last 30 days and each student's latest weekly Reliance Score."
+        description="Sage use over the last 30 days and each student's latest weekly Reliance Score (the higher one if they take more than one of your courses)."
         actions={<CourseFilter courses={courses} value={courseId} />}
       />
       {rows.length === 0 ? (
@@ -121,13 +121,21 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <SortHead {...sortState} k="name" className="pl-6">
+                <SortHead {...sortState} k="name" className="pl-4 sm:pl-6">
                   Name
                 </SortHead>
                 <TableHead className="hidden md:table-cell">Course</TableHead>
-                <SortHead {...sortState} k="conversations">Conversations</SortHead>
-                <SortHead {...sortState} k="reliance">Reliance Score</SortHead>
-                <SortHead {...sortState} k="flags">Open flags</SortHead>
+                <SortHead {...sortState} k="conversations" className="hidden sm:table-cell">
+                  Conversations
+                </SortHead>
+                <SortHead {...sortState} k="reliance">
+                  <span className="sm:hidden">Score</span>
+                  <span className="hidden sm:inline">Reliance Score</span>
+                </SortHead>
+                <SortHead {...sortState} k="flags" className="pr-4 sm:pr-2">
+                  <span className="sm:hidden">Flags</span>
+                  <span className="hidden sm:inline">Open flags</span>
+                </SortHead>
                 <SortHead {...sortState} k="active" className="hidden pr-6 sm:table-cell">
                   Last active
                 </SortHead>
@@ -136,7 +144,7 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
             <TableBody>
               {rows.map((r) => (
                 <TableRow key={r.id}>
-                  <TableCell className="pl-6">
+                  <TableCell className="pl-4 sm:pl-6">
                     <Link
                       href={`/teacher/students/${r.id}`}
                       className="inline-flex min-h-11 items-center font-medium hover:text-primary"
@@ -147,7 +155,7 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
                   <TableCell className="hidden text-muted-foreground md:table-cell">
                     {r.courses.map((c) => c.code || c.name).join(", ")}
                   </TableCell>
-                  <TableCell className="font-mono">{r.conversations}</TableCell>
+                  <TableCell className="hidden font-mono sm:table-cell">{r.conversations}</TableCell>
                   <TableCell>
                     {r.reliance === null ? (
                       <span className="text-muted-foreground">—</span>

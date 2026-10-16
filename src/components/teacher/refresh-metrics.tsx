@@ -14,7 +14,7 @@ export function RefreshMetricsButton({ courseId }: { courseId: string | null }) 
   return (
     <form action={action} className="flex items-center gap-3">
       <input type="hidden" name="courseId" value={courseId ?? ""} />
-      <p aria-live="polite" className="text-small text-muted-foreground">
+      <p aria-live="polite" className="text-small text-muted-foreground empty:hidden">
         {pending ? "" : state.message}
       </p>
       <Button type="submit" variant="outline" disabled={pending}>

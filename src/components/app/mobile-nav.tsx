@@ -1,7 +1,7 @@
 "use client";
 
 import { Menu } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { navigation, type Area } from "./nav";
-import { NavLinks } from "./nav-links";
+import { NavLinks, NavList } from "./nav-links";
 
 /** Menu button and slide-in navigation below the `lg` breakpoint. */
 export function MobileNav({ area }: { area: Area }) {
@@ -34,7 +34,9 @@ export function MobileNav({ area }: { area: Area }) {
           <Logo href={`/${area}`} />
         </SheetHeader>
         <nav aria-label={`${navigation[area].label} navigation`} className="p-3">
-          <NavLinks area={area} onNavigate={() => setOpen(false)} />
+          <Suspense fallback={<NavList area={area} path="" />}>
+            <NavLinks area={area} onNavigate={() => setOpen(false)} />
+          </Suspense>
         </nav>
       </SheetContent>
     </Sheet>

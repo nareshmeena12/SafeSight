@@ -5,7 +5,7 @@ import { signOut } from "@/lib/auth/actions";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { MobileNav } from "./mobile-nav";
 import { navigation, type Area } from "./nav";
-import { NavLinks } from "./nav-links";
+import { NavLinks, NavList } from "./nav-links";
 import { UserMenu } from "./user-menu";
 
 /**
@@ -29,7 +29,9 @@ export function AppShell({ area, children }: { area: Area; children: React.React
         </div>
         <nav aria-label={`${label} navigation`} className="flex-1 overflow-y-auto p-3">
           <p className="px-3 pt-2 pb-2 text-eyebrow text-muted-foreground uppercase">{label}</p>
-          <NavLinks area={area} />
+          <Suspense fallback={<NavList area={area} path="" />}>
+            <NavLinks area={area} />
+          </Suspense>
         </nav>
       </aside>
       <div className="flex min-w-0 flex-1 flex-col">

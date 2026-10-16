@@ -16,11 +16,6 @@ import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Sage" };
 
-// The app shell's sidebar reads usePathname() outside <Suspense>, which can't
-// prerender under an unknown [assignmentId]. Let this route block on the
-// server until the shell wraps its nav links in Suspense (see CLAUDE.md).
-export const instant = false;
-
 export default function SagePage({ params }: PageProps<"/student/sage/[assignmentId]">) {
   return (
     <Suspense fallback={<PageSkeleton />}>
