@@ -161,6 +161,71 @@ describe.skipIf(!env)("row-level security", () => {
     await admin.from("pilot_requests").delete().eq("email", `pilot-${run}@test.safesight.in`);
   });
 
+  it("teacher notes are teacher-only", async () => {
+    await insert("assignment_teacher_notes", { assignment_id: assignmentId, notes: "Answer key: 42 kJ" });
+    const student = await clients.studentA.from("assignment_teacher_notes").select("notes");
+    expect(student.data).toEqual([]);
+    const assignment = await clients.studentA.from("assignments").select("*").eq("id", assignmentId).single();
+    expect(assignment.data).not.toHaveProperty("teacher_notes");
+    const other = await clients.otherTeacher.from("assignment_teacher_notes").select("notes");
+    expect(other.data).toEqual([]);
+    const teacher = await clients.teacher.from("assignment_teacher_notes").select("notes");
+    expect(teacher.data).toEqual([{ notes: "Answer key: 42 kJ" }]);
+    const write = await clients.studentA
+      .from("assignment_teacher_notes")
+      .upsert({ assignment_id: assignmentId, notes: "changed" });
+    expect(write.error).not.toBeNull();
+  });
+
+  it("a student cannot write message labels or citations", async () => {
+    for (const extra of [{ topic: "x" }, { attempted: true }, { citations: [{ page: 1 }] }]) {
+      const { error } = await clients.studentA
+        .from("messages")
+        .insert({ conversation_id: convA, role: "user", content: "hi", ...extra });
+      expect(error).not.toBeNull();
+    }
+  });
+
+  it("course PDFs: the teacher uploads, enrolled students read, others can't", async () => {
+    const bucket = "course-materials";
+    const path = `${courseId}/notes-${run}.pdf`;
+    const pdf = () => new Blob(["%PDF-1.4 test"], { type: "application/pdf" });
+
+    const up = await clients.teacher.storage.from(bucket).upload(path, pdf());
+    expect(up.error).toBeNull();
+    const foreign = await clients.otherTeacher.storage.from(bucket).upload(`${courseId}/x-${run}.pdf`, pdf());
+    expect(foreign.error).not.toBeNull();
+    const byStudent = await clients.studentA.storage.from(bucket).upload(`${courseId}/s-${run}.pdf`, pdf());
+    expect(byStudent.error).not.toBeNull();
+
+    const read = await clients.studentA.storage.from(bucket).download(path);
+    expect(read.error).toBeNull();
+    const outsider = await clients.otherTeacher.storage.from(bucket).download(path);
+    expect(outsider.error).not.toBeNull();
+
+    await admin.storage.from(bucket).remove([path]);
+  });
+
+  it("notes search only returns the caller's course materials", async () => {
+    const material = await insert("materials", {
+      course_id: courseId,
+      title: "Lecture 4",
+      file_path: `${courseId}/lecture-4.pdf`,
+      status: "ready",
+    });
+    await insert("material_chunks", {
+      material_id: material.id,
+      page: 12,
+      content: "The first law for a closed system: Q minus W equals the change in internal energy.",
+    });
+    const args = { p_course_id: courseId, p_query: "first law closed system" };
+    const student = await clients.studentA.rpc("match_material_chunks", args);
+    expect(student.error).toBeNull();
+    expect(student.data!.map((r: { page: number | null }) => r.page)).toEqual([12]);
+    const outsider = await clients.otherTeacher.rpc("match_material_chunks", args);
+    expect(outsider.data).toEqual([]);
+  });
+
   it("a student joins a course with its join code", async () => {
     const { data: course } = await admin.from("courses").select("join_code").eq("id", otherCourseId).single();
     const { data, error } = await clients.studentA.rpc("join_course", { p_join_code: course!.join_code.toLowerCase() });
