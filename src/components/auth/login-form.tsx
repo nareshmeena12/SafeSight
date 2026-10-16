@@ -33,7 +33,7 @@ export function LoginForm({ next }: { next?: string }) {
         required
         error={state.fieldErrors?.password}
       />
-      <Button type="submit" size="lg" className="h-11" disabled={pending}>
+      <Button type="submit" size="lg" disabled={pending}>
         {pending ? "Logging in…" : "Log in"}
       </Button>
       <p className="text-center text-sm text-muted-foreground">

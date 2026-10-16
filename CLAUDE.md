@@ -35,32 +35,39 @@ src/
   proxy.ts                  refreshes the Supabase session; signed-out visitors of /student, /teacher → /login?next=
   app/
     layout.tsx              root layout, Geist fonts, metadata
-    globals.css             Tailwind v4 + shadcn variables (dark mode = prefers-color-scheme). S2 swaps in our tokens
+    globals.css             design tokens as CSS variables (light/dark), Tailwind theme, type scale, focus ring, paper grain
     page.tsx                placeholder home; S10 replaces it with the landing page
+    design/                 /design: every token and component, with a System/Light/Dark preview switch
     (auth)/login, signup    auth pages (route group, shared centred-card layout)
     auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
-    student/                student app (layout + home)
-    teacher/                teacher app (layout + overview); admins land here too until v2
+    student/                student app (layout = AppShell + home)
+    teacher/                teacher app (layout = AppShell + overview); admins land here too until v2
   components/
-    ui/                     shadcn/ui (radix base, "nova" preset). Add more with `pnpm dlx shadcn@latest add <name>`
+    ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
     auth/                   login and sign-up forms (client, useActionState)
-    app/app-header.tsx      placeholder top bar + page skeleton; S2 builds the real shell
-    logo.tsx                lens mark + wordmark
+    app/                    app-shell (sidebar + top bar), nav.ts (nav config per app), nav-links, mobile-nav (sheet), user-menu, page-header, page-skeleton
+    product/                mode-badge, reliance-badge, stat-card, empty-state
+    motion/fade-up.tsx      Motion fade-up (respects reduced motion)
+    logo.tsx                Logo (mark + wordmark) and LogoMark
   lib/
     env.ts                  zod-checked public env
-    supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only)
+    supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
     auth/roles.ts           Role type, homeForRole, canAccess, redirectAfterLogin (pure, unit-tested)
     auth/dal.ts             getCurrentUser(), requireRole([...]) — call at the top of every protected page/route
     auth/actions.ts         login, signup, signOut server actions
     auth/schemas.ts         zod schemas for the auth forms
+    reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
 supabase/
   config.toml               local Supabase (CLI is a devDependency)
   migrations/               SQL migrations, applied in order
-  seed.sql                  SQL seed for `supabase db reset` (S3 fills it)
-scripts/seed-users.mts      demo login accounts via the Auth admin API
+  migrations/…_core_schema   S3: all PLAN.md §8 tables + pilot_requests, RLS, private.* helpers, join_course()
+  seed.sql                  empty on purpose — demo data comes from `pnpm seed`
+scripts/seed.mts            demo data (institution, users, courses, enrollments, assignments) via the service role
+scripts/db-push-hosted.mts  applies pending migrations to the hosted project via the Management API
+tests/db/rls.test.ts        RLS tests against local Supabase (skipped when it isn't running)
 ```
 
-Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed:users`, `db:start`, `db:reset`.
+Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
 
 ## Routes (planned)
 
@@ -109,17 +116,32 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 
 - [x] Day 0: repo created with plan, design reference and this file (2026-10-16)
 - [x] S1 scaffold (2026-10-16): Next.js 16 + Tailwind v4 + shadcn/ui, Supabase email/password login with student/teacher/admin roles, role redirects, demo users, lint/typecheck/test scripts
-- [ ] S2 design system — **next**
+- [x] S2 design system (2026-10-16): tokens as CSS variables with light/dark, Instrument Serif + Geist + Geist Mono, restyled shadcn components, app shell for both apps, /design page
+- [x] S3 database (2026-10-16): 15 tables with RLS (PLAN.md §8 + pilot_requests), RLS tests, seed (1 institution, 1 teacher, 2 courses, 5 assignments, 30 students); applied and seeded on the hosted project
+- [ ] S4 Sage chat — **next**
 
 ## Handoff notes
 
-- **Auth and roles.** `public.profiles` (migration `20261016000000_profiles.sql`) holds `role` (`user_role` enum) and `full_name`; a trigger creates it on sign-up. Sign-up may request `student` or `teacher` only; anything else becomes `student`. Users can only *select* their own profile — no insert/update policies, so roles change only through the service role. `institution_id` exists without a foreign key; S3 adds `institutions` and the FK, and policies that let teachers read their students' profiles.
+- **S2 and S3 shipped together** in one PR from branch `claude/jolly-mayer-zxechp` (the cloud session's assigned branch), one commit per session.
+- **Auth and roles.** `public.profiles` (migration `20261016000000_profiles.sql`) holds `role` (`user_role` enum) and `full_name`; a trigger creates it on sign-up. Sign-up may request `student` or `teacher` only; anything else becomes `student`. No insert/update policies on profiles, so roles change only through the service role. Users read their own profile; teachers read their enrolled students'; students read their teachers'. `institution_id` → `institutions` (set by the seed; sign-up leaves it null until an institution flow exists).
 - **Routing.** Login → `redirectAfterLogin(role, next)`: students `/student`, teachers and admins `/teacher`. The proxy only does an optimistic signed-in check; every protected page must call `requireRole([...])` itself (it also bounces the wrong role to its own home). Do the same in every API route.
 - **Cache Components is on** (Next 16 default here). Anything that reads cookies/session (`requireRole`, `getCurrentUser`) must render inside a `<Suspense>` boundary — see `app/student/page.tsx` for the pattern. Next keeps the previous route mounted but hidden (`<Activity>`), so in browser tests select `h1:visible`, not `h1`.
 - **Env.** The cloud environment already sets `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SITE_URL` for the **hosted** project; real process env beats `.env.local`. To work against local Supabase in a cloud session, start Docker (`dockerd &`), run `pnpm db:start`, then `set -a; . ./.env.local; set +a` with the local keys before `pnpm build`/`pnpm start`. `NEXT_PUBLIC_*` values are inlined at build time, so rebuild after switching.
-- **Hosted Supabase has not been migrated.** S1 was verified end-to-end against local Supabase only. Before the Vercel preview can log anyone in: apply `supabase/migrations` to the hosted project (`supabase link` + `supabase db push`, or paste the SQL into the SQL editor), then run `SEED_PASSWORD=… pnpm seed:users`. In Supabase Auth settings, set the Site URL and add the Vercel domains (`https://*.vercel.app/**`) to the redirect allow list.
-- **Demo accounts** (`pnpm seed:users`): `teacher@demo.safesight.in` (Kavita Sharma), `riya@demo.safesight.in` (Riya Sharma), `admin@demo.safesight.in` (Arjun Mehta). Password `safesight-demo` locally; `SEED_PASSWORD` is required for a hosted project.
-- **Styling is shadcn's neutral default** for now (dark mode already follows the system). S2 replaces the variables in `globals.css` with `design/tokens.json`, loads Instrument Serif, and builds the real app shell. Auth pages are functional placeholders; S10 rebuilds them from `design/landing/Auth.dc.html` (magic link, password toggle, institution field).
+- **Hosted Supabase is migrated and seeded (S3).** Both migrations are recorded in `supabase_migrations.schema_migrations` (the S1 one was applied by hand earlier and recorded as a baseline). For new migrations run `pnpm db:push:hosted` (uses `SUPABASE_ACCESS_TOKEN` + `SUPABASE_PROJECT_REF`, set in the cloud env; `--dry-run` lists pending), then `pnpm seed` if seed data changed. Still to do by hand: in Supabase Auth settings, set the Site URL and add the Vercel domains (`https://*.vercel.app/**`) to the redirect allow list.
+- **Demo accounts.** `teacher@demo.safesight.in` (Kavita Sharma), `riya@demo.safesight.in` (Riya Sharma), `admin@demo.safesight.in` (Arjun Mehta). Locally the password is `safesight-demo`. On hosted they keep the password they already had — `pnpm seed` never changes an existing user's password unless run with `--reset-passwords` and `SEED_PASSWORD`. The other 29 seeded students (`firstname.lastname@demo.safesight.in`) were created on hosted with random passwords: they fill rosters but can't log in.
+- **Seed data (S3).** Institution "Shivalik Institute of Technology", Mandi (invented). Kavita Sharma teaches ME201 Thermodynamics (join code `THRM01`, all 30 students) and ME204 Fluid Mechanics (`FLMC02`, first 20). Five assignments covering all three modes, incl. "Thermodynamics problem set 3" (Learn) for the demo. Fixed UUIDs (`00000000-0000-4000-8000-…`) keep it idempotent; S11 adds activity on top. The account `nareshmeena1202@gmail.com` on hosted is a real sign-up and is left alone.
+- **Schema decisions (S3).** Enums: `ai_mode`, `message_role` (`user`/`assistant`, matching the AI SDK), `message_intent` (the five `classify_message` labels), `writing_event_type`, `flag_type` (`answer_seeking`, `exam_mode_attempt`, `instruction_override`, `wellbeing`), `flag_severity`, `flag_status`, `pilot_role`. `material_chunks.embedding` is `vector(1024)` (BAAI/bge-m3); another embedding size needs a migration. `courses.join_code` defaults to 6 random uppercase chars. Added beyond §8: `conversations.shared_with_teacher`, `flags.reason` / `resolved_at`, `submissions.created_at` / `updated_at` (unique per assignment + student), `pilot_requests.message`. `weekly_metrics.week` is the Monday of the ISO week.
+- **RLS model (S3).** Policies call SECURITY DEFINER helpers in the `private` schema (`is_course_teacher`, `is_enrolled`, `teaches_student`, `owns_conversation`, `teacher_can_read_conversation`, …) to avoid recursion. Students: own rows only; may insert `messages` only with `role='user'` and no labels; may only toggle `shared_with_teacher` on conversations; edit submissions only while `submitted_at` is null. Teachers: their courses, rosters, assignments, materials, conversation metadata, submissions, events, reports, metrics, flags (column grant: only `status`, `resolved_at` updatable). **Message text** is visible to a teacher only if a flag in their course points at a message in that conversation, or the student shared it. Students see their own flags except `wellbeing`. Labels, assistant replies, flags, reports, metrics, chunks and `pilot_requests` are written with the service role only (`lib/supabase/admin.ts`). `assignments.teacher_notes` is readable by enrolled students — never put answer keys there. Admins get nothing extra until v2. Students join via `rpc('join_course', { p_join_code })`.
+- **RLS tests** (`tests/db/rls.test.ts`) create throwaway users on **local** Supabase only (keys from `supabase status`, or `SUPABASE_TEST_*`) and skip with a warning when it isn't running — start Docker and `pnpm db:start` before `pnpm test` to run them. Add a case whenever a policy changes.
+- **Typed clients.** `createClient()` (server/browser/admin) is typed with `Database`. After a migration: `pnpm db:reset` locally, then `pnpm db:types`.
+- **Design tokens (S2).** `globals.css` defines every token in `design/tokens.json` as `--ss-*` variables, light by default, dark under `prefers-color-scheme` *or* `<html data-theme="dark">` (`data-theme="light"` forces light; only /design uses the override). The dark block is written twice (system + forced) — change both. shadcn's variables are mapped onto the brand, so `bg-primary`, `bg-card`, `text-muted-foreground` etc. all work. Extra utilities: `bg-surface`, `text-text-muted`, `bg-primary-soft`, `bg-primary-hover`, `border-border-strong`, `bg-hover` (neutral hover tint), `bg-good|warning|critical`, `shadow-lift`, `ease-out` (brand curve). Derived values not in tokens.json (`border-strong`, `primary-hover`, `muted`, `hover`, `glow`) come from `design/landing/site.css`.
+- **Amber is `insight`, not `accent`.** shadcn uses `accent` for menu/hover fills (mapped to primary-soft), so the brand's Insight amber is `bg-insight` / `text-on-insight` / `bg-insight-soft`, plus `Button variant="insight"` and `Badge variant="insight"`. Once per screen.
+- **Type scale** as Tailwind text utilities: `text-display`, `text-headline`, `text-headline-sm` (pair with `font-serif`), `text-lead`, `text-title`, `text-body`, `text-label`, `text-small`, `text-eyebrow`, `font-mono text-mono`, `font-mono text-mono-stat`. Display/headline/lead switch to desktop sizes at `md`. Fonts via `next/font/google` in `app/layout.tsx` (`--font-geist`, `--font-geist-mono`, `--font-instrument-serif`). Page titles use `font-serif text-headline-sm`.
+- **Radius**: `rounded-sm` 8, `rounded-md` 12 (controls), `rounded-lg` 16 (cards), `rounded-xl` 24, `rounded-full`. **Focus**: one global `:focus-visible` box-shadow (the `focus-ring` token); shadcn's `ring-ring/50` classes were stripped — strip them from newly added shadcn components too, swap `ring-1 ring-foreground/10` for `border`, and use `rounded-md` for controls. Buttons/inputs/selects are 44px tall by default (`size="sm"` is 36px — desktop-only spots).
+- **App shell.** `AppShell area="student|teacher"` (used by both layouts): sidebar from `lg`, sheet menu below, top bar with the account menu (inside Suspense), 1200px content column, skip link. Nav items live in `components/app/nav.ts`; items with `soon: "S7"` render disabled with a "Soon" pill — remove `soon` when the page lands. Start each page with `<PageHeader eyebrow title description actions />` and use `<PageSkeleton />` as the Suspense fallback.
+- **Product components** ready for S4+: `ModeBadge` (learn/assist/exam), `RelianceBadge` (score → band dot + label; thresholds in `lib/reliance.ts` are a first guess), `StatCard` (`highlight` = amber dot), `EmptyState`, `FadeUp`. `TooltipProvider` wraps the app in the root layout.
+- **/design** is public and `noindex`. Add every new shared component to it. Auth pages got the tokens but are still placeholders; S10 rebuilds them from `design/landing/Auth.dc.html` (magic link, password toggle, institution field).
+- **Screenshots in a cloud session**: `pnpm build && pnpm start`, then Playwright with `executablePath: "/opt/pw-browsers/chromium-1194/chrome-linux/chrome"` and `colorScheme: "dark"` for dark mode.
 - The landing-page design was finished in Claude Design. `design/landing/` holds the prototype source (`.dc.html` artboards plus `site.css`). Treat it as the visual spec for S10: copy, layout, spacing, animations and mobile layouts. Rebuild it in Next.js + Tailwind + Motion; do not ship the prototype files.
 - The prototype's `.dc.html` files use a Claude Design runtime (`<x-dc>`, `{{holes}}`, `<sc-if>`, `<sc-for>`, a `class Component extends DCLogic` script). Read them for structure and behaviour, not as React code.
 - `design/tokens.json` is the design-system export (colour, type, spacing, radius, shadow tokens with usage notes).
