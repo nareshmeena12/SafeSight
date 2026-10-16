@@ -2,7 +2,7 @@ import "server-only";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { wrapLanguageModel } from "ai";
 import { z } from "zod";
-import { fallbackMiddleware } from "./fallback";
+import { fallbackMiddleware, type FallbackState } from "./fallback";
 
 /**
  * The model provider (OpenAI-compatible: DeepInfra or OpenRouter). Server
@@ -74,6 +74,10 @@ export function aiStatus() {
 }
 
 const DEFAULT_SLOW_MS = 5_000;
+/** After the main model was slow, demo mode uses the fallback for this long. */
+const FALLBACK_STICKY_MS = 5 * 60_000;
+/** Per server instance, shared by every chatModel() call. */
+const fallbackState: FallbackState = { skipMainUntil: 0 };
 
 function demoFallbackModel(env: ReturnType<typeof aiEnv>) {
   const on = env.DEMO_MODE === "true" && env.AI_FALLBACK_MODEL && env.AI_FALLBACK_MODEL !== env.AI_MODEL;
@@ -83,7 +87,8 @@ function demoFallbackModel(env: ReturnType<typeof aiEnv>) {
 /**
  * The chat model for Sage, the labeller, Lens and the Trace agent. Throws if
  * unconfigured. In demo mode it switches to AI_FALLBACK_MODEL whenever the
- * main model takes longer than AI_SLOW_MS to start answering, or fails.
+ * main model takes longer than AI_SLOW_MS to start answering, or fails, and
+ * then stays on the fallback for 5 minutes.
  */
 export function chatModel() {
   const env = aiEnv();
@@ -109,6 +114,8 @@ export function chatModel() {
     middleware: fallbackMiddleware({
       fallback: provider.chatModel(fallback),
       slowMs,
+      stickyMs: FALLBACK_STICKY_MS,
+      state: fallbackState,
       onSwitch: (reason) => console.warn(`demo mode: ${env.AI_MODEL} → ${fallback} (${reason})`),
     }),
   });

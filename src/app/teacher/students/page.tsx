@@ -107,7 +107,7 @@ async function StudentsContent({ searchParams }: Pick<PageProps<"/teacher/studen
       <PageHeader
         eyebrow="Students"
         title="Your students"
-        description="Sage use over the last 30 days and each student's latest weekly Reliance Score."
+        description="Sage use over the last 30 days and each student's latest weekly Reliance Score (the higher one if they take more than one of your courses)."
         actions={<CourseFilter courses={courses} value={courseId} />}
       />
       {rows.length === 0 ? (

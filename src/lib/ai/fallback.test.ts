@@ -89,3 +89,20 @@ describe("demo mode fallback", () => {
     expect((await generateText({ model: fast, prompt: "hi" })).text).toBe("main");
   });
 });
+
+describe("demo mode fallback, sticky", () => {
+  it("skips the slow main model for later calls once it has switched", async () => {
+    const main = streamingModel("main", 300);
+    const state = { skipMainUntil: 0 };
+    const make = () =>
+      wrapLanguageModel({
+        model: main,
+        middleware: fallbackMiddleware({ fallback: streamingModel("fallback"), slowMs: 50, stickyMs: 60_000, state }),
+      });
+    expect(await streamed(make())).toBe("fallback");
+    const started = Date.now();
+    expect(await streamed(make())).toBe("fallback");
+    expect(Date.now() - started).toBeLessThan(50);
+    expect(main.doStreamCalls).toHaveLength(1);
+  });
+});

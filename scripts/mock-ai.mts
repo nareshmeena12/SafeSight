@@ -102,8 +102,14 @@ function lens(users: string[], toolResults: string[]): Reply {
 }
 
 function trace(prompt: string) {
-  const facts = JSON.parse(prompt.match(/Facts \(JSON\):\n([\s\S]*?)\n\nReturn/)?.[1] ?? "{}");
-  return { summary: `Written over ${facts.sessions ?? 1} session(s), ${facts.active_minutes ?? "some"} minutes active. Pasted text makes up ${facts.paste_share_of_final_text ?? "part"} of the final text.` };
+  const f = JSON.parse(prompt.match(/Facts \(JSON\):\n([\s\S]*?)\n\nReturn/)?.[1] ?? "{}");
+  const paste = f.pastes?.[0];
+  const pastes = paste
+    ? ` ${f.pastes.length === 1 ? "One paste" : `${f.pastes.length} pastes; the first`} at ${paste.time} added ${paste.characters} characters, about ${paste.about_share_of_final_length} of the final length.`
+    : " No pastes were recorded.";
+  return {
+    summary: `Written over ${f.sessions} ${f.sessions === 1 ? "session" : "sessions"}, ${f.active_minutes} minutes active.${pastes} Pasted text makes up ${f.pasted_text_share_of_final_text} of the final text.`,
+  };
 }
 
 async function send(res: ServerResponse, body: Record<string, unknown>, reply: Reply, stream: boolean, model: string) {

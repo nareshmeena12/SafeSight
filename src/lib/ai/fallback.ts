@@ -17,19 +17,28 @@ class SlowModelError extends Error {
 /** Parts that carry no model output yet: wait past them for the first real one. */
 const preamble = new Set<string>(["stream-start", "response-metadata"]);
 
+/** Shared between calls: until when to skip the main model after it was slow. */
+export type FallbackState = { skipMainUntil: number };
+
 /**
  * Demo mode (PLAN.md §12): if the main model hasn't started answering within
  * `slowMs` — or fails before it starts — the call switches to `fallback`.
  * Streams switch only before the first token, so a student never sees a reply
- * restart halfway. Pure: the provider decides when to apply it.
+ * restart halfway. After a switch, calls go straight to the fallback for
+ * `stickyMs` (one Sage turn makes several calls; each shouldn't wait again).
+ * Pure: the provider decides when to apply it.
  */
 export function fallbackMiddleware({
   fallback,
   slowMs,
+  stickyMs = 0,
+  state = { skipMainUntil: 0 },
   onSwitch,
 }: {
   fallback: Model;
   slowMs: number;
+  stickyMs?: number;
+  state?: FallbackState;
   onSwitch?: (reason: string) => void;
 }): LanguageModelMiddleware {
   /** The main model's call gets its own abort signal, so a slow call is cancelled when we switch. */
@@ -40,8 +49,14 @@ export function fallbackMiddleware({
   };
   const switchReason = (error: unknown) => (error instanceof Error ? error.message : String(error));
   const callerAborted = (params: CallOptions) => params.abortSignal?.aborted === true;
+  const skipMain = () => Date.now() < state.skipMainUntil;
+  const switched = (error: unknown) => {
+    state.skipMainUntil = Date.now() + stickyMs;
+    onSwitch?.(switchReason(error));
+  };
 
   const wrapStream: WrapStream = async ({ params, model }) => {
+    if (skipMain()) return fallback.doStream(params);
     const main = withCancel(params);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_, reject) => {
@@ -79,12 +94,13 @@ export function fallbackMiddleware({
       clearTimeout(timer);
       main.cancel();
       if (callerAborted(params)) throw error;
-      onSwitch?.(switchReason(error));
+      switched(error);
       return fallback.doStream(params);
     }
   };
 
   const wrapGenerate: WrapGenerate = async ({ params, model }) => {
+    if (skipMain()) return fallback.doGenerate(params);
     const main = withCancel(params);
     let timer: ReturnType<typeof setTimeout> | undefined;
     const deadline = new Promise<never>((_, reject) => {
@@ -95,7 +111,7 @@ export function fallbackMiddleware({
     } catch (error) {
       main.cancel();
       if (callerAborted(params)) throw error;
-      onSwitch?.(switchReason(error));
+      switched(error);
       return fallback.doGenerate(params);
     } finally {
       clearTimeout(timer);

@@ -1,6 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { saveBatch } from "@/lib/trace/ingest";
+import { refreshCurrentWeekForSubmission } from "@/lib/teacher/refresh";
 import { generateIntegrityReport } from "@/lib/trace/report";
 import { authorize, jsonError, readBatch } from "../../request";
 
@@ -35,6 +36,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/trace/[subm
     } catch (e) {
       console.error("Trace report failed", e);
     }
+    // The paste ratio feeds this week's Reliance Score.
+    await refreshCurrentWeekForSubmission(auth.submissionId);
   });
 
   return NextResponse.json({ ok: true, submittedAt: now });

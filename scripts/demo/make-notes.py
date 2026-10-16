@@ -29,7 +29,7 @@ PAGES = [
     ("ME201 Thermodynamics: Lecture notes", [
         "Shivalik Institute of Technology, Mandi. Course teacher: Prof. Kavita Sharma.",
         "These notes follow the lectures of weeks 1 to 7. Each page covers one idea. Read them alongside the problem sets; the worked examples use different numbers from the assignments on purpose.",
-        "Contents: 2 Systems and boundaries. 3 Properties and state. 4 Temperature and the zeroth law. 5 Energy, heat and work. 6 Sign convention. 7 Boundary work. 8 Pure substances. 9 Property tables and quality. 10 Ideal gases. 11 First law for closed systems. 12 Polytropic processes. 13 Specific heats and internal energy. 14 Summary of process relations.",
+        "Bring these notes to every tutorial. Questions about them are welcome in office hours on Tuesdays and Thursdays.",
     ]),
     ("Lecture 1: Systems and boundaries", [
         "A system is the quantity of matter or region of space we choose to study. Everything outside it is the surroundings, and the real or imaginary surface that separates them is the boundary.",
