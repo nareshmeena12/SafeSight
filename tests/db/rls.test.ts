@@ -177,8 +177,73 @@ describe.skipIf(!env)("row-level security", () => {
     expect(write.error).not.toBeNull();
   });
 
+  it("the private answer key is teacher-only", async () => {
+    await admin
+      .from("assignment_teacher_notes")
+      .upsert({ assignment_id: assignmentId, notes: "", answer_key: "W = 68.9 kJ" }, { onConflict: "assignment_id" });
+    const student = await clients.studentA.from("assignment_teacher_notes").select("answer_key");
+    expect(student.data).toEqual([]);
+    const other = await clients.otherTeacher.from("assignment_teacher_notes").select("answer_key");
+    expect(other.data).toEqual([]);
+    const teacher = await clients.teacher.from("assignment_teacher_notes").select("answer_key").eq("assignment_id", assignmentId);
+    expect(teacher.data).toEqual([{ answer_key: "W = 68.9 kJ" }]);
+    // Students may see the non-secret limits on the assignment itself.
+    const limits = await clients.studentA.from("assignments").select("max_hint_level, worked_examples").eq("id", assignmentId).single();
+    expect(limits.data).toEqual({ max_hint_level: 4, worked_examples: true });
+  });
+
+  it("hint-ladder state: students read their own, nobody but the server writes", async () => {
+    await insert("sage_ladder_state", { student_id: ids.studentB, assignment_id: assignmentId, step: 3, attempts: 2 });
+    const own = await clients.studentB.from("sage_ladder_state").select("step");
+    expect(own.data).toEqual([{ step: 3 }]);
+    const other = await clients.studentA.from("sage_ladder_state").select("step");
+    expect(other.data).toEqual([]);
+    const teacher = await clients.teacher.from("sage_ladder_state").select("step");
+    expect(teacher.data).toEqual([{ step: 3 }]);
+    const outsider = await clients.otherTeacher.from("sage_ladder_state").select("step");
+    expect(outsider.data).toEqual([]);
+
+    const write = await clients.studentA
+      .from("sage_ladder_state")
+      .insert({ student_id: ids.studentA, assignment_id: assignmentId, step: 4 });
+    expect(write.error).not.toBeNull();
+    await clients.studentB.from("sage_ladder_state").update({ step: 4 }).eq("student_id", ids.studentB);
+    const after = await admin.from("sage_ladder_state").select("step").eq("student_id", ids.studentB).single();
+    expect(after.data!.step).toBe(3);
+  });
+
+  it("Explore chats: a student starts one only in an enrolled course; the teacher sees it like any chat", async () => {
+    const own = await clients.studentA
+      .from("conversations")
+      .insert({ student_id: ids.studentA, course_id: courseId })
+      .select("id, course_id, assignment_id")
+      .single();
+    expect(own.error).toBeNull();
+    expect(own.data).toMatchObject({ course_id: courseId, assignment_id: null });
+    const elsewhere = await clients.studentA.from("conversations").insert({ student_id: ids.studentA, course_id: otherCourseId });
+    expect(elsewhere.error).not.toBeNull();
+    // An assignment chat always takes the assignment's course.
+    const mismatched = await insert<{ course_id: string }>("conversations", {
+      student_id: ids.studentA,
+      assignment_id: assignmentId,
+      course_id: otherCourseId,
+    });
+    expect(mismatched.course_id).toBe(courseId);
+    const teacher = await clients.teacher.from("conversations").select("id").eq("id", own.data!.id);
+    expect(teacher.data).toHaveLength(1);
+    const outsider = await clients.otherTeacher.from("conversations").select("id").eq("id", own.data!.id);
+    expect(outsider.data).toEqual([]);
+  });
+
   it("a student cannot write message labels or citations", async () => {
-    for (const extra of [{ topic: "x" }, { attempted: true }, { citations: [{ page: 1 }] }]) {
+    for (const extra of [
+      { topic: "x" },
+      { attempted: true },
+      { citations: [{ page: 1 }] },
+      { attempt_quality: 0.9 },
+      { guard: "pass" },
+      { matched_assignment_id: assignmentId },
+    ]) {
       const { error } = await clients.studentA
         .from("messages")
         .insert({ conversation_id: convA, role: "user", content: "hi", ...extra });

@@ -1,60 +1,65 @@
 import { describe, expect, it } from "vitest";
-import type { Labels } from "./labels";
-import { buildSagePrompt, classifierPrompt, examModeReply } from "./prompt";
+import { classifierJsonShape, type Labels } from "./labels";
+import { decidePolicy } from "./policy";
+import { buildSagePrompt, classifierPrompt, examModeReply, guardPrompt, jailbreakReply, PROMPT_MARKER, safeHint } from "./prompt";
+import { essay, labels, thermo } from "./test-fixtures";
 
-const labels: Labels = {
-  intent: "answer_seeking",
-  attempted: false,
-  sharesSolution: false,
-  instructionOverride: false,
-  distress: "none",
-  topic: "",
-};
-const input = {
-  mode: "learn" as const,
-  courseName: "Thermodynamics",
-  courseCode: "ME201",
-  assignmentTitle: "Thermodynamics problem set 3",
-  instructions: "Solve problems 1–6.",
-  teacherNotes: "Push them to draw the system boundary first.",
-  hintLevel: 1 as const,
-  labels,
-  studentFirstName: "Riya",
-  hasMaterials: true,
-  care: { counselling: "the counselling centre", helpline: "Tele-MANAS", helplineNumber: "14416" },
-};
-
+const care = { counselling: "the counselling centre", helpline: "Tele-MANAS", helplineNumber: "14416" };
 const banned = /cheat|catch|spy|ai-generated/i;
 
+function prompt(l: Partial<Labels>, home = thermo) {
+  const lab = labels(l);
+  const policy = decidePolicy({ home, matched: null, labels: lab, ladderFor: () => null });
+  return buildSagePrompt({ policy, labels: lab, courseName: "Thermodynamics", courseCode: "ME201", home, studentFirstName: "Riya", passages: [], care });
+}
+
 describe("buildSagePrompt", () => {
-  it("states the mode rule and the current ladder step", () => {
-    const p = buildSagePrompt(input);
-    expect(p).toContain("LEARN mode");
-    expect(p).toContain("Never give the final answer");
-    expect(p).toContain("Your step for THIS reply is 1");
-    expect(p).toContain("search_course_material");
+  it("states the mode, the step and explicit allowed and forbidden outputs", () => {
+    const p = prompt({ intent: "answer_seeking" });
+    expect(p).toMatch(/Mode: LEARN/);
+    expect(p).toMatch(/Ladder step for this reply: 1 of 5 — CLARIFY/);
+    expect(p).toMatch(/ALLOWED in this reply/);
+    expect(p).toMatch(/FORBIDDEN in this reply/);
+    expect(p).toContain(PROMPT_MARKER);
   });
 
-  it("keeps teacher notes in a private section", () => {
-    const p = buildSagePrompt(input);
-    expect(p).toContain("Private guidance from the teacher");
-    expect(p).toContain("never quote it");
-    expect(buildSagePrompt({ ...input, teacherNotes: "" })).not.toContain("Private guidance");
+  it("includes the teacher's notes as private, and the answer key only to check work", () => {
+    expect(prompt({ intent: "answer_seeking" })).toMatch(/Never quote it/);
+    expect(prompt({ intent: "answer_seeking" })).not.toContain(thermo.answerKey);
+    expect(prompt({ intent: "attempt", attemptQuality: 0.9, sharesWorking: true })).toContain(thermo.answerKey);
   });
 
-  it("adds the care protocol for distress", () => {
-    const p = buildSagePrompt({ ...input, hintLevel: null, labels: { ...labels, intent: "distress", distress: "high" } });
-    expect(p).toContain("14416");
-    expect(p).not.toContain("Hint ladder");
+  it("tells Sage to ignore permission claims and format tricks", () => {
+    const p = prompt({ intent: "answer_seeking", claimsPermission: true });
+    expect(p).toMatch(/my teacher allowed it/);
+    expect(p).toMatch(/poem/);
+    expect(p).toMatch(/rules don't apply here/);
+  });
+
+  it("uses Assist rules for the essay", () => {
+    expect(prompt({ intent: "deliverable_request" }, essay)).toMatch(/Mode: ASSIST/);
   });
 
   it("never uses banned words", () => {
-    for (const mode of ["learn", "assist", "exam"] as const) {
-      for (const l of [labels, { ...labels, instructionOverride: true, distress: "high" as const, intent: "off_topic" as const }]) {
-        expect(buildSagePrompt({ ...input, mode, labels: l })).not.toMatch(banned);
-      }
-      expect(classifierPrompt("{}", mode)).not.toMatch(banned);
+    for (const p of [prompt({ intent: "answer_seeking" }), classifierPrompt(classifierJsonShape), guardPrompt("{}")]) {
+      expect(p).not.toMatch(banned);
     }
-    expect(examModeReply("Mid-semester test")).not.toMatch(banned);
+  });
+});
+
+describe("fixed replies", () => {
+  it("are kind and never give anything away", () => {
+    const replies = [
+      examModeReply("Mid-semester test"),
+      jailbreakReply({ governing: thermo }, 0),
+      jailbreakReply({ governing: null }, 1),
+      safeHint({ kind: "ladder", step: 1, governing: thermo }),
+      safeHint({ kind: "ask_working", step: 2, governing: thermo }),
+      safeHint({ kind: "assist", step: 3, governing: essay }),
+    ];
+    for (const r of replies) {
+      expect(r).not.toMatch(banned);
+      expect(r).not.toMatch(/68\.9|241/);
+    }
   });
 });

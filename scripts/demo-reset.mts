@@ -48,6 +48,11 @@ const { data: msgs } = chatIds.length
   : { data: [] };
 await deleteIn("flags", "message_id", (msgs ?? []).map((m) => m.id));
 await deleteIn("conversations", "id", chatIds);
+// The hint ladder is per student per assignment, so a new chat alone wouldn't reset it.
+if (ps3Ids.length) {
+  const { error: ladderError } = await db.from("sage_ladder_state").delete().eq("student_id", riyaId).in("assignment_id", ps3Ids);
+  fail("sage_ladder_state", ladderError);
+}
 
 const { data: work } = await db
   .from("submissions")

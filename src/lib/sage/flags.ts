@@ -1,5 +1,5 @@
-import type { AiMode } from "@/components/product/mode-badge";
 import { isAnswerSeeking, type Intent, type Labels } from "./labels";
+import type { Policy } from "./policy";
 
 /**
  * flag_to_teacher rules (PLAN.md §4). Pure: the route decides, then writes the
@@ -14,24 +14,25 @@ export type FlagDecision = { type: FlagType; severity: FlagSeverity; reason: str
 export const ANSWER_SEEKING_THRESHOLD = 3;
 /** ...and that raise it to medium. */
 export const ANSWER_SEEKING_MEDIUM = 5;
-/** How many recent student messages in the conversation the rule looks at. */
+/** How many recent student messages (this course, last 24 hours) the rule looks at. */
 export const ANSWER_SEEKING_WINDOW = 10;
 
 export function decideFlags({
-  mode,
+  policy,
   labels,
   recentIntents,
-  recentOverrides,
-  assignmentTitle,
+  recentJailbreaks,
+  context,
   existing,
 }: {
-  mode: AiMode;
+  policy: Pick<Policy, "kind" | "flags" | "governing">;
   labels: Labels;
-  /** Intents of the student's recent messages in this conversation, oldest first, including this one. */
+  /** Intents of the student's recent messages in this course, oldest first, including this one. */
   recentIntents: (Intent | null)[];
-  /** Instruction-override attempts in this conversation before this message. */
-  recentOverrides: number;
-  assignmentTitle: string;
+  /** Jailbreak attempts in this course in the last 24 hours, before this message. */
+  recentJailbreaks: number;
+  /** "Thermodynamics problem set 3", or "Ask Sage (ME201)". */
+  context: string;
   /** Open flags for this student and course raised in the last 24 hours. */
   existing: { type: FlagType; severity: FlagSeverity }[];
 }): FlagDecision[] {
@@ -46,28 +47,28 @@ export function decideFlags({
       severity: labels.distress === "high" ? "high" : "medium",
       reason:
         labels.distress === "high"
-          ? `A message on ${assignmentTitle} suggests the student may be in distress. Sage shared the counselling contact and a helpline.`
-          : `A message on ${assignmentTitle} suggests the student may be under strain. Sage responded with care and shared support options.`,
+          ? `A message on ${context} suggests the student may be in distress. Sage shared the counselling contact and a helpline.`
+          : `A message on ${context} suggests the student may be under strain. Sage responded with care and shared support options.`,
     });
   }
 
-  if (mode === "exam") {
+  if (policy.flags.examAttempt) {
     add({
       type: "exam_mode_attempt",
       severity: "medium",
-      reason: `Opened Sage on ${assignmentTitle}, which is in Exam mode. Sage did not help with it.`,
+      reason: `Asked Sage about ${policy.governing?.title ?? context}, which is in Exam mode. Sage did not help with it.`,
     });
   }
 
-  if (labels.instructionOverride) {
-    const attempts = recentOverrides + 1;
+  if (policy.flags.jailbreak) {
+    const attempts = recentJailbreaks + 1;
     add({
       type: "instruction_override",
       severity: attempts >= 2 ? "medium" : "low",
       reason:
         attempts >= 2
-          ? `Asked Sage ${attempts} times to set aside its tutoring rules on ${assignmentTitle}.`
-          : `Asked Sage to set aside its tutoring rules on ${assignmentTitle}.`,
+          ? `Asked Sage ${attempts} times in a day to set aside its tutoring rules or show its instructions (${context}).`
+          : `Asked Sage to set aside its tutoring rules or show its instructions (${context}).`,
     });
   }
 
@@ -77,7 +78,7 @@ export function decideFlags({
     add({
       type: "answer_seeking",
       severity: seeking >= ANSWER_SEEKING_MEDIUM ? "medium" : "low",
-      reason: `Asked for the full answer ${seeking} times in the last ${window.length} messages on ${assignmentTitle}.`,
+      reason: `Asked for the full answer or finished work ${seeking} times in the last ${window.length} messages (${context}).`,
     });
   }
 

@@ -17,16 +17,19 @@ export type Database = {
     Tables: {
       assignment_teacher_notes: {
         Row: {
+          answer_key: string
           assignment_id: string
           notes: string
           updated_at: string
         }
         Insert: {
+          answer_key?: string
           assignment_id: string
           notes?: string
           updated_at?: string
         }
         Update: {
+          answer_key?: string
           assignment_id?: string
           notes?: string
           updated_at?: string
@@ -49,7 +52,9 @@ export type Database = {
           due_at: string | null
           id: string
           instructions: string
+          max_hint_level: number
           title: string
+          worked_examples: boolean
         }
         Insert: {
           ai_mode?: Database["public"]["Enums"]["ai_mode"]
@@ -58,7 +63,9 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string
+          max_hint_level?: number
           title: string
+          worked_examples?: boolean
         }
         Update: {
           ai_mode?: Database["public"]["Enums"]["ai_mode"]
@@ -67,7 +74,9 @@ export type Database = {
           due_at?: string | null
           id?: string
           instructions?: string
+          max_hint_level?: number
           title?: string
+          worked_examples?: boolean
         }
         Relationships: [
           {
@@ -82,6 +91,7 @@ export type Database = {
       conversations: {
         Row: {
           assignment_id: string | null
+          course_id: string | null
           id: string
           shared_with_teacher: boolean
           started_at: string
@@ -89,6 +99,7 @@ export type Database = {
         }
         Insert: {
           assignment_id?: string | null
+          course_id?: string | null
           id?: string
           shared_with_teacher?: boolean
           started_at?: string
@@ -96,6 +107,7 @@ export type Database = {
         }
         Update: {
           assignment_id?: string | null
+          course_id?: string | null
           id?: string
           shared_with_teacher?: boolean
           started_at?: string
@@ -107,6 +119,13 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "conversations_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
           {
@@ -624,40 +643,64 @@ export type Database = {
       }
       messages: {
         Row: {
+          attempt_quality: number | null
           attempted: boolean | null
           citations: Json
+          client_id: string | null
           content: string
           conversation_id: string
           created_at: string
+          guard: string | null
           hint_level: number | null
           id: string
           intent: Database["public"]["Enums"]["message_intent"] | null
+          latency_ms: number | null
+          match_score: number | null
+          matched_assignment_id: string | null
+          reply_to: string | null
           role: Database["public"]["Enums"]["message_role"]
           topic: string | null
+          ttft_ms: number | null
         }
         Insert: {
+          attempt_quality?: number | null
           attempted?: boolean | null
           citations?: Json
+          client_id?: string | null
           content: string
           conversation_id: string
           created_at?: string
+          guard?: string | null
           hint_level?: number | null
           id?: string
           intent?: Database["public"]["Enums"]["message_intent"] | null
+          latency_ms?: number | null
+          match_score?: number | null
+          matched_assignment_id?: string | null
+          reply_to?: string | null
           role: Database["public"]["Enums"]["message_role"]
           topic?: string | null
+          ttft_ms?: number | null
         }
         Update: {
+          attempt_quality?: number | null
           attempted?: boolean | null
           citations?: Json
+          client_id?: string | null
           content?: string
           conversation_id?: string
           created_at?: string
+          guard?: string | null
           hint_level?: number | null
           id?: string
           intent?: Database["public"]["Enums"]["message_intent"] | null
+          latency_ms?: number | null
+          match_score?: number | null
+          matched_assignment_id?: string | null
+          reply_to?: string | null
           role?: Database["public"]["Enums"]["message_role"]
           topic?: string | null
+          ttft_ms?: number | null
         }
         Relationships: [
           {
@@ -665,6 +708,20 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_matched_assignment_id_fkey"
+            columns: ["matched_assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_fkey"
+            columns: ["reply_to"]
+            isOneToOne: false
+            referencedRelation: "messages"
             referencedColumns: ["id"]
           },
         ]
@@ -730,6 +787,48 @@ export type Database = {
             columns: ["institution_id"]
             isOneToOne: false
             referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sage_ladder_state: {
+        Row: {
+          assignment_id: string
+          attempts: number
+          last_example_at: string | null
+          step: number
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id: string
+          attempts?: number
+          last_example_at?: string | null
+          step?: number
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string
+          attempts?: number
+          last_example_at?: string | null
+          step?: number
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sage_ladder_state_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_ladder_state_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -968,6 +1067,10 @@ export type Database = {
         | "pasted_question"
         | "off_topic"
         | "distress"
+        | "verify_answer"
+        | "attempt"
+        | "deliverable_request"
+        | "jailbreak"
       message_role: "user" | "assistant"
       pilot_role: "teacher" | "hod" | "admin" | "student" | "other"
       user_role: "student" | "teacher" | "admin"
@@ -1129,6 +1232,10 @@ export const Constants = {
         "pasted_question",
         "off_topic",
         "distress",
+        "verify_answer",
+        "attempt",
+        "deliverable_request",
+        "jailbreak",
       ],
       message_role: ["user", "assistant"],
       pilot_role: ["teacher", "hod", "admin", "student", "other"],

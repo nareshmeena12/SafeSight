@@ -56,3 +56,8 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 - [x] **S15 — Report and test.** Per-student evidence summary in Trace's neutral style after the session, CSV download, and a script that simulates 30 seats so the demo can be rehearsed without a lab.
 
 > Before installing anything on real lab PCs, get written permission from the course instructor and the lab administrator.
+
+## Hardening
+
+- [x] **S16 — Sage safety and speed.** Pipeline with the policy in code: `classify_message` (8 intents, attempt quality, best-matching active assignment) → TypeScript policy engine (mode, ladder state per student per assignment, attempt quality ≥ 0.5 to climb) → generation with explicit allowed/forbidden outputs → output guard (deterministic + second model call; regenerate once, then a safe hint). Teacher controls per assignment (private answer key, max hint level, worked examples). "Ask Sage" Explore chat. Timeouts, one retry/fallback, Thinking…/Stop/Retry, idempotent messages, time-to-first-token and latency logs. Red-team evals: `pnpm eval:sage` (69 attacks + 20 legitimate questions, LLM judge).
+  *Done when:* `pnpm eval:sage` against the live model reports 0% leaks and under 10% over-refusal.

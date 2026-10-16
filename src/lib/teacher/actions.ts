@@ -73,8 +73,16 @@ export async function saveAssignment(_prev: FormState, formData: FormData): Prom
   const parsed = assignmentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
   const { db } = await teacher();
-  const { courseId, assignmentId, title, instructions, aiMode, teacherNotes, dueAt } = parsed.data;
-  const row = { title, instructions, ai_mode: aiMode, due_at: dueAt };
+  const { courseId, assignmentId, title, instructions, aiMode, teacherNotes, answerKey, maxHintLevel, workedExamples, dueAt } =
+    parsed.data;
+  const row = {
+    title,
+    instructions,
+    ai_mode: aiMode,
+    due_at: dueAt,
+    max_hint_level: maxHintLevel,
+    worked_examples: workedExamples,
+  };
 
   const { data, error } = assignmentId
     ? await db.from("assignments").update(row).eq("id", assignmentId).eq("course_id", courseId).select("id")
@@ -85,12 +93,12 @@ export async function saveAssignment(_prev: FormState, formData: FormData): Prom
   const notes = await db
     .from("assignment_teacher_notes")
     .upsert(
-      { assignment_id: data[0].id, notes: teacherNotes, updated_at: new Date().toISOString() },
+      { assignment_id: data[0].id, notes: teacherNotes, answer_key: answerKey, updated_at: new Date().toISOString() },
       { onConflict: "assignment_id" },
     );
   if (notes.error) {
     refresh();
-    return { status: "error", message: "The assignment saved, but the notes for Sage didn't. Please try again." };
+    return { status: "error", message: "The assignment saved, but the notes and answer key for Sage didn't. Please try again." };
   }
   refresh();
   return { status: "success", message: assignmentId ? "Assignment updated." : "Assignment created." };
