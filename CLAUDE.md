@@ -54,6 +54,9 @@ src/
     api/materials/          POST create+ingest; [materialId] POST re-read / DELETE; [materialId]/file GET → signed PDF URL #page=N
     api/lens/route.ts       Lens chat (teachers only; streamText + read-only tools)
     api/cron/weekly-metrics nightly refresh_weekly_metrics (vercel.json cron, CRON_SECRET)
+    student/trace/          S9: "Your writing" list + [assignmentId] Trace editor (or the submitted view with replay)
+    teacher/submissions/    S9: submitted Trace work + [submissionId] replay with the evidence summary
+    api/trace/[submissionId]/  S9: batch (autosave every 5s), submit (+ Trace agent via after()), report (teacher re-run)
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
     auth/                   login and sign-up forms (client, useActionState)
@@ -65,6 +68,7 @@ src/
     lens/                   lens-chat (useChat), tool-views (charts/tables/drafts/quiz from tool results), lens-box, markdown, suggestions
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
+    trace/                  S9: trace-editor (Tiptap + recorder), replay (scrubber), paste-mark, evidence-summary, trace.css
   lib/
     env.ts                  zod-checked public env
     supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
@@ -79,6 +83,7 @@ src/
     materials/              chunk (pure), constants, vector, ingest + search (server-only)
     teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts
     lens/                   model.ts (provider from env), tools.ts (7 read-only tools), prompt.ts, rate-limit.ts
+    trace/                  S9: schemas, metrics, html (paste measure), replay clock, summary (template + banned words), report (Trace agent), ingest, queries
 supabase/
   config.toml               local Supabase (CLI is a devDependency)
   migrations/               SQL migrations, applied in order
@@ -90,6 +95,7 @@ scripts/db-push-hosted.mts  applies pending migrations to the hosted project via
 scripts/sage-eval.mts       S5: runs the 30 trick prompts (sage-trick-prompts.json) and lists replies that give away answers
 tests/db/rls.test.ts        RLS tests against local Supabase (skipped when it isn't running)
 tests/db/teacher-dashboard.test.ts  teacher RPC scoping and the Reliance Score formula
+tests/db/trace-rls.test.ts  S9: RLS for submissions, writing_events, writing_snapshots, integrity_reports
 ```
 
 Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `sage:eval`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
@@ -148,6 +154,7 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S6 notes search (2026-10-16): teacher PDF upload to Storage, unpdf extraction, ~500-token page chunks, pgvector + keyword hybrid search, `search_course_material` tool, page chips under replies. Also: teacher notes are now teacher-only
 - [x] S7 teacher dashboard + S8 Lens (2026-10-16): overview, courses/assignments (AI mode picker, join code), students table, student detail, flags, flagged-chat view; weekly_metrics + Reliance Score in SQL; Lens page + overview box with 7 read-only tools, charts/tables from tool results, Draft email and Make quiz. Migration applied on hosted.
 - [ ] **Not yet verified against a real model**: no AI_* env vars in the cloud env. Sage and Lens were tested end to end with local mock providers. Once keys are set, run `pnpm sage:eval`, try the demo flow and the Lens demo question
+- [x] S9 Trace (2026-10-16): Tiptap editor with 5s autosave/event batches, paste mark, `writing_snapshots` migration (applied on hosted), submit, teacher replay with scrubber and amber pastes, Trace agent (structured JSON, template fallback)
 
 ## Handoff notes
 
@@ -199,3 +206,10 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - **App shell + dynamic routes.** `NavLinks` calls `usePathname()` outside `<Suspense>`, which fails the build for any route with an unknown dynamic param. `/student/sage/[assignmentId]` sets `export const instant = false` to work around it; S7/S9 dynamic routes will need the same, or whoever owns the shell can wrap `NavLinks` in Suspense and drop these opt-outs.
 - **Not done / for later sessions.** /teacher/materials isn't in the sidebar (nav.ts left alone because other sessions edit it) — S7 should link it from the courses page or add a nav item (S7 links it from each course page as "Notes and PDFs"). No "share this chat with my teacher" toggle yet (column exists). No output check before streaming a reply (PLAN.md risk table); `pnpm sage:eval` is the pre-demo check instead. Sage replies in English only (Hinglish is v2).
 - **Local end-to-end testing without keys.** A tiny mock OpenAI-compatible server (chat streaming with tool calls, json_object labels, 1024-dim embeddings) is enough to drive the whole flow; point `AI_BASE_URL` at it in `.env.local`, rebuild, and use Playwright. That's how S4–S6 were verified.
+- **Trace (S9).** Routes: student `/student/trace` (list) → `/student/trace/[assignmentId]` (editor; after submit, the same page shows the student their own summary and replay); teacher `/teacher/submissions` → `/teacher/submissions/[submissionId]`. **No nav entries were added** (app shell was off-limits during parallel work): add "Writing" (`/student/trace`, icon `NotebookPen`) and "Submissions" (`/teacher/submissions`) to `components/app/nav.ts`, and point an assignment page's "Write in Trace" button at `/student/trace/<assignmentId>`.
+- **Trace recording.** The editor records every transaction: inserted text → `type`, or `paste` when ProseMirror's `uiEvent` is paste/drop; removed text → `delete`; editor focus/blur. Sizes count **visible (non-whitespace) characters** everywhere. Keystrokes within 1s are merged (`coalesceEvents`). Every 5s the editor POSTs `{events, content?, charCount?}` to `/api/trace/[id]/batch` (user client, RLS: own draft only); `sendBeacon` on pagehide/hidden. Client timestamps are clamped to [now − 12h, now]. The first visit to the editor creates the draft row.
+- **Paste mark.** Pasted/dropped text gets a Tiptap mark rendered as `<span data-trace-paste>` (invisible to the student; `.trace-show-pastes` tints it amber). `paste_ratio` = visible chars inside the mark ÷ visible chars in the final HTML (`measureHtml`, a DOM-free scanner), so text pasted then deleted or retyped doesn't count. Per-paste share in the summary is paste size ÷ final length ("about").
+- **Replay data.** New table `writing_snapshots` (migration `20261019090000_trace_snapshots.sql`, same RLS as `writing_events`, insert-only while draft): each batch that changed the document stores its HTML, dated at the batch's last event. The replay shows the latest snapshot at the scrubber time; pauses > 4s are squeezed to 4s (`buildReplayClock`); new sessions (gap > 30 min) get a thin tick, pastes an amber tick and a "Jump" row. Snapshot HTML is only ever rendered through a read-only Tiptap editor (schema drops unknown tags). Storage grows with long essays (full HTML every 5s while typing); S12/v2 could thin old snapshots.
+- **Trace agent.** `lib/trace/report.ts`: `computeMetrics` (active time = gaps ≤ 5 min; session break = gap > 30 min) → `writeSummary` asks `AI_MODEL` for `{summary}` via `generateText` + `Output.object` (temp 0.2, 20s timeout) and falls back to `templateSummary` when no model env is set, the call fails, or the text trips `usesBannedWords`. Times are IST. Runs with the service role in `after()` on submit; a teacher can re-run it from the replay page ("Prepare/Refresh summary"). **The cloud env has no `AI_*` vars yet**, so summaries currently come from the template. `lib/trace/model.ts` builds its own OpenAI-compatible model from the same env vars; it could switch to `chatModel()` from `lib/ai/provider.ts` (S4) later.
+- **Known framework issues (not Trace).** The app shell's `NavLinks` calls `usePathname()` outside `<Suspense>`, which fails the build for any dynamic route; the two Trace `[param]` pages set `export const instant = false` to render on request. The cleaner fix (S12 or whoever next touches the shell) is to wrap `NavLinks` in Suspense, then drop those exports — `/student/sage/[assignmentId]` (S4) does the same. `next start` also logs "unstable value `Date.now()` while prerendering" on `/teacher` and `/student` — it happens on untouched pages too (auth/shell), so look at it in S12.
+- **New deps (S9):** `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/core`, `ai` (v7), `@ai-sdk/openai-compatible`. `ai` and `@ai-sdk/openai-compatible` are shared with S4 (same versions).
