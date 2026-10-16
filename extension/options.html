@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SafeSight Lab · Options</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>main { max-width: 520px; margin: 48px auto; padding: 0 16px; }</style>
+</head>
+<body>
+  <main>
+    <div class="brand"><img src="icons/mark.svg" alt="">SafeSight Lab</div>
+    <form id="form" class="card" novalidate>
+      <h1>Set up this lab PC</h1>
+      <p class="muted">For the lab admin. Do this once per PC. Settings pushed by Chrome policy can't be changed here.</p>
+      <label for="serverUrl">SafeSight address</label>
+      <input id="serverUrl" type="url" placeholder="https://safesight.example.in" required>
+      <label for="seatLabel">Seat or PC number</label>
+      <input id="seatLabel" maxlength="32" placeholder="14">
+      <p class="muted" style="margin-top:4px">Shown on the teacher's seat grid. Leave empty to use the student's roll number.</p>
+      <p class="error" id="error" role="alert" hidden></p>
+      <button class="primary" type="submit">Save</button>
+      <p class="muted" id="saved" role="status" style="margin-top:8px"></p>
+    </form>
+  </main>
+  <script type="module" src="options.js"></script>
+</body>
+</html>

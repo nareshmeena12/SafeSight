@@ -1,0 +1,15 @@
+{
+  "type": "object",
+  "properties": {
+    "serverUrl": {
+      "title": "SafeSight address",
+      "description": "The SafeSight site the lab reports to, for example https://safesight.example.in",
+      "type": "string"
+    },
+    "seatLabel": {
+      "title": "Seat label",
+      "description": "This PC's seat or PC number, shown on the teacher's grid.",
+      "type": "string"
+    }
+  }
+}
