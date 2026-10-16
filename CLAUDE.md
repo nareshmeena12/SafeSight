@@ -42,6 +42,9 @@ src/
     auth/confirm/route.ts   email-link landing: verifies the token, redirects by role
     student/                student app (layout = AppShell + home)
     teacher/                teacher app (layout = AppShell + overview); admins land here too until v2
+    student/trace/          S9: "Your writing" list + [assignmentId] Trace editor (or the submitted view with replay)
+    teacher/submissions/    S9: submitted Trace work + [submissionId] replay with the evidence summary
+    api/trace/[submissionId]/  S9: batch (autosave every 5s), submit (+ Trace agent via after()), report (teacher re-run)
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
     auth/                   login and sign-up forms (client, useActionState)
@@ -49,6 +52,7 @@ src/
     product/                mode-badge, reliance-badge, stat-card, empty-state
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
+    trace/                  S9: trace-editor (Tiptap + recorder), replay (scrubber), paste-mark, evidence-summary, trace.css
   lib/
     env.ts                  zod-checked public env
     supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
@@ -57,6 +61,7 @@ src/
     auth/actions.ts         login, signup, signOut server actions
     auth/schemas.ts         zod schemas for the auth forms
     reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
+    trace/                  S9: schemas, metrics, html (paste measure), replay clock, summary (template + banned words), report (Trace agent), ingest, queries
 supabase/
   config.toml               local Supabase (CLI is a devDependency)
   migrations/               SQL migrations, applied in order
@@ -65,6 +70,7 @@ supabase/
 scripts/seed.mts            demo data (institution, users, courses, enrollments, assignments) via the service role
 scripts/db-push-hosted.mts  applies pending migrations to the hosted project via the Management API
 tests/db/rls.test.ts        RLS tests against local Supabase (skipped when it isn't running)
+tests/db/trace-rls.test.ts  S9: RLS for submissions, writing_events, writing_snapshots, integrity_reports
 ```
 
 Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
@@ -118,7 +124,8 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S1 scaffold (2026-10-16): Next.js 16 + Tailwind v4 + shadcn/ui, Supabase email/password login with student/teacher/admin roles, role redirects, demo users, lint/typecheck/test scripts
 - [x] S2 design system (2026-10-16): tokens as CSS variables with light/dark, Instrument Serif + Geist + Geist Mono, restyled shadcn components, app shell for both apps, /design page
 - [x] S3 database (2026-10-16): 15 tables with RLS (PLAN.md §8 + pilot_requests), RLS tests, seed (1 institution, 1 teacher, 2 courses, 5 assignments, 30 students); applied and seeded on the hosted project
-- [ ] S4 Sage chat — **next**
+- [ ] S4 Sage chat — **next** (S4–S8 are being built in parallel sessions)
+- [x] S9 Trace (2026-10-16): Tiptap editor with 5s autosave/event batches, paste mark, `writing_snapshots` migration (applied on hosted), submit, teacher replay with scrubber and amber pastes, Trace agent (structured JSON, template fallback)
 
 ## Handoff notes
 
@@ -145,3 +152,10 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - The landing-page design was finished in Claude Design. `design/landing/` holds the prototype source (`.dc.html` artboards plus `site.css`). Treat it as the visual spec for S10: copy, layout, spacing, animations and mobile layouts. Rebuild it in Next.js + Tailwind + Motion; do not ship the prototype files.
 - The prototype's `.dc.html` files use a Claude Design runtime (`<x-dc>`, `{{holes}}`, `<sc-if>`, `<sc-for>`, a `class Component extends DCLogic` script). Read them for structure and behaviour, not as React code.
 - `design/tokens.json` is the design-system export (colour, type, spacing, radius, shadow tokens with usage notes).
+- **Trace (S9).** Routes: student `/student/trace` (list) → `/student/trace/[assignmentId]` (editor; after submit, the same page shows the student their own summary and replay); teacher `/teacher/submissions` → `/teacher/submissions/[submissionId]`. **No nav entries were added** (app shell was off-limits during parallel work): add "Writing" (`/student/trace`, icon `NotebookPen`) and "Submissions" (`/teacher/submissions`) to `components/app/nav.ts`, and point an assignment page's "Write in Trace" button at `/student/trace/<assignmentId>`.
+- **Trace recording.** The editor records every transaction: inserted text → `type`, or `paste` when ProseMirror's `uiEvent` is paste/drop; removed text → `delete`; editor focus/blur. Sizes count **visible (non-whitespace) characters** everywhere. Keystrokes within 1s are merged (`coalesceEvents`). Every 5s the editor POSTs `{events, content?, charCount?}` to `/api/trace/[id]/batch` (user client, RLS: own draft only); `sendBeacon` on pagehide/hidden. Client timestamps are clamped to [now − 12h, now]. The first visit to the editor creates the draft row.
+- **Paste mark.** Pasted/dropped text gets a Tiptap mark rendered as `<span data-trace-paste>` (invisible to the student; `.trace-show-pastes` tints it amber). `paste_ratio` = visible chars inside the mark ÷ visible chars in the final HTML (`measureHtml`, a DOM-free scanner), so text pasted then deleted or retyped doesn't count. Per-paste share in the summary is paste size ÷ final length ("about").
+- **Replay data.** New table `writing_snapshots` (migration `20261019090000_trace_snapshots.sql`, same RLS as `writing_events`, insert-only while draft): each batch that changed the document stores its HTML, dated at the batch's last event. The replay shows the latest snapshot at the scrubber time; pauses > 4s are squeezed to 4s (`buildReplayClock`); new sessions (gap > 30 min) get a thin tick, pastes an amber tick and a "Jump" row. Snapshot HTML is only ever rendered through a read-only Tiptap editor (schema drops unknown tags). Storage grows with long essays (full HTML every 5s while typing); S12/v2 could thin old snapshots.
+- **Trace agent.** `lib/trace/report.ts`: `computeMetrics` (active time = gaps ≤ 5 min; session break = gap > 30 min) → `writeSummary` asks `AI_MODEL` for `{summary}` via `generateText` + `Output.object` (temp 0.2, 20s timeout) and falls back to `templateSummary` when no model env is set, the call fails, or the text trips `usesBannedWords`. Times are IST. Runs with the service role in `after()` on submit; a teacher can re-run it from the replay page ("Prepare/Refresh summary"). **The cloud env has no `AI_*` vars yet**, so summaries currently come from the template. `lib/trace/model.ts` builds its own OpenAI-compatible model — switch it to S4's shared provider helper when merging.
+- **Known framework issues (not Trace).** The app shell's `NavLinks` calls `usePathname()` outside `<Suspense>`, which fails the build for any dynamic route; the two Trace `[param]` pages set `export const instant = false` to render on request. The cleaner fix (S12 or whoever next touches the shell) is to wrap `NavLinks` in Suspense, then drop those exports — S4's `sage/[assignmentId]` will hit the same error. `next start` also logs "unstable value `Date.now()` while prerendering" on `/teacher` and `/student` — it happens on untouched pages too (auth/shell), so look at it in S12.
+- **New deps (S9):** `@tiptap/react`, `@tiptap/pm`, `@tiptap/starter-kit`, `@tiptap/core`, `ai` (v7), `@ai-sdk/openai-compatible`. If S4 also added `ai`, keep one version when resolving the lockfile (`pnpm install`).

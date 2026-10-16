@@ -39,7 +39,7 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 - [ ] **S8 — Lens.** Box on the overview and a full page. Tools from PLAN.md §4, read-only and limited to the teacher's own courses. Answers can include a table or small Recharts chart. Draft email and Make quiz buttons.
 
-- [ ] **S9 — Trace.** Tiptap editor with autosave; record type, paste, delete and focus events, batched every 5s to `writing_events`. Submission, teacher replay page with scrubber and amber paste events, and the Trace agent's neutral integrity report.
+- [x] **S9 — Trace.** Tiptap editor with autosave; record type, paste, delete and focus events, batched every 5s to `writing_events`. Submission, teacher replay page with scrubber and amber paste events, and the Trace agent's neutral integrity report.
 
 - [ ] **S10 — Landing page.** Build the public landing page, /login and /signup from `design/landing/` (read `design/README.md` first). Match copy, layout, mobile layouts and animations; use Motion. Pilot form saves to `pilot_requests` through a zod-validated API route. Also /about and /privacy.
 

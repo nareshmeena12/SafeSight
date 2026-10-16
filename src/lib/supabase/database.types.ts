@@ -336,6 +336,26 @@ isOneToOne: false
       referencedColumns: ["id"]
     }
                   ]
+                },"writing_snapshots": {
+                  Row: {
+                    "at": string,"char_count": number,"content": string,"id": number,"submission_id": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "at"?: string,"char_count"?: number,"content": string,"id"?: never,"submission_id": string
+                  }
+                  Update: {
+                    "at"?: string,"char_count"?: number,"content"?: string,"id"?: never,"submission_id"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "writing_snapshots_submission_id_fkey"
+      columns: ["submission_id"]
+isOneToOne: false
+      referencedRelation: "submissions"
+      referencedColumns: ["id"]
+    }
+                  ]
                 }
           }
           Views: {
