@@ -1,0 +1,76 @@
+/* Typography for Trace documents (editor and read-only views). Scoped by the .trace-prose class. */
+.trace-prose {
+  font-size: 1rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+.trace-prose p {
+  margin: 0 0 1em;
+}
+.trace-prose h2 {
+  font-size: 1.375rem;
+  line-height: 1.3;
+  font-weight: 600;
+  margin: 1.5em 0 0.5em;
+}
+.trace-prose h3 {
+  font-size: 1.125rem;
+  line-height: 1.4;
+  font-weight: 600;
+  margin: 1.25em 0 0.5em;
+}
+.trace-prose :is(h2, h3):first-child {
+  margin-top: 0;
+}
+.trace-prose ul {
+  list-style: disc;
+  padding-left: 1.5em;
+  margin: 0 0 1em;
+}
+.trace-prose ol {
+  list-style: decimal;
+  padding-left: 1.5em;
+  margin: 0 0 1em;
+}
+.trace-prose li > p {
+  margin: 0 0 0.25em;
+}
+.trace-prose blockquote {
+  border-left: 2px solid var(--ss-border-strong);
+  padding-left: 1em;
+  color: var(--ss-text-muted);
+  margin: 0 0 1em;
+}
+.trace-prose code {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875em;
+  background: var(--ss-muted);
+  border-radius: 4px;
+  padding: 0.1em 0.3em;
+}
+.trace-prose pre {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.875rem;
+  background: var(--ss-muted);
+  border-radius: 8px;
+  padding: 0.75em 1em;
+  overflow-x: auto;
+  margin: 0 0 1em;
+}
+.trace-prose pre code {
+  background: none;
+  padding: 0;
+}
+.trace-prose .ProseMirror {
+  outline: none;
+  min-height: 100%;
+}
+.trace-prose .ProseMirror > :last-child {
+  margin-bottom: 0;
+}
+/* Teacher and replay views: pasted text in Insight amber. */
+.trace-show-pastes [data-trace-paste] {
+  background: var(--ss-accent-soft);
+  box-shadow: inset 0 -2px 0 var(--ss-accent);
+  border-radius: 2px;
+}
