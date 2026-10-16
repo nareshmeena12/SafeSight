@@ -1,47 +1,71 @@
 import "server-only";
 import { generateText, Output, type ModelMessage } from "ai";
-import type { AiMode } from "@/components/product/mode-badge";
 import { chatModel } from "@/lib/ai/provider";
-import { heuristicLabels, labelsJsonShape, labelsSchema, mergeLabels, type Labels } from "./labels";
+import {
+  classifierJsonShape,
+  classifierOutputSchema,
+  heuristicLabels,
+  mergeLabels,
+  type Labels,
+} from "./labels";
+import { bestMatch, candidateRefs, type SageAssignment } from "./match";
 import { classifierPrompt } from "./prompt";
 
-const CLASSIFY_TIMEOUT_MS = 8_000;
+export const CLASSIFY_TIMEOUT_MS = Number(process.env.SAGE_CLASSIFY_MS) || 4_000;
 
 /**
- * classify_message: labels the student's latest message with structured JSON
- * output, merged with the keyword safety net. Never throws: if the model is
- * slow or returns bad JSON, the heuristic labels stand alone.
+ * classify_message: intent, attempt quality and the best-matching active
+ * assignment, with structured JSON output, merged with the keyword safety net
+ * and a lexical match. Never throws: if the model is slow or returns bad
+ * JSON, the heuristic labels and the lexical match stand alone.
  */
 export async function classifyMessage({
   text,
   history,
-  mode,
+  home,
+  candidates,
+  signal,
 }: {
   text: string;
   /** Recent conversation before this message. */
   history: ModelMessage[];
-  mode: AiMode;
+  /** The chat's own assignment, or null in Explore. */
+  home: SageAssignment | null;
+  /** The student's active assignments in this course (including home). */
+  candidates: SageAssignment[];
+  signal?: AbortSignal;
 }): Promise<Labels> {
   const heuristic = heuristicLabels(text);
-  let model: Labels | null = null;
+  const refs = candidateRefs(candidates);
+  let model: ReturnType<typeof classifierOutputSchema.parse> | null = null;
   try {
     const context = history
       .slice(-6)
-      .map((m) => `${m.role === "user" ? "Student" : "Sage"}: ${typeof m.content === "string" ? m.content : ""}`)
+      .map((m) => `${m.role === "user" ? "Student" : "Sage"}: ${typeof m.content === "string" ? m.content.slice(0, 700) : ""}`)
       .join("\n")
-      .slice(-4000);
+      .slice(-3500);
+    const list = refs.length
+      ? refs
+          .map(
+            ({ ref, assignment: a }) =>
+              `${ref}${a.id === home?.id ? " (this chat's assignment)" : ""}: "${a.title}" [${a.mode}, ${a.kind}] ${a.instructions.replace(/\s+/g, " ").slice(0, 500)}`,
+          )
+          .join("\n")
+      : "(none)";
     const { output } = await generateText({
       model: chatModel(),
-      system: classifierPrompt(labelsJsonShape, mode),
-      prompt: `Recent conversation:\n${context || "(none)"}\n\nLatest student message:\n"""\n${text}\n"""`,
-      output: Output.object({ schema: labelsSchema, name: "labels" }),
+      system: classifierPrompt(classifierJsonShape),
+      prompt: `ACTIVE ASSIGNMENTS:\n${list}\n\nChat: ${home ? `assignment chat for ${refs.find((r) => r.assignment.id === home.id)?.ref ?? "?"}` : "Explore (not tied to an assignment)"}\n\nRecent conversation:\n${context || "(none)"}\n\nLatest student message:\n"""\n${text.slice(0, 4000)}\n"""`,
+      output: Output.object({ schema: classifierOutputSchema, name: "labels" }),
       temperature: 0,
-      maxRetries: 1,
-      abortSignal: AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
+      maxOutputTokens: 300,
+      maxRetries: 0,
+      abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(CLASSIFY_TIMEOUT_MS)]) : AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
     });
     model = output;
   } catch (error) {
     console.warn("classify_message fell back to heuristic labels:", error instanceof Error ? error.message : error);
   }
-  return mergeLabels(model, heuristic);
+  const match = bestMatch(text, candidates, model?.match ?? null);
+  return { ...mergeLabels(model ? { ...model, match } : null, heuristic), match };
 }

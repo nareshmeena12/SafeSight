@@ -83,6 +83,10 @@ export type CourseDetail = {
     instructions: string;
     aiMode: AiMode;
     teacherNotes: string;
+    /** Teacher-only. */
+    answerKey: string;
+    maxHintLevel: number;
+    workedExamples: boolean;
     dueAt: string | null;
     createdAt: string;
   }[];
@@ -101,7 +105,9 @@ export async function getCourseDetail(
   const [assignments, roster] = await Promise.all([
     db
       .from("assignments")
-      .select("id, title, instructions, ai_mode, due_at, created_at, notes:assignment_teacher_notes(notes)")
+      .select(
+        "id, title, instructions, ai_mode, due_at, created_at, max_hint_level, worked_examples, notes:assignment_teacher_notes(notes, answer_key)",
+      )
       .eq("course_id", courseId)
       .order("due_at", { ascending: true, nullsFirst: false }),
     db
@@ -114,16 +120,22 @@ export async function getCourseDetail(
 
   return {
     course,
-    assignments: assignments.data.map((a) => ({
-      id: a.id,
-      title: a.title,
-      instructions: a.instructions,
-      aiMode: a.ai_mode,
-      // Teacher-only notes for Sage live in their own table (one row or none).
-      teacherNotes: (Array.isArray(a.notes) ? a.notes[0]?.notes : a.notes?.notes) ?? "",
-      dueAt: a.due_at,
-      createdAt: a.created_at,
-    })),
+    assignments: assignments.data.map((a) => {
+      // Teacher-only notes and answer key live in their own table (one row or none).
+      const secret = Array.isArray(a.notes) ? a.notes[0] : a.notes;
+      return {
+        id: a.id,
+        title: a.title,
+        instructions: a.instructions,
+        aiMode: a.ai_mode,
+        teacherNotes: secret?.notes ?? "",
+        answerKey: secret?.answer_key ?? "",
+        maxHintLevel: a.max_hint_level,
+        workedExamples: a.worked_examples,
+        dueAt: a.due_at,
+        createdAt: a.created_at,
+      };
+    }),
     roster: roster.data
       .map((r) => ({ id: r.student_id, name: r.student?.full_name || "Unnamed student", joinedAt: r.created_at }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -443,11 +455,12 @@ export type ConversationView = {
 export async function getConversation(db: Db, teacherId: string, conversationId: string): Promise<ConversationView | null> {
   const { data: conv, error } = await db
     .from("conversations")
-    .select("id, student_id, started_at, shared_with_teacher, assignment:assignments(title, course_id, course:courses(teacher_id))")
+    .select("id, student_id, started_at, shared_with_teacher, course_id, course:courses(teacher_id), assignment:assignments(title)")
     .eq("id", conversationId)
     .maybeSingle();
   if (error) fail("conversation", error);
-  if (!conv || conv.assignment?.course?.teacher_id !== teacherId) return null;
+  // Explore chats ("Ask Sage") have a course but no assignment.
+  if (!conv || conv.course?.teacher_id !== teacherId) return null;
 
   const [messages, student] = await Promise.all([
     db
@@ -469,8 +482,8 @@ export async function getConversation(db: Db, teacherId: string, conversationId:
   return {
     id: conv.id,
     student: { id: conv.student_id, name: student.data?.full_name || "Unnamed student" },
-    assignmentTitle: conv.assignment?.title ?? null,
-    courseId: conv.assignment?.course_id ?? null,
+    assignmentTitle: conv.assignment?.title ?? (conv.course_id ? "Ask Sage" : null),
+    courseId: conv.course_id,
     startedAt: conv.started_at,
     shared: conv.shared_with_teacher,
     flags,

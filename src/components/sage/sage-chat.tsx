@@ -9,7 +9,7 @@ import { FadeUp } from "@/components/motion/fade-up";
 import { ModeBadge, type AiMode } from "@/components/product/mode-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { SEARCH_TOOL, type SageUIMessage } from "@/lib/sage/types";
+import type { SageStage, SageUIMessage } from "@/lib/sage/types";
 import { cn } from "@/lib/utils";
 import { CareCard } from "./care-card";
 import { CitationChips } from "./citation-chips";
@@ -18,56 +18,88 @@ import { Markdown } from "./markdown";
 
 const MAX_CHARS = 4000;
 
-const starters: Record<AiMode, string[]> = {
+type Starters = Record<AiMode | "explore", string[]>;
+const starters: Starters = {
   learn: ["I'm stuck on the first problem", "What's the key idea behind this assignment?", "Can you check my working?"],
   assist: ["Explain the main concept to me", "How should I structure this?", "Can you give me feedback on my draft?"],
   exam: [],
+  explore: ["Explain this week's topic simply", "Quiz me with one question", "What's the intuition behind entropy?"],
 };
 
+const stageText: Record<SageStage, string> = {
+  reading: "Thinking…",
+  writing: "Thinking…",
+  checking: "Checking my hint…",
+};
+
+/** An assignment chat, or Explore ("Ask Sage") for a course. */
+export type SageChatTarget =
+  | { kind: "assignment"; assignmentId: string; title: string; mode: AiMode }
+  | { kind: "explore"; courseId: string; courseName: string };
+
 export function SageChat({
-  assignmentId,
-  assignmentTitle,
-  mode,
+  target,
   studentFirstName,
   initialConversationId,
   initialMessages,
   available,
 }: {
-  assignmentId: string;
-  assignmentTitle: string;
-  mode: AiMode;
+  target: SageChatTarget;
   studentFirstName: string;
   initialConversationId: string | null;
   initialMessages: SageUIMessage[];
   /** False when the model provider isn't configured yet. */
   available: boolean;
 }) {
+  const mode: AiMode | "explore" = target.kind === "assignment" ? target.mode : "explore";
+  const targetKey = target.kind === "assignment" ? target.assignmentId : target.courseId;
   const [conversationId, setConversationId] = useState(initialConversationId);
   const [transport] = useState(
     () =>
       new DefaultChatTransport<SageUIMessage>({
         api: "/api/sage",
-        // The server keeps the history; send only the new message.
+        // The server keeps the history; send only the new message. Its id is
+        // the idempotency key: a retry of the same message is answered once.
         prepareSendMessagesRequest: ({ messages, body }) => {
-          const last = messages[messages.length - 1];
+          const last = messages.findLast((m) => m.role === "user") ?? messages[messages.length - 1];
           const text = last.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
-          return { body: { ...body, assignmentId, message: { id: last.id, text } } };
+          return {
+            body: {
+              ...(target.kind === "assignment" ? { assignmentId: target.assignmentId } : { courseId: target.courseId }),
+              conversationId: (body as { conversationId?: string | null } | undefined)?.conversationId ?? null,
+              message: { id: last.id, text },
+            },
+          };
         },
       }),
   );
 
-  const { messages, sendMessage, status, error, stop, setMessages, clearError } = useChat<SageUIMessage>({
-    id: initialConversationId ?? `new-${assignmentId}`,
+  const [stage, setStage] = useState<SageStage | null>(null);
+  const { messages, sendMessage, regenerate, status, error, stop, setMessages, clearError } = useChat<SageUIMessage>({
+    id: initialConversationId ?? `new-${targetKey}`,
     messages: initialMessages,
     transport,
+    onData: (part) => {
+      if (part.type === "data-status") setStage(part.data.stage);
+    },
     onFinish: ({ message }) => {
+      setStage(null);
       if (message.metadata?.conversationId) setConversationId(message.metadata.conversationId);
     },
+    onError: () => setStage(null),
   });
 
   const [input, setInput] = useState("");
   const busy = status === "submitted" || status === "streaming";
   const disabled = !available || busy;
+  // useChat's status changes on the next render; this blocks a second Enter in the same tick.
+  const sending = useRef(false);
+  useEffect(() => {
+    if (!busy) sending.current = false;
+  }, [busy]);
+  const lastMessage = messages.at(-1);
+  const waiting =
+    busy && (status === "submitted" || !lastMessage || lastMessage.role === "user" || !lastMessage.parts.some((p) => p.type === "text" && p.text));
 
   const hintLevel =
     messages.findLast((m) => m.role === "assistant" && m.metadata?.hintLevel)?.metadata?.hintLevel ?? null;
@@ -79,8 +111,10 @@ export function SageChat({
 
   function send(text: string) {
     const trimmed = text.trim();
-    if (!trimmed || disabled) return;
+    if (!trimmed || disabled || sending.current) return;
+    sending.current = true;
     clearError();
+    setStage("reading");
     void sendMessage({ text: trimmed.slice(0, MAX_CHARS) }, { body: { conversationId } });
     setInput("");
   }
@@ -90,24 +124,36 @@ export function SageChat({
     setConversationId(null);
     setMessages([]);
     clearError();
+    setStage(null);
   }
 
-  /** Put a message that didn't go through back into the box. */
+  /**
+   * Send the same message again, with the same id: if Sage already answered
+   * it, the server sends that answer back instead of a second one.
+   */
   function retry() {
-    const lastUser = messages.findLast((m) => m.role === "user");
-    if (lastUser) {
-      setInput(lastUser.parts.map((p) => (p.type === "text" ? p.text : "")).join(""));
-      setMessages(messages.slice(0, messages.lastIndexOf(lastUser)));
-    }
+    if (sending.current) return;
+    sending.current = true;
     clearError();
+    setStage("reading");
+    void regenerate({ body: { conversationId } });
   }
 
   return (
     <div className="flex flex-col">
       <div className="mb-6 flex flex-col gap-3 rounded-lg border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
-          <ModeBadge mode={mode} withHint />
-          {mode !== "exam" ? <HintLadder level={hintLevel} /> : null}
+          {target.kind === "assignment" ? (
+            <>
+              <ModeBadge mode={target.mode} withHint />
+              {target.mode !== "exam" ? <HintLadder level={hintLevel} /> : null}
+            </>
+          ) : (
+            <p className="text-small text-muted-foreground">
+              Ask about anything in <span className="text-foreground">{target.courseName}</span>. If a question is part of an
+              assignment, Sage follows that assignment&apos;s rule.
+            </p>
+          )}
         </div>
         {messages.length ? (
           <Button variant="ghost" onClick={newChat} className="self-start sm:self-auto">
@@ -121,15 +167,20 @@ export function SageChat({
         {messages.length === 0 ? (
           <SageBubble>
             <p className="mb-3">
-              {mode === "exam" ? (
+              {target.kind === "explore" ? (
                 <>
-                  <strong>{assignmentTitle}</strong> is in Exam mode, so I&apos;m switched off for it. Good luck — I&apos;ll be
+                  Hi{studentFirstName ? ` ${studentFirstName}` : ""}! I&apos;m Sage. Ask me about any idea from{" "}
+                  <strong>{target.courseName}</strong> — I&apos;ll explain it properly and check you&apos;ve got it.
+                </>
+              ) : target.mode === "exam" ? (
+                <>
+                  <strong>{target.title}</strong> is in Exam mode, so I&apos;m switched off for it. Good luck — I&apos;ll be
                   here to help you revise afterwards.
                 </>
               ) : (
                 <>
                   Hi{studentFirstName ? ` ${studentFirstName}` : ""}! I&apos;m Sage. Let&apos;s work through{" "}
-                  <strong>{assignmentTitle}</strong> together. Tell me which part you&apos;re on and what you&apos;ve tried
+                  <strong>{target.title}</strong> together. Tell me which part you&apos;re on and what you&apos;ve tried
                   so far — I&apos;ll help you find the next step yourself.
                 </>
               )}
@@ -146,23 +197,30 @@ export function SageChat({
           </SageBubble>
         ) : null}
 
-        {messages.map((m) => (m.role === "user" ? <StudentBubble key={m.id} message={m} /> : <SageMessage key={m.id} message={m} />))}
+        {messages.map((m, i) =>
+          m.role === "user" ? (
+            <StudentBubble key={m.id} message={m} />
+          ) : (
+            <SageMessage
+              key={m.id}
+              message={m}
+              thinking={busy && i === messages.length - 1 && waiting ? stageText[stage ?? "reading"] : null}
+            />
+          ),
+        )}
 
-        {status === "submitted" ? (
+        {waiting && status === "submitted" ? (
           <SageBubble>
-            <p className="flex items-center gap-1 text-muted-foreground" aria-label="Sage is thinking">
-              <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse" />
-              <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:150ms]" />
-              <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:300ms]" />
-            </p>
+            <Thinking label={stageText[stage ?? "reading"]} />
           </SageBubble>
         ) : null}
 
         {error ? (
           <div role="alert" className="flex flex-col gap-3 rounded-md border bg-surface p-4 text-small sm:flex-row sm:items-center sm:justify-between">
             <p>{friendlyError(error)}</p>
-            <Button variant="secondary" onClick={retry} className="self-start">
-              Try again
+            <Button variant="secondary" onClick={retry} disabled={!available} className="self-start sm:shrink-0">
+              <RotateCcw aria-hidden="true" />
+              Retry
             </Button>
           </div>
         ) : null}
@@ -197,9 +255,12 @@ export function SageChat({
                 ? "Sage is being set up — check back soon"
                 : mode === "exam"
                   ? "Sage is off for this assignment"
+                  : mode === "explore"
+                    ? "Ask Sage about anything in this course…"
                   : "Ask Sage, or share what you've tried…"
             }
             disabled={!available}
+            aria-describedby="sage-privacy"
             className="max-h-48 min-h-11 resize-none py-2.5"
           />
           {busy ? (
@@ -213,7 +274,7 @@ export function SageChat({
           )}
         </div>
         <p className="mt-2 flex justify-between gap-4 text-small text-muted-foreground">
-          <span>Your teacher sees a summary, not your chats — unless a message is flagged or you share it.</span>
+          <span id="sage-privacy">Your teacher sees a summary, not your chats — unless a message is flagged or you share it.</span>
           {input.length > MAX_CHARS - 500 ? (
             <span className="shrink-0 font-mono">
               {input.length}/{MAX_CHARS}
@@ -227,7 +288,8 @@ export function SageChat({
 
 function friendlyError(error: Error) {
   const message = error.message?.trim();
-  if (!message || message.startsWith("{") || message.startsWith("<") || message.length > 300) {
+  const network = /failed to fetch|networkerror|load failed|network request failed|aborted/i.test(message ?? "");
+  if (!message || network || message.startsWith("{") || message.startsWith("<") || message.length > 300) {
     return "Sage couldn't reply just now. Check your connection and try again.";
   }
   return message;
@@ -244,19 +306,36 @@ function SageBubble({ children }: { children: React.ReactNode }) {
   );
 }
 
-function SageMessage({ message }: { message: SageUIMessage }) {
-  const searching = message.parts.some(
-    (p) => p.type === `tool-${SEARCH_TOOL}` && "state" in p && (p.state === "input-streaming" || p.state === "input-available"),
+function Thinking({ label }: { label: string }) {
+  return (
+    <p className="flex items-center gap-2 text-muted-foreground" role="status">
+      <span className="flex items-center gap-1" aria-hidden="true">
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse" />
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:150ms]" />
+        <span className="size-1.5 rounded-full bg-current motion-safe:animate-pulse [animation-delay:300ms]" />
+      </span>
+      <span className="text-small">{label}</span>
+    </p>
   );
+}
+
+function SageMessage({ message, thinking }: { message: SageUIMessage; thinking: string | null }) {
   const text = message.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
   const care = message.parts.find((p) => p.type === "data-care");
+  const rules = message.metadata?.rules;
+  // A reply that was stopped or failed before any text: nothing to show.
+  if (!text && !care && !thinking) return null;
   return (
     <SageBubble>
       <span className="sr-only">Sage said:</span>
       {care?.type === "data-care" ? <CareCard care={care.data} /> : null}
       {text ? <Markdown>{text}</Markdown> : null}
-      {searching ? (
-        <p className="text-small text-muted-foreground motion-safe:animate-pulse">Looking through your course notes…</p>
+      {thinking && !text ? <Thinking label={thinking} /> : null}
+      {rules ? (
+        <p className="mt-2 text-small text-muted-foreground">
+          This looks like part of <span className="text-foreground">{rules.title}</span>, so Sage followed its{" "}
+          {rules.mode === "learn" ? "Learn (hints only)" : rules.mode === "assist" ? "Assist" : "Exam"} rule.
+        </p>
       ) : null}
       <CitationChips citations={message.metadata?.citations ?? []} />
     </SageBubble>

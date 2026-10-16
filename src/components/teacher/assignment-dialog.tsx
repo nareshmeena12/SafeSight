@@ -14,6 +14,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { saveAssignment } from "@/lib/teacher/actions";
 import { toDateTimeLocal, type FormState } from "@/lib/teacher/schemas";
@@ -50,8 +52,75 @@ export type AssignmentValues = {
   instructions: string;
   aiMode: Mode;
   teacherNotes: string;
+  answerKey: string;
+  maxHintLevel: number;
+  workedExamples: boolean;
   dueAt: string | null;
 };
+
+const hintLevels = [
+  { value: "1", label: "1 · Clarify only", description: "Sage only asks what they've tried and where they're stuck." },
+  { value: "2", label: "2 · Up to Nudge", description: "Sage may name the idea or formula that applies." },
+  { value: "3", label: "3 · Up to Guide", description: "Sage may break the problem into steps." },
+  { value: "4", label: "4 · Up to Parallel example", description: "Sage may work a different problem with the same method." },
+] as const;
+
+/** How far Sage may go, and whether it may work examples. Applies in Learn and Assist. */
+function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; disabled: boolean }) {
+  const [level, setLevel] = useState(String(assignment?.maxHintLevel ?? 4));
+  const [examples, setExamples] = useState(assignment?.workedExamples ?? true);
+  const hint = hintLevels.find((h) => h.value === level);
+  return (
+    <>
+      {disabled ? (
+        // Disabled controls don't post: keep the settings for when the mode changes back.
+        <>
+          <input type="hidden" name="maxHintLevel" value={level} />
+          {examples ? <input type="hidden" name="workedExamples" value="on" /> : null}
+        </>
+      ) : null}
+      <fieldset className="grid gap-4 rounded-md border p-4 disabled:opacity-60" disabled={disabled}>
+        <legend className="px-1 text-label">How far Sage may go</legend>
+        <div className="grid gap-2">
+          <Label htmlFor="maxHintLevel">Highest hint step</Label>
+          <Select name="maxHintLevel" value={level} onValueChange={setLevel} disabled={disabled}>
+            <SelectTrigger id="maxHintLevel" className="w-full" aria-describedby="maxHintLevel-hint">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {hintLevels.map((h) => (
+                <SelectItem key={h.value} value={h.value}>
+                  {h.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p id="maxHintLevel-hint" className="text-sm text-muted-foreground">
+            {hint?.description} Students climb a step only after a real attempt. Checking their own working is always on.
+          </p>
+        </div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="grid gap-1">
+            <Label htmlFor="workedExamples">Worked examples</Label>
+            <p id="workedExamples-hint" className="text-sm text-muted-foreground">
+              A fully worked problem with a different scenario and unknown, at most one per hour. Essays get structure
+              notes, never sample paragraphs.
+            </p>
+          </div>
+          <Switch
+            id="workedExamples"
+            name="workedExamples"
+            checked={examples}
+            onCheckedChange={setExamples}
+            disabled={disabled}
+            aria-describedby="workedExamples-hint"
+            className="mt-1"
+          />
+        </div>
+      </fieldset>
+    </>
+  );
+}
 
 /** The AI rule for an assignment, as three radio cards. */
 function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mode) => void; error?: string }) {
@@ -169,6 +238,25 @@ export function AssignmentDialog({
               Only you and Sage see these. Sage uses them to guide students and never quotes them.
             </p>
           </div>
+          <div className="grid gap-2">
+            <Label htmlFor="answerKey">Answer key (private)</Label>
+            <Textarea
+              id="answerKey"
+              name="answerKey"
+              rows={4}
+              defaultValue={assignment?.answerKey}
+              placeholder="e.g. Problem 2: W = 68.9 kJ, Q = 241.2 kJ"
+              aria-describedby="answerKey-hint"
+              aria-invalid={state.fieldErrors?.answerKey ? true : undefined}
+              className="font-mono"
+            />
+            <p id="answerKey-hint" className="text-sm text-muted-foreground">
+              Optional, and never shown to students. Sage checks every reply against it, so final values and model
+              answers don&apos;t slip out.
+            </p>
+            {state.fieldErrors?.answerKey ? <p className="text-sm text-destructive">{state.fieldErrors.answerKey}</p> : null}
+          </div>
+          <SageLimits assignment={assignment} disabled={mode === "exam"} />
           <Field
             name="dueAt"
             label="Due"

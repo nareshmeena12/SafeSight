@@ -1,83 +1,63 @@
 import { describe, expect, it } from "vitest";
 import { decideFlags } from "./flags";
-import type { Labels } from "./labels";
+import type { Intent, Labels } from "./labels";
+import { decidePolicy } from "./policy";
+import { exam, labels, thermo } from "./test-fixtures";
 
-const labels: Labels = {
-  intent: "answer_seeking",
-  attempted: false,
-  sharesSolution: false,
-  instructionOverride: false,
-  distress: "none",
-  topic: "",
-};
-const common = { mode: "learn" as const, recentOverrides: 0, assignmentTitle: "Problem set 3", existing: [] };
+function flags(l: Partial<Labels>, { recent = [] as (Intent | null)[], jailbreaks = 0, home = thermo, existing = [] as never[] } = {}) {
+  const lab = labels(l);
+  const policy = decidePolicy({ home, matched: null, labels: lab, ladderFor: () => null });
+  return decideFlags({
+    policy,
+    labels: lab,
+    recentIntents: [...recent, lab.intent],
+    recentJailbreaks: jailbreaks,
+    context: home.title,
+    existing,
+  });
+}
 
 describe("decideFlags", () => {
-  it("flags repeated answer-seeking on the third ask", () => {
-    expect(decideFlags({ ...common, labels, recentIntents: ["answer_seeking", "pasted_question"] })).toEqual([]);
-    const flags = decideFlags({
-      ...common,
-      labels,
-      recentIntents: ["pasted_question", "answer_seeking", "answer_seeking"],
-    });
-    expect(flags).toHaveLength(1);
-    expect(flags[0]).toMatchObject({ type: "answer_seeking", severity: "low" });
-    expect(flags[0].reason).toContain("3 times");
+  it("flags repeated answer-seeking from the third time", () => {
+    expect(flags({ intent: "answer_seeking" }, { recent: ["answer_seeking"] })).toEqual([]);
+    const f = flags({ intent: "deliverable_request" }, { recent: ["answer_seeking", "concept", "answer_seeking"] });
+    expect(f).toHaveLength(1);
+    expect(f[0]).toMatchObject({ type: "answer_seeking", severity: "low" });
+    const five = flags({ intent: "answer_seeking" }, { recent: ["answer_seeking", "answer_seeking", "answer_seeking", "answer_seeking"] });
+    expect(five[0].severity).toBe("medium");
   });
 
-  it("raises answer-seeking to medium at five", () => {
-    const flags = decideFlags({ ...common, labels, recentIntents: Array(5).fill("answer_seeking") });
-    expect(flags[0].severity).toBe("medium");
-  });
-
-  it("does not repeat an open flag from the last day", () => {
-    const flags = decideFlags({
-      ...common,
-      labels,
-      recentIntents: Array(4).fill("answer_seeking"),
+  it("does not repeat an open flag of the same type and severity", () => {
+    const f = decideFlags({
+      policy: decidePolicy({ home: thermo, matched: null, labels: labels({ intent: "answer_seeking" }), ladderFor: () => null }),
+      labels: labels({ intent: "answer_seeking" }),
+      recentIntents: ["answer_seeking", "answer_seeking", "answer_seeking"],
+      recentJailbreaks: 0,
+      context: thermo.title,
       existing: [{ type: "answer_seeking", severity: "low" }],
     });
-    expect(flags).toEqual([]);
+    expect(f).toEqual([]);
   });
 
-  it("flags any use in Exam mode", () => {
-    const flags = decideFlags({
-      ...common,
-      mode: "exam",
-      labels: { ...labels, intent: "concept_question" },
-      recentIntents: ["concept_question"],
-    });
-    expect(flags.map((f) => f.type)).toEqual(["exam_mode_attempt"]);
+  it("flags jailbreaks, more strongly the second time in a day", () => {
+    expect(flags({ intent: "jailbreak" })[0]).toMatchObject({ type: "instruction_override", severity: "low" });
+    expect(flags({ intent: "jailbreak" }, { jailbreaks: 1 })[0].severity).toBe("medium");
   });
 
-  it("raises a high wellbeing flag for distress", () => {
-    const flags = decideFlags({
-      ...common,
-      labels: { ...labels, intent: "distress", distress: "high" },
-      recentIntents: ["distress"],
-    });
-    expect(flags).toEqual([expect.objectContaining({ type: "wellbeing", severity: "high" })]);
+  it("flags Exam-mode use", () => {
+    expect(flags({ intent: "concept" }, { home: exam })[0]).toMatchObject({ type: "exam_mode_attempt", severity: "medium" });
   });
 
-  it("flags instruction overrides, medium on the second", () => {
-    const first = decideFlags({ ...common, labels: { ...labels, instructionOverride: true }, recentIntents: ["answer_seeking"] });
-    expect(first).toEqual([expect.objectContaining({ type: "instruction_override", severity: "low" })]);
-    const second = decideFlags({
-      ...common,
-      recentOverrides: 1,
-      labels: { ...labels, instructionOverride: true },
-      recentIntents: ["answer_seeking"],
-    });
-    expect(second[0].severity).toBe("medium");
+  it("raises a private wellbeing flag on distress", () => {
+    expect(flags({ intent: "distress", distress: "high" })[0]).toMatchObject({ type: "wellbeing", severity: "high" });
+    expect(flags({ intent: "concept", distress: "low" })[0]).toMatchObject({ type: "wellbeing", severity: "medium" });
   });
 
-  it("uses neutral words in reasons", () => {
-    const all = decideFlags({
-      ...common,
-      mode: "exam",
-      labels: { ...labels, instructionOverride: true, distress: "high" },
-      recentIntents: Array(6).fill("answer_seeking"),
-    });
+  it("keeps reasons neutral", () => {
+    const all = [
+      ...flags({ intent: "jailbreak" }, { jailbreaks: 2 }),
+      ...flags({ intent: "answer_seeking" }, { recent: ["answer_seeking", "answer_seeking"] }),
+    ];
     for (const f of all) expect(f.reason).not.toMatch(/cheat|catch|spy|ai-generated/i);
   });
 });

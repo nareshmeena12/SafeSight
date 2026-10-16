@@ -10,8 +10,11 @@ import { fallbackMiddleware, type FallbackState } from "./fallback";
  * handler or a script.
  *
  *   AI_BASE_URL, AI_API_KEY, AI_MODEL       chat model (Sage, labels, Lens, Trace)
- *   DEMO_MODE=true + AI_FALLBACK_MODEL      demo mode: switch to the fallback model when the
- *                                           main one is slow (AI_SLOW_MS, default 5000) or fails
+ *   AI_FALLBACK_MODEL                       one automatic retry goes to this model when the main
+ *                                           one fails or hasn't started answering within
+ *                                           AI_SLOW_MS (default 10000; 5000 in demo mode).
+ *                                           Without it, the retry goes to the main model again.
+ *   DEMO_MODE=true                          after a switch, stay on the fallback for 5 minutes
  *   EMBEDDING_MODEL                         1024-dimension model, e.g. BAAI/bge-m3
  *   EMBEDDING_BASE_URL, EMBEDDING_API_KEY   optional; default to AI_BASE_URL / AI_API_KEY
  *   AI_STRUCTURED_OUTPUTS=true              send json_schema instead of json_object
@@ -73,7 +76,8 @@ export function aiStatus() {
   };
 }
 
-const DEFAULT_SLOW_MS = 5_000;
+const DEFAULT_SLOW_MS = 10_000;
+const DEMO_SLOW_MS = 5_000;
 /** After the main model was slow, demo mode uses the fallback for this long. */
 const FALLBACK_STICKY_MS = 5 * 60_000;
 /** Per server instance, shared by every chatModel() call. */
@@ -84,11 +88,17 @@ function demoFallbackModel(env: ReturnType<typeof aiEnv>) {
   return on ? env.AI_FALLBACK_MODEL! : null;
 }
 
+function fallbackModelId(env: ReturnType<typeof aiEnv>) {
+  return env.AI_FALLBACK_MODEL && env.AI_FALLBACK_MODEL !== env.AI_MODEL ? env.AI_FALLBACK_MODEL : null;
+}
+
 /**
- * The chat model for Sage, the labeller, Lens and the Trace agent. Throws if
- * unconfigured. In demo mode it switches to AI_FALLBACK_MODEL whenever the
- * main model takes longer than AI_SLOW_MS to start answering, or fails, and
- * then stays on the fallback for 5 minutes.
+ * The chat model for Sage, the labeller, the output guard, Lens and the Trace
+ * agent. Throws if unconfigured. Every call gets one automatic retry: if the
+ * main model fails, or hasn't started answering within AI_SLOW_MS, the call
+ * is cancelled and retried on AI_FALLBACK_MODEL (or the main model again when
+ * no fallback is set). Streams only switch before the first token. In demo
+ * mode, after a switch every call goes straight to the fallback for 5 minutes.
  */
 export function chatModel() {
   const env = aiEnv();
@@ -106,17 +116,17 @@ export function chatModel() {
     supportsStructuredOutputs: env.AI_STRUCTURED_OUTPUTS === "true",
   });
   const main = provider.chatModel(env.AI_MODEL!);
-  const fallback = demoFallbackModel(env);
-  if (!fallback) return main;
-  const slowMs = env.AI_SLOW_MS ?? DEFAULT_SLOW_MS;
+  const fallback = fallbackModelId(env);
+  const demo = demoFallbackModel(env) !== null;
+  const slowMs = env.AI_SLOW_MS ?? (demo ? DEMO_SLOW_MS : DEFAULT_SLOW_MS);
   return wrapLanguageModel({
     model: main,
     middleware: fallbackMiddleware({
-      fallback: provider.chatModel(fallback),
+      fallback: fallback ? provider.chatModel(fallback) : main,
       slowMs,
-      stickyMs: FALLBACK_STICKY_MS,
+      stickyMs: demo ? FALLBACK_STICKY_MS : 0,
       state: fallbackState,
-      onSwitch: (reason) => console.warn(`demo mode: ${env.AI_MODEL} → ${fallback} (${reason})`),
+      onSwitch: (reason) => console.warn(`ai retry: ${env.AI_MODEL} → ${fallback ?? env.AI_MODEL} (${reason})`),
     }),
   });
 }

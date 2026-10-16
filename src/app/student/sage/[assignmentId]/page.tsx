@@ -10,8 +10,7 @@ import { SageChat } from "@/components/sage/sage-chat";
 import { Button } from "@/components/ui/button";
 import { aiStatus } from "@/lib/ai/provider";
 import { requireRole } from "@/lib/auth/dal";
-import { careData } from "@/lib/sage/care";
-import { citationsSchema, type SageUIMessage } from "@/lib/sage/types";
+import { loadChatMessages } from "@/lib/sage/ui-history";
 import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = { title: "Sage" };
@@ -47,30 +46,9 @@ async function SageContent({ params }: { params: PageProps<"/student/sage/[assig
     .limit(1)
     .maybeSingle();
 
-  const { data: rows } = conversation
-    ? await supabase
-        .from("messages")
-        .select("id, role, content, intent, hint_level, citations")
-        .eq("conversation_id", conversation.id)
-        .order("created_at", { ascending: true })
-        .limit(200)
-    : { data: [] };
-
-  const care = careData();
-  const initialMessages: SageUIMessage[] = (rows ?? []).map((m, i, all) => {
-    const prev = all[i - 1];
-    const afterDistress = m.role === "assistant" && prev?.role === "user" && prev.intent === "distress";
-    const citations = citationsSchema.safeParse(m.citations);
-    return {
-      id: m.id,
-      role: m.role,
-      parts: [
-        ...(afterDistress ? [{ type: "data-care" as const, id: "care", data: care }] : []),
-        { type: "text" as const, text: m.content },
-      ],
-      metadata: { hintLevel: m.hint_level, citations: citations.success ? citations.data : [] },
-    };
-  });
+  const initialMessages = conversation
+    ? await loadChatMessages(supabase, conversation.id, { homeAssignmentId: assignment.id })
+    : [];
 
   const course = assignment.courses;
   const due = assignment.due_at
@@ -99,9 +77,7 @@ async function SageContent({ params }: { params: PageProps<"/student/sage/[assig
         }
       />
       <SageChat
-        assignmentId={assignment.id}
-        assignmentTitle={assignment.title}
-        mode={assignment.ai_mode}
+        target={{ kind: "assignment", assignmentId: assignment.id, title: assignment.title, mode: assignment.ai_mode }}
         studentFirstName={user.fullName.split(" ")[0] ?? ""}
         initialConversationId={conversation?.id ?? null}
         initialMessages={initialMessages}

@@ -24,8 +24,9 @@
 import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { decideFlags, type FlagSeverity, type FlagType } from "../src/lib/sage/flags";
-import { nextHintLevel } from "../src/lib/sage/ladder";
-import { type Intent, type Labels } from "../src/lib/sage/labels";
+import { toDbIntent, type Intent, type Labels } from "../src/lib/sage/labels";
+import { assignmentKind, type SageAssignment } from "../src/lib/sage/match";
+import { decidePolicy, type LadderState } from "../src/lib/sage/policy";
 import { examModeReply } from "../src/lib/sage/prompt";
 import { measureHtml } from "../src/lib/trace/html";
 import { computeMetrics, type TimedEvent } from "../src/lib/trace/metrics";
@@ -216,26 +217,53 @@ const raised = new Map<string, { type: FlagType; severity: FlagSeverity; at: num
 type Turn =
   | { kind: "concept" | "attempt" | "share" | "seek" | "paste" | "override" | "thanks" | "stressed" | "exam"; text?: string };
 
-function labelsFor(turn: Turn, topic: Topic | null): Labels {
-  const base = { attempted: false, sharesSolution: false, instructionOverride: false, distress: "none" as const, topic: topic?.label ?? "" };
+function labelsFor(turn: Turn, topic: Topic | null, assignmentId: string): Labels {
+  const base = {
+    attemptQuality: 0,
+    sharesWorking: false,
+    claimsPermission: false,
+    distress: "none" as const,
+    topic: topic?.label ?? "",
+    // Demo chats are about their own assignment.
+    match: { assignmentId, similarity: 0.7 },
+    source: "model" as const,
+  };
   switch (turn.kind) {
     case "concept":
     case "thanks":
     case "exam":
-      return { ...base, intent: "concept_question" };
+      return { ...base, intent: "concept" };
     case "attempt":
-      return { ...base, intent: "concept_question", attempted: true };
+      return { ...base, intent: "attempt", attemptQuality: 0.6 };
     case "share":
-      return { ...base, intent: "concept_question", attempted: true, sharesSolution: true };
+      return { ...base, intent: "attempt", attemptQuality: 0.9, sharesWorking: true };
     case "seek":
-      return { ...base, intent: "answer_seeking" };
     case "paste":
-      return { ...base, intent: "pasted_question" };
+      return { ...base, intent: "answer_seeking" };
     case "override":
-      return { ...base, intent: "answer_seeking", instructionOverride: true };
+      return { ...base, intent: "jailbreak" };
     case "stressed":
       return { ...base, intent: "distress", distress: "low", topic: "" };
   }
+}
+
+/** Ladder state per student per assignment, carried across that student's chats (as in the app). */
+const ladders = new Map<string, LadderState>();
+
+function sageAssignment(a: Assignment): SageAssignment {
+  return {
+    id: a.id,
+    courseId: a.course,
+    title: a.title,
+    instructions: a.instructions,
+    mode: a.mode,
+    kind: assignmentKind(a.title, a.instructions),
+    maxHintLevel: 4,
+    workedExamples: true,
+    dueAt: null,
+    teacherNotes: "",
+    answerKey: "",
+  };
 }
 
 function textFor(turn: Turn, topic: Topic, mode: Mode): string {
@@ -262,28 +290,38 @@ function simulateConversation(studentId: string, a: Assignment, start: number, t
   let t = start;
   let level: number | null = null;
   const intents: (Intent | null)[] = [];
-  let overrides = 0;
+  let jailbreaks = 0;
   const key = `${studentId}:${a.course}`;
+  const ladderKey = `${studentId}:${a.id}`;
+  const home = sageAssignment(a);
 
-  conversations.push({ id: conversationId, student_id: studentId, assignment_id: a.id, started_at: iso(t) });
+  conversations.push({ id: conversationId, student_id: studentId, assignment_id: a.id, course_id: a.course, started_at: iso(t) });
 
   for (const turn of turns) {
-    const labels = labelsFor(turn, topic);
+    const labels = labelsFor(turn, topic, a.id);
     const text = topic ? textFor(turn, topic, a.mode) : textFor(turn, topics.signConvention, a.mode);
     const userId = randomUUID();
     messages.push({
       id: userId, conversation_id: conversationId, role: "user", content: text,
-      intent: labels.intent, attempted: labels.attempted, topic: labels.topic || null, hint_level: null,
-      citations: [], created_at: iso(t),
+      intent: toDbIntent(labels.intent), attempted: labels.attemptQuality >= 0.5, attempt_quality: labels.attemptQuality,
+      topic: labels.topic || null, hint_level: null, citations: [], created_at: iso(t),
     });
 
-    const hint = nextHintLevel({ mode: a.mode, current: level, labels });
+    const policy = decidePolicy({
+      home,
+      matched: { assignment: home, similarity: labels.match.similarity },
+      labels,
+      ladderFor: () => ladders.get(ladderKey) ?? null,
+      now: t,
+    });
+    if (policy.ladder) ladders.set(ladderKey, policy.ladder);
+    const hint = policy.step;
     intents.push(labels.intent);
     const existing = (raised.get(key) ?? []).filter((f) => f.at > t - DAY);
     const decisions = decideFlags({
-      mode: a.mode, labels, recentIntents: intents, recentOverrides: overrides, assignmentTitle: a.title, existing,
+      policy, labels, recentIntents: intents, recentJailbreaks: jailbreaks, context: a.title, existing,
     });
-    if (labels.instructionOverride) overrides++;
+    if (labels.intent === "jailbreak") jailbreaks++;
     for (const d of decisions) {
       flags.push({
         student_id: studentId, course_id: a.course, message_id: userId, type: d.type, severity: d.severity,
@@ -308,7 +346,8 @@ function simulateConversation(studentId: string, a: Assignment, start: number, t
     t += int(6, 25) * SECOND;
     messages.push({
       id: randomUUID(), conversation_id: conversationId, role: "assistant", content: reply,
-      intent: null, attempted: null, topic: null, hint_level: hint, citations: cite as unknown as Json, created_at: iso(t),
+      intent: null, attempted: null, attempt_quality: null, topic: null, hint_level: hint, citations: cite as unknown as Json,
+      created_at: iso(t),
     });
     if (hint) level = hint;
     t += int(40, 300) * SECOND;
@@ -645,6 +684,7 @@ for (let i = 0; i < ids.length; i += 50) {
   fail("clear flags", (await db.from("flags").delete().in("student_id", chunk).in("course_id", DEMO_COURSES)).error);
   fail("clear chats", (await db.from("conversations").delete().in("student_id", chunk).in("assignment_id", assignmentIds)).error);
   fail("clear work", (await db.from("submissions").delete().in("student_id", chunk).in("assignment_id", assignmentIds)).error);
+  fail("clear ladder", (await db.from("sage_ladder_state").delete().in("student_id", chunk).in("assignment_id", assignmentIds)).error);
 }
 
 // A problem set 3 or notes created live in a rehearsal would sit next to the fixed ones.
@@ -673,6 +713,13 @@ await insertAll("submissions", submissions);
 await insertAll("writing_events", events, 1000);
 await insertAll("writing_snapshots", snapshots, 200);
 await insertAll("integrity_reports", reports);
+await insertAll(
+  "sage_ladder_state",
+  [...ladders].map(([key, l]) => {
+    const [student_id, assignment_id] = key.split(":");
+    return { student_id, assignment_id, step: l.step, attempts: l.attempts, last_example_at: l.lastExampleAt, updated_at: new Date().toISOString() };
+  }),
+);
 const rows = await refreshMetrics(6);
 
 console.log(`Notes        ${NOTES_TITLE}: ${ingest.pages} pages, ${ingest.chunks} chunks${ingest.embedded ? " (with vectors)" : " (keyword search)"}`);

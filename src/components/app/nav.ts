@@ -9,6 +9,7 @@ import {
   type LucideIcon,
   MessagesSquare,
   NotebookPen,
+  Sparkles,
   Users,
 } from "lucide-react";
 
@@ -28,6 +29,7 @@ export const navigation: Record<Area, { label: string; items: NavItem[] }> = {
     label: "Student",
     items: [
       { label: "Home", href: "/student", icon: House },
+      { label: "Ask Sage", href: "/student/sage", icon: Sparkles },
       { label: "Writing", href: "/student/trace", icon: NotebookPen },
       { label: "My learning", href: "/student/learning", icon: BookOpen },
     ],

@@ -21,11 +21,13 @@ const preamble = new Set<string>(["stream-start", "response-metadata"]);
 export type FallbackState = { skipMainUntil: number };
 
 /**
- * Demo mode (PLAN.md §12): if the main model hasn't started answering within
- * `slowMs` — or fails before it starts — the call switches to `fallback`.
+ * Timeout + one retry: if the main model hasn't started answering within
+ * `slowMs` — or fails before it starts — the call is cancelled and retried
+ * once on `fallback` (AI_FALLBACK_MODEL, or the main model itself).
  * Streams switch only before the first token, so a student never sees a reply
- * restart halfway. After a switch, calls go straight to the fallback for
- * `stickyMs` (one Sage turn makes several calls; each shouldn't wait again).
+ * restart halfway. In demo mode (PLAN.md §12), after a switch, calls go
+ * straight to the fallback for `stickyMs` (one Sage turn makes several calls;
+ * each shouldn't wait again).
  * Pure: the provider decides when to apply it.
  */
 export function fallbackMiddleware({

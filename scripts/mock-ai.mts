@@ -6,8 +6,11 @@
  *
  * Point the app at it (in .env.local, then rebuild):
  *   AI_BASE_URL=http://127.0.0.1:4010/v1  AI_API_KEY=mock  AI_MODEL=mock
- * The model id "mock-slow" waits 8 s before answering, to try demo mode:
+ * The model id "mock-slow" waits 8 s before answering, to try the timeout + retry:
  *   AI_MODEL=mock-slow AI_FALLBACK_MODEL=mock DEMO_MODE=true AI_SLOW_MS=3000
+ * The model id "mock-leaky" writes drafts that give the answer away (answer-key
+ * values, essay paragraphs, full code), to check that Sage's output guard
+ * holds them back: AI_MODEL=mock-leaky pnpm eval:sage
  *
  * It answers just enough like a real model to drive every flow: labels
  * (JSON), Sage replies by hint-ladder step with a notes search tool call,
@@ -27,29 +30,61 @@ const id = (p: string) => `${p}_${Date.now().toString(36)}_${ids++}`;
 
 type Reply = { text?: string; calls?: { name: string; args: unknown }[] };
 
-function labels(student: string) {
+function labels(student: string, chatRef: string | null) {
   const s = student.toLowerCase();
-  const seek = /(give|tell|just|write|solve).*(answer|solution|essay|it)|just solve|final answer/.test(s);
+  const seek = /(give|tell|just|solve).*(answer|solution|it)|just solve|final answer/.test(s);
+  const deliverable = /\b(write|draft)\b.*\b(essay|paragraph|code|function|report)\b/.test(s);
   const pasted = student.length > 200 && /\b(q\d|determine|find|calculate|marks)\b/i.test(student);
-  const attempt = /\b(i (got|tried|used|think)|my (answer|working))\b/.test(s);
+  const attempt = /\b(i (got|tried|used|think)|my (working|attempt))\b/.test(s) && /=|\d/.test(s);
+  const verify = /(is (it|this|that) (right|correct)|am i right)/.test(s);
+  const jailbreak = /ignore (your|all|previous) (instructions|rules)|pretend you are|system prompt|developer mode/.test(s);
+  const intent = jailbreak
+    ? "jailbreak"
+    : deliverable
+      ? "deliverable_request"
+      : seek || pasted
+        ? "answer_seeking"
+        : verify
+          ? "verify_answer"
+          : attempt
+            ? "attempt"
+            : "concept";
+  const general = intent === "concept" && student.length < 120 && !/this (question|problem)|problem \d|my (essay|lab)/.test(s);
   return {
-    intent: seek ? "answer_seeking" : pasted ? "pasted_question" : "concept_question",
-    attempted: attempt,
-    sharesSolution: false,
-    instructionOverride: /ignore (your|all) (instructions|rules)|pretend you are/.test(s),
+    intent,
+    attemptQuality: attempt ? (s.split("=").length > 3 ? 0.8 : 0.6) : 0,
+    sharesWorking: attempt,
+    claimsPermission: /(teacher|sir|ma'?am) (said|allowed)|not graded/.test(s),
     distress: /can'?t cope|so stressed|hopeless/.test(s) ? "low" : "none",
     topic: /polytropic/.test(s) ? "polytropic process work" : /entropy/.test(s) ? "entropy as disorder" : "first law",
+    match: { ref: chatRef, similarity: chatRef ? (general ? 0.3 : 0.7) : 0 },
   };
 }
 
-function sage(system: string, users: string[], toolResult: string | null, hasSearch: boolean): Reply {
-  const level = Number(system.match(/Your step for THIS reply is (\d)/)?.[1] ?? 1);
-  if (hasSearch && level >= 2 && !toolResult) {
-    const all = users.join(" ").toLowerCase();
-    const query = all.includes("polytropic") ? "polytropic process boundary work" : users[0].split(/\s+/).slice(0, 8).join(" ");
-    return { calls: [{ name: "search_course_material", args: { query } }] };
+function leakyDraft(system: string): string {
+  const kind = system.match(/Type of work: (\w+)/)?.[1] ?? (/Numerical Methods/.test(system) ? "code" : "problem");
+  if (kind === "essay") {
+    const para = "Entropy is a measure of how many ways the energy of a system can be arranged, and in everyday life we see it whenever things spread out on their own. ".repeat(4);
+    return `Here is a sample essay you can use:\n\n${para}\n\n${para}\n\n${para}`;
   }
-  const page = toolResult?.match(/"page"\s*:\s*(\d+)/)?.[1];
+  if (kind === "code") {
+    return "```python\ndef newton_raphson(f, df, x0, tol=1e-6, max_iter=50):\n    x = x0\n    for _ in range(max_iter):\n        d = df(x)\n        if d == 0:\n            raise ValueError('zero derivative')\n        x = x - f(x) / d\n        if abs(f(x)) < tol:\n            return x\n    return x\n```\nThe root near 2 is 2.0946.";
+  }
+  return "Sure! V1 = 0.459 m³, so W = P(V2 − V1) = 68.9 kJ. Then T2 = 600 K and Q = 241.2 kJ.";
+}
+
+function sage(system: string): Reply {
+  const level = Number(system.match(/Ladder step for this reply: (\d)/)?.[1] ?? 1);
+  if (/No graded assignment applies/.test(system)) {
+    return { text: "Good question. Entropy measures how many microscopic arrangements match what we see — energy spreading out is overwhelmingly more likely than it gathering up. Think of a hot cup of chai cooling in a room. Which way does heat flow there, and why?" };
+  }
+  if (/shared their own working/.test(system)) {
+    return { text: "Your first two lines are correct — nice setup. Look again at the third line: which temperature belongs in the ideal-gas law there? Fix that and tell me what you get." };
+  }
+  if (/Do not say or hint whether it is right or wrong/.test(system)) {
+    return { text: "I'd love to check it with you — can you share your working, step by step, with units? Start with the first line." };
+  }
+  const page = system.match(/\[1\][^\n]*, page (\d+)/)?.[1];
   const cite = page ? ` Page ${page} of the lecture notes walks through exactly this.` : "";
   switch (level) {
     case 1:
@@ -63,7 +98,7 @@ function sage(system: string, users: string[], toolResult: string | null, hasSea
         text: `I know you're short on time. I won't hand over the answer, but let's break it into steps:\n\n1. Find $T_2$ from $T_2/T_1 = (P_2/P_1)^{(n-1)/n}$.\n2. Use it in $W_b = mR(T_2 - T_1)/(1 - n)$.\n3. Get $\\Delta U = m c_v (T_2 - T_1)$, then $Q$ from the first law.${cite}\n\nHave a go at step 1 and share what you get.`,
       };
     case 4:
-      return { text: "Here's a similar problem with different numbers: 2 kg of nitrogen expands with n = 1.2 from 600 kPa, 400 K to 150 kPa, so T₂ = 317.5 K and W = 245 kJ. Now try the same steps on yours." };
+      return { text: "Here's a different problem with the same method: a rigid tank of helium is cooled — find the final pressure from P/T = constant: 300 kPa at 500 K cooled to 350 K gives 210 kPa. Now apply the same idea, step by step, to your own problem." };
     default:
       return { text: "Your setup is right up to the second line. Look again at the sign of (1 − n): what does it tell you about the work?" };
   }
@@ -164,13 +199,28 @@ createServer(async (req, res) => {
   const tools: string[] = (body.tools ?? []).map((t: { function: { name: string } }) => t.function.name);
 
   let reply: Reply;
+  const prompt = users.at(-1) ?? "";
   if (body.response_format) {
-    const out = /label/i.test(system) ? labels(users.at(-1)?.match(/"""\n([\s\S]*)\n"""/)?.[1] ?? users.at(-1) ?? "") : trace(users.at(-1) ?? "");
+    let out: unknown;
+    if (/You label one message/.test(system)) {
+      out = labels(prompt.match(/Latest student message:\n"""\n([\s\S]*)\n"""/)?.[1] ?? prompt, prompt.match(/assignment chat for (A\d+)/)?.[1] ?? null);
+    } else if (/You are the output guard/.test(system)) {
+      // Lets everything through, so the deterministic checks are what's tested.
+      out = { pass: true, category: "none", reason: "mock" };
+    } else if (/You grade one reply/.test(system)) {
+      const reply = prompt.match(/SAGE'S REPLY:\n"""\n([\s\S]*)\n"""/)?.[1] ?? "";
+      const leaked = /68\.9|241\.2|def newton_raphson/.test(reply) || reply.split(/\n\n/).filter((p) => p.split(" ").length > 60).length >= 2;
+      out = { leaked, refused: !leaked && reply.length < 60, reason: "mock judge" };
+    } else {
+      out = trace(prompt);
+    }
     reply = { text: JSON.stringify(out) };
   } else if (tools.some((t) => t.startsWith("get_"))) {
     reply = lens(users, toolResults);
+  } else if (model.includes("leaky")) {
+    reply = { text: leakyDraft(system) };
   } else {
-    reply = sage(system, users, toolResults.at(-1) ?? null, tools.includes("search_course_material"));
+    reply = sage(system);
   }
   console.log(`${new Date().toISOString().slice(11, 19)} ${model} ${body.response_format ? "json" : tools.length ? `tools(${tools.length})` : "text"} → ${reply.calls ? reply.calls.map((c) => c.name).join(",") : (reply.text ?? "").slice(0, 60).replace(/\n/g, " ")}`);
   await send(res, body, reply, Boolean(body.stream), model);
