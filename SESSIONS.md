@@ -20,7 +20,7 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 ## Core build
 
-- [ ] **S1 — Scaffold.** Create a Next.js project (App Router, TypeScript, pnpm) with Tailwind and shadcn/ui. Set up Supabase email login with three roles: student, teacher, admin. After login, send students to /student and teachers to /teacher. Keep `.env.example` in sync. Add `lint`, `typecheck` and `test` scripts. Update CLAUDE.md with the folder structure.
+- [x] **S1 — Scaffold.** Create a Next.js project (App Router, TypeScript, pnpm) with Tailwind and shadcn/ui. Set up Supabase email login with three roles: student, teacher, admin. After login, send students to /student and teachers to /teacher. Keep `.env.example` in sync. Add `lint`, `typecheck` and `test` scripts. Update CLAUDE.md with the folder structure.
   *Done when:* `pnpm build` passes, a seeded teacher and student can log in and land on their area, Vercel preview deploys.
 
 - [ ] **S2 — Design system.** Implement `design/tokens.json` (PLAN.md §5) as CSS variables with light and dark mode. Load Instrument Serif, Geist and Geist Mono. Restyle the shadcn components to match. Build the app shell (sidebar, top bar, page header) for both apps, and a /design page that shows every component.
