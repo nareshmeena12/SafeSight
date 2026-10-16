@@ -1,0 +1,275 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SafeSight — log in or sign up</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ss" data-theme="{{theme}}" data-motion="{{motion}}" style="font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--text); background: var(--background);">
+<div class="auth">
+
+<aside class="auth-art" aria-label="About SafeSight">
+<div class="glow" aria-hidden="true"></div>
+<a class="logo" href="Main.dc.html" aria-label="SafeSight home">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg>
+<span>SafeSight</span>
+</a>
+<div>
+<p class="auth-quote">Guide, <em>don't guard.</em></p>
+<p class="auth-sub">A tutor that helps students think for themselves, and a clear view of AI use for the teachers who guide them.</p>
+</div>
+<div class="card auth-demo" aria-hidden="true">
+<div class="msg msg--student"><div class="bubble bubble--student"><p>Is my free-body diagram right?</p></div></div>
+<div class="msg msg--sage"><span class="avatar avatar--sm"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path></svg></span><div class="bubble bubble--sage"><p>Almost. Count the forces on the block again. Which one acts along the incline?</p></div></div>
+</div>
+<p class="auth-foot-note">Built at IIT Mandi · Now piloting</p>
+</aside>
+
+<main class="auth-side">
+<div class="auth-top">
+<a class="logo mobile-logo" href="Main.dc.html" aria-label="SafeSight home">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg>
+<span>SafeSight</span>
+</a>
+<div class="auth-top-right">
+<button type="button" class="icon-btn" aria-label="{{themeLabel}}" onClick="{{toggleTheme}}">
+<sc-if value="{{isLight}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+<sc-if value="{{isDark}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+</button>
+<a href="Main.dc.html">Back to site</a>
+</div>
+</div>
+
+<div class="auth-form">
+
+<sc-if value="{{v.login}}" hint-placeholder-val="{{true}}">
+<form onSubmit="{{submit}}" novalidate="" aria-labelledby="au-title-login">
+<h1 class="auth-h" id="au-title-login">Welcome back</h1>
+<p class="auth-p">Log in to continue with your courses.</p>
+<div class="fields">
+<div class="{{fc.email}}">
+<label for="au-email">Email</label>
+<input class="input" id="au-email" type="text" inputmode="email" autocomplete="email" placeholder="you@college.edu.in" value="{{f.email}}" onChange="{{on.email}}" onBlur="{{blur.email}}" aria-invalid="{{inv.email}}" aria-describedby="au-email-err">
+<sc-if value="{{show.email}}" hint-placeholder-val="{{false}}"><p class="err" id="au-email-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.email}}</p></sc-if>
+</div>
+<div class="{{fc.pw}}">
+<div class="label-row"><label for="au-pw">Password</label><a href="#forgot" onClick="{{sendLink}}">Forgot password?</a></div>
+<div class="pw-wrap">
+<input class="input" id="au-pw" type="{{pwType}}" autocomplete="current-password" value="{{f.pw}}" onChange="{{on.pw}}" onBlur="{{blur.pw}}" aria-invalid="{{inv.pw}}" aria-describedby="au-pw-err">
+<button type="button" class="pw-toggle" onClick="{{togglePw}}" aria-label="{{pwToggleLabel}}">{{pwToggleText}}</button>
+</div>
+<sc-if value="{{show.pw}}" hint-placeholder-val="{{false}}"><p class="err" id="au-pw-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.pw}}</p></sc-if>
+</div>
+<button type="submit" class="{{btnCls}}">
+<sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span class="spin" aria-hidden="true"></span>Logging in…</sc-if>
+<sc-if value="{{idle}}" hint-placeholder-val="{{true}}">Log in</sc-if>
+</button>
+</div>
+<div class="divider">or</div>
+<button type="button" class="btn btn--secondary btn--block" onClick="{{sendLink}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg>Email me a sign-in link</button>
+<p class="auth-switch">New to SafeSight?<button type="button" onClick="{{toSignup}}">Create an account</button></p>
+</form>
+</sc-if>
+
+<sc-if value="{{v.signup}}" hint-placeholder-val="{{false}}">
+<form onSubmit="{{submit}}" novalidate="" aria-labelledby="au-title-signup">
+<h1 class="auth-h" id="au-title-signup">Create your account</h1>
+<p class="auth-p">Pick the option that fits you. It shapes what you'll see in SafeSight.</p>
+<fieldset class="roles">
+<legend>I am a</legend>
+<button type="button" class="{{roleS.cls}}" aria-pressed="{{roleS.pressed}}" onClick="{{pickStudent}}">
+<span class="role-dot" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span class="role-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.908a2 2 0 0 0 1.66 0z"></path><path d="M22 10v6"></path><path d="M6 12.5V16a6 3 0 0 0 12 0v-3.5"></path></svg></span>
+<b>Student</b><small>Learn with Sage in your courses</small>
+</button>
+<button type="button" class="{{roleT.cls}}" aria-pressed="{{roleT.pressed}}" onClick="{{pickTeacher}}">
+<span class="role-dot" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+<span class="role-ic" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h20"></path><path d="M21 3v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V3"></path><path d="m7 21 5-5 5 5"></path></svg></span>
+<b>Teacher</b><small>Set up courses and see class insights</small>
+</button>
+</fieldset>
+<div class="fields">
+<div class="{{fc.name}}">
+<label for="au-name">Full name</label>
+<input class="input" id="au-name" type="text" autocomplete="name" placeholder="{{namePh}}" value="{{f.name}}" onChange="{{on.name}}" onBlur="{{blur.name}}" aria-invalid="{{inv.name}}" aria-describedby="au-name-err">
+<sc-if value="{{show.name}}" hint-placeholder-val="{{false}}"><p class="err" id="au-name-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.name}}</p></sc-if>
+</div>
+<div class="{{fc.email}}">
+<label for="au-email2">College email</label>
+<input class="input" id="au-email2" type="text" inputmode="email" autocomplete="email" placeholder="you@college.edu.in" value="{{f.email}}" onChange="{{on.email}}" onBlur="{{blur.email}}" aria-invalid="{{inv.email}}" aria-describedby="au-email2-err au-email2-help">
+<sc-if value="{{show.email}}" hint-placeholder-val="{{false}}"><p class="err" id="au-email2-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.email}}</p></sc-if>
+<sc-if value="{{hideEmailErr}}" hint-placeholder-val="{{true}}"><p class="help" id="au-email2-help">Use your college email so we can connect you to your institution.</p></sc-if>
+</div>
+<sc-if value="{{isTeacher}}" hint-placeholder-val="{{false}}">
+<div class="{{fc.inst}}">
+<label for="au-inst">Institution</label>
+<input class="input" id="au-inst" type="text" autocomplete="organization" placeholder="College or institute name" value="{{f.inst}}" onChange="{{on.inst}}" onBlur="{{blur.inst}}" aria-invalid="{{inv.inst}}" aria-describedby="au-inst-err">
+<sc-if value="{{show.inst}}" hint-placeholder-val="{{false}}"><p class="err" id="au-inst-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.inst}}</p></sc-if>
+</div>
+</sc-if>
+<sc-if value="{{isStudent}}" hint-placeholder-val="{{true}}">
+<div class="field">
+<label for="au-code">Class code <span style="font-weight: 400; color: var(--text-muted);">(optional)</span></label>
+<input class="input mono" id="au-code" type="text" autocomplete="off" placeholder="ME204-7KQ" value="{{f.code}}" onChange="{{on.code}}" aria-describedby="au-code-help">
+<p class="help" id="au-code-help">Your teacher shares this. You can add it later too.</p>
+</div>
+</sc-if>
+<div class="{{fc.pw}}">
+<label for="au-pw2">Password</label>
+<div class="pw-wrap">
+<input class="input" id="au-pw2" type="{{pwType}}" autocomplete="new-password" value="{{f.pw}}" onChange="{{on.pw}}" onBlur="{{blur.pw}}" aria-invalid="{{inv.pw}}" aria-describedby="au-pw2-err au-pw2-help">
+<button type="button" class="pw-toggle" onClick="{{togglePw}}" aria-label="{{pwToggleLabel}}">{{pwToggleText}}</button>
+</div>
+<div class="strength" aria-hidden="true"><sc-for list="{{strength}}" as="sb" hint-placeholder-count="4"><i class="{{sb.cls}}"></i></sc-for></div>
+<sc-if value="{{show.pw}}" hint-placeholder-val="{{false}}"><p class="err" id="au-pw2-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.pw}}</p></sc-if>
+<sc-if value="{{hidePwErr}}" hint-placeholder-val="{{true}}"><p class="help" id="au-pw2-help">{{strengthText}}</p></sc-if>
+</div>
+<button type="submit" class="{{btnCls}}">
+<sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span class="spin" aria-hidden="true"></span>Creating your account…</sc-if>
+<sc-if value="{{idle}}" hint-placeholder-val="{{true}}">{{signupCta}}</sc-if>
+</button>
+</div>
+<p class="legal">By continuing you agree to the Terms and the Privacy policy. Student data is never used to train AI models.</p>
+<p class="auth-switch">Already have an account?<button type="button" onClick="{{toLogin}}">Log in</button></p>
+</form>
+</sc-if>
+
+<sc-if value="{{v.sent}}" hint-placeholder-val="{{false}}">
+<div role="status" aria-live="polite">
+<div class="mail-ic" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"></rect><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"></path></svg></div>
+<h1 class="auth-h">Check your inbox</h1>
+<p class="auth-p">{{sentText}} <b style="color: var(--text); font-weight: 500;">{{f.email}}</b>. The link works once.</p>
+<a class="btn btn--secondary btn--block" href="Main.dc.html">Back to the website</a>
+<p class="auth-switch">Wrong address?<button type="button" onClick="{{back}}">Change email</button></p>
+</div>
+</sc-if>
+
+<sc-if value="{{v.inapp}}" hint-placeholder-val="{{false}}">
+<div role="status" aria-live="polite">
+<div class="mail-ic" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></div>
+<h1 class="auth-h">You're in.</h1>
+<p class="auth-p">Opening your courses now. If nothing happens, use the button below.</p>
+<a class="btn btn--primary btn--block" href="Main.dc.html#teachers">Go to my dashboard</a>
+</div>
+</sc-if>
+
+</div>
+</main>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"mode":{"editor":"enum","options":["login","signup"],"default":"login"},"role":{"editor":"enum","options":["student","teacher"],"default":"student"},"motion":{"editor":"boolean","default":true},"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      themeOverride: null,
+      view: props.mode === "signup" ? "signup" : "login",
+      role: props.role === "teacher" ? "teacher" : "student",
+      f: { name: "", email: "", pw: "", inst: "", code: "" },
+      touched: {}, attempted: false, busy: false, showPw: false, sentKind: "link"
+    };
+  }
+
+  componentWillUnmount() { if (this.t) clearTimeout(this.t); }
+
+  errors() {
+    var s = this.state, f = s.f, e = {};
+    var em = f.email.trim();
+    if (!em) e.email = "Enter your email address.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) e.email = "That email looks incomplete, like name@college.edu.in.";
+    if (s.view === "login") {
+      if (!f.pw) e.pw = "Enter your password.";
+    } else {
+      if (!f.name.trim()) e.name = "Please tell us your name.";
+      if (f.pw.length < 8) e.pw = f.pw ? "Use at least 8 characters. Add " + (8 - f.pw.length) + " more." : "Choose a password with at least 8 characters.";
+      if (s.role === "teacher" && !f.inst.trim()) e.inst = "Which college or institute do you teach at?";
+    }
+    return e;
+  }
+
+  go(view) { this.setState({ view: view, touched: {}, attempted: false, busy: false }); }
+
+  focusFirst(err) {
+    var map = this.state.view === "login" ? { email: "au-email", pw: "au-pw" } : { name: "au-name", email: "au-email2", inst: "au-inst", pw: "au-pw2" };
+    var order = ["name", "email", "inst", "pw"];
+    for (var i = 0; i < order.length; i++) if (err[order[i]] && map[order[i]]) { var el = document.getElementById(map[order[i]]); if (el) el.focus(); return; }
+  }
+
+  renderVals() {
+    var self = this, s = this.state, f = s.f, p = this.props;
+    var theme = s.themeOverride || (p.theme === "dark" ? "dark" : "light");
+    var isDark = theme === "dark";
+    var e = this.errors();
+    var keys = ["name", "email", "inst", "pw", "code"];
+    var show = {}, fc = {}, inv = {}, on = {}, blur = {};
+    keys.forEach(function (k) {
+      var vis = !!e[k] && (s.attempted || !!s.touched[k]);
+      show[k] = vis; fc[k] = vis ? "field has-err" : "field"; inv[k] = vis ? "true" : "false";
+      on[k] = function (ev) { var nf = Object.assign({}, self.state.f); nf[k] = ev.target.value; self.setState({ f: nf }); };
+      blur[k] = function () { var t = Object.assign({}, self.state.touched); t[k] = true; self.setState({ touched: t }); };
+    });
+    var pw = f.pw, score = 0;
+    if (pw.length >= 8) score++;
+    if (pw.length >= 12) score++;
+    if (/[0-9]/.test(pw) && /[a-zA-Z]/.test(pw)) score++;
+    if (/[^a-zA-Z0-9]/.test(pw) || /[A-Z]/.test(pw) && /[a-z]/.test(pw)) score++;
+    if (!pw) score = 0;
+    var strengthText = !pw ? "At least 8 characters." : ["Too short so far.", "Okay. A longer one is safer.", "Good password.", "Strong password.", "Very strong password."][score];
+    var role = s.role;
+    return {
+      theme: theme, isDark: isDark, isLight: !isDark,
+      motion: p.motion === false ? "off" : "on",
+      themeLabel: isDark ? "Switch to light mode" : "Switch to dark mode",
+      toggleTheme: function () { self.setState({ themeOverride: isDark ? "light" : "dark" }); },
+      v: { login: s.view === "login", signup: s.view === "signup", sent: s.view === "sent", inapp: s.view === "in" },
+      f: f, show: show, fc: fc, inv: inv, on: on, blur: blur, msg: e,
+      hideEmailErr: !show.email, hidePwErr: !show.pw,
+      pwType: s.showPw ? "text" : "password",
+      pwToggleText: s.showPw ? "Hide" : "Show",
+      pwToggleLabel: s.showPw ? "Hide password" : "Show password",
+      togglePw: function () { self.setState({ showPw: !self.state.showPw }); },
+      strength: [0, 1, 2, 3].map(function (i) { return { cls: i < score ? "on" : "" }; }),
+      strengthText: strengthText,
+      isTeacher: role === "teacher", isStudent: role === "student",
+      roleS: { cls: role === "student" ? "role is-sel" : "role", pressed: role === "student" ? "true" : "false" },
+      roleT: { cls: role === "teacher" ? "role is-sel" : "role", pressed: role === "teacher" ? "true" : "false" },
+      pickStudent: function () { self.setState({ role: "student" }); },
+      pickTeacher: function () { self.setState({ role: "teacher" }); },
+      namePh: role === "teacher" ? "Dr. Ananya Rao" : "Riya Sharma",
+      signupCta: role === "teacher" ? "Create teacher account" : "Create student account",
+      busy: s.busy, idle: !s.busy,
+      btnCls: s.busy ? "btn btn--primary btn--submit is-busy" : "btn btn--primary btn--submit",
+      sentText: s.sentKind === "verify" ? "We sent a link to confirm your account to" : "We sent a sign-in link to",
+      toSignup: function () { self.go("signup"); },
+      toLogin: function () { self.go("login"); },
+      back: function () { self.go(self.state.sentKind === "verify" ? "signup" : "login"); },
+      sendLink: function (ev) {
+        if (ev && ev.preventDefault) ev.preventDefault();
+        var err = self.errors();
+        if (err.email) { var t = Object.assign({}, self.state.touched, { email: true }); self.setState({ touched: t }); var el = document.getElementById("au-email"); if (el) el.focus(); return; }
+        self.setState({ sentKind: "link", view: "sent" });
+      },
+      submit: function (ev) {
+        ev.preventDefault();
+        var err = self.errors();
+        if (Object.keys(err).length) { self.setState({ attempted: true }); self.focusFirst(err); return; }
+        self.setState({ busy: true });
+        self.t = setTimeout(function () {
+          if (self.state.view === "login") self.setState({ busy: false, view: "in" });
+          else self.setState({ busy: false, view: "sent", sentKind: "verify" });
+        }, 900);
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

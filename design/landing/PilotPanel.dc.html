@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SafeSight — request a pilot</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="ss ss--embed" data-theme="{{theme}}" data-motion="{{motion}}" style="font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--text);">
+<div class="{{frameCls}}">
+<div class="pilot">
+
+<div>
+<p class="eyebrow">Pilot programme</p>
+<h2 class="pilot-h">Bring SafeSight to your course <em>next semester.</em></h2>
+<p class="pilot-lead">Tell us a little about you. We'll set up Sage with your notes and walk you through the dashboard.</p>
+<ul class="pilot-pts">
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Start with a single course</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>We do the setup with you</li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Always free for students</li>
+</ul>
+</div>
+
+<div class="form-card">
+<sc-if value="{{isForm}}" hint-placeholder-val="{{true}}">
+<form onSubmit="{{submit}}" novalidate="" aria-label="Request a pilot">
+<p class="form-title">Request a pilot</p>
+<div class="fields">
+<div class="field-row">
+<div class="{{fc.name}}">
+<label for="pf-name">Name</label>
+<input class="input" id="pf-name" type="text" autocomplete="name" placeholder="Dr. Ananya Rao" value="{{f.name}}" onChange="{{on.name}}" onBlur="{{blur.name}}" aria-invalid="{{inv.name}}" aria-describedby="pf-name-err">
+<sc-if value="{{show.name}}" hint-placeholder-val="{{false}}"><p class="err" id="pf-name-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.name}}</p></sc-if>
+</div>
+<div class="{{fc.role}}">
+<label for="pf-role">Role</label>
+<div class="select-wrap">
+<select class="{{roleCls}}" id="pf-role" value="{{f.role}}" onChange="{{on.role}}" onBlur="{{blur.role}}" aria-invalid="{{inv.role}}" aria-describedby="pf-role-err">
+<option value="">Select your role</option>
+<option value="Professor">Professor</option>
+<option value="HOD">HOD</option>
+<option value="Dean">Dean</option>
+<option value="Other">Other</option>
+</select>
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+</div>
+<sc-if value="{{show.role}}" hint-placeholder-val="{{false}}"><p class="err" id="pf-role-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.role}}</p></sc-if>
+</div>
+</div>
+<div class="{{fc.inst}}">
+<label for="pf-inst">Institution</label>
+<input class="input" id="pf-inst" type="text" autocomplete="organization" placeholder="College or institute name" value="{{f.inst}}" onChange="{{on.inst}}" onBlur="{{blur.inst}}" aria-invalid="{{inv.inst}}" aria-describedby="pf-inst-err">
+<sc-if value="{{show.inst}}" hint-placeholder-val="{{false}}"><p class="err" id="pf-inst-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.inst}}</p></sc-if>
+</div>
+<div class="{{fc.email}}">
+<label for="pf-email">Work email</label>
+<input class="input" id="pf-email" type="text" inputmode="email" autocomplete="email" placeholder="you@college.edu.in" value="{{f.email}}" onChange="{{on.email}}" onBlur="{{blur.email}}" aria-invalid="{{inv.email}}" aria-describedby="pf-email-err pf-email-help">
+<sc-if value="{{show.email}}" hint-placeholder-val="{{false}}"><p class="err" id="pf-email-err"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>{{msg.email}}</p></sc-if>
+<sc-if value="{{hideEmailErr}}" hint-placeholder-val="{{true}}"><p class="help" id="pf-email-help">We'll only use this to plan your pilot.</p></sc-if>
+</div>
+<button type="submit" class="{{btnCls}}">
+<sc-if value="{{busy}}" hint-placeholder-val="{{false}}"><span class="spin" aria-hidden="true"></span>Sending…</sc-if>
+<sc-if value="{{idle}}" hint-placeholder-val="{{true}}">Request a pilot<svg class="nudge" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></sc-if>
+</button>
+</div>
+<p class="form-foot">No commitment. We'll reply from a real person, not a mailing list.</p>
+</form>
+</sc-if>
+
+<sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+<div class="done" role="status" aria-live="polite">
+<div class="check-wrap" aria-hidden="true">
+<span class="check-ring"></span><span class="check-ring2"></span>
+<svg class="check-svg" width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19.5 7"></path></svg>
+</div>
+<h3>Thank you, {{firstName}}.</h3>
+<p>Your pilot request is in. We'll write to <b>{{f.email}}</b> soon to plan a pilot for <b>{{instName}}</b>.</p>
+<ol class="next">
+<li><span class="mono">1</span>A short call about your course and what you'd like students to get from it.</li>
+<li><span class="mono">2</span>We set up Sage with your notes and choose a mode for each assignment together.</li>
+<li><span class="mono">3</span>Your students start learning with Sage next semester.</li>
+</ol>
+<button type="button" class="link-btn" onClick="{{reset}}">Send another request</button>
+</div>
+</sc-if>
+</div>
+
+</div>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"done":{"editor":"boolean","default":false},"showErrors":{"editor":"boolean","default":false},"motion":{"editor":"boolean","default":true},"framed":{"editor":null},"$preview":{"width":1440,"height":880}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    var f = { name: "", inst: "", role: "", email: "" };
+    if (props.done) f = { name: "Dr. Ananya Rao", inst: "NIT Karnataka", role: "Professor", email: "ananya.rao@nitk.edu.in" };
+    else if (props.showErrors) f = { name: "Dr. Ananya Rao", inst: "", role: "", email: "ananya.rao@nitk" };
+    this.state = { f: f, touched: {}, attempted: !!props.showErrors, busy: false, done: !!props.done };
+  }
+
+  componentWillUnmount() { if (this.t) clearTimeout(this.t); }
+
+  errors() {
+    var f = this.state.f, e = {};
+    if (!f.name.trim()) e.name = "Please tell us your name.";
+    if (!f.role) e.role = "Choose the role closest to yours.";
+    if (!f.inst.trim()) e.inst = "Which college or institute are you from?";
+    var em = f.email.trim();
+    if (!em) e.email = "We need an email address to reach you.";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(em)) e.email = "That email looks incomplete. Check the part after the @, like name@college.edu.in.";
+    return e;
+  }
+
+  renderVals() {
+    var self = this, s = this.state, f = s.f, p = this.props;
+    var e = this.errors();
+    var keys = ["name", "role", "inst", "email"];
+    var show = {}, fc = {}, inv = {}, on = {}, blur = {};
+    keys.forEach(function (k) {
+      var vis = !!e[k] && (s.attempted || !!s.touched[k]);
+      show[k] = vis;
+      fc[k] = vis ? "field has-err" : "field";
+      inv[k] = vis ? "true" : "false";
+      on[k] = function (ev) { var nf = Object.assign({}, self.state.f); nf[k] = ev.target.value; self.setState({ f: nf }); };
+      blur[k] = function () { var t = Object.assign({}, self.state.touched); t[k] = true; self.setState({ touched: t }); };
+    });
+    var framed = p.framed === undefined || p.framed === null ? true : !!p.framed;
+    return {
+      theme: p.theme === "dark" ? "dark" : "light",
+      motion: p.motion === false ? "off" : "on",
+      frameCls: framed ? "pilot-frame" : "",
+      f: f, show: show, fc: fc, inv: inv, on: on, blur: blur, msg: e,
+      hideEmailErr: !show.email,
+      roleCls: f.role ? "select" : "select is-empty",
+      isForm: !s.done, isDone: s.done,
+      busy: s.busy, idle: !s.busy,
+      btnCls: s.busy ? "btn btn--primary btn--submit is-busy" : "btn btn--primary btn--submit",
+      firstName: (function () {
+        var parts = f.name.trim().split(/\s+/);
+        if (parts.length > 1 && /^(dr|prof|mr|ms|mrs)\.?$/i.test(parts[0])) return parts[0] + " " + parts[parts.length - 1];
+        return parts[0] || "there";
+      })(),
+      instName: f.inst.trim(),
+      submit: function (ev) {
+        ev.preventDefault();
+        var err = self.errors();
+        var first = ["name", "role", "inst", "email"].filter(function (k) { return err[k]; })[0];
+        if (first) {
+          self.setState({ attempted: true });
+          var el = document.getElementById(first === "name" ? "pf-name" : first === "role" ? "pf-role" : first === "inst" ? "pf-inst" : "pf-email");
+          if (el) el.focus();
+          return;
+        }
+        self.setState({ busy: true });
+        self.t = setTimeout(function () { self.setState({ busy: false, done: true }); }, 900);
+      },
+      reset: function () { self.setState({ f: { name: "", inst: "", role: "", email: "" }, touched: {}, attempted: false, done: false }); }
+    };
+  }
+}
+</script>
+</body>
+</html>

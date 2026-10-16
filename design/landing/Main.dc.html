@@ -1,0 +1,979 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SafeSight — AI that teaches, not answers</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="site.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&amp;family=Geist+Mono:wght@400;500&amp;family=Instrument+Serif:ital@0;1&amp;display=swap">
+<style>body{margin:0}html{scroll-behavior:smooth}@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}</style>
+</helmet>
+<div class="ss" data-theme="{{theme}}" data-motion="{{motion}}" style="font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: var(--text); background: var(--background);">
+
+<header class="{{navClass}}">
+<div class="wrap nav-inner">
+<a class="logo" href="#top" aria-label="SafeSight home">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg>
+<span>SafeSight</span>
+</a>
+<nav aria-label="Main" style="display: contents;">
+<ul class="nav-links">
+<li><a href="#product">Product</a></li>
+<li><a href="#how">How it works</a></li>
+<li><a href="#lab">Lab Mode</a></li>
+<li><a href="#privacy">Privacy</a></li>
+<li><a href="#teachers">For teachers</a></li>
+</ul>
+</nav>
+<div class="nav-actions">
+<button type="button" class="icon-btn theme-btn" aria-label="{{themeLabel}}" onClick="{{toggleTheme}}">
+<sc-if value="{{isLight}}" hint-placeholder-val="{{true}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg></sc-if>
+<sc-if value="{{isDark}}" hint-placeholder-val="{{false}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg></sc-if>
+</button>
+<a class="nav-login" href="Auth.dc.html">Log in</a>
+<a class="btn btn--primary btn--sm" href="#pilot">Request a pilot</a>
+<button type="button" class="icon-btn burger" aria-label="Open menu" aria-expanded="{{menuExpanded}}" onClick="{{openMenu}}">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16"></path><path d="M4 12h16"></path><path d="M4 17h16"></path></svg>
+</button>
+</div>
+</div>
+</header>
+
+<main id="top">
+<section class="hero" aria-labelledby="hero-title">
+<div class="wrap hero-grid">
+
+<div>
+<div class="pill rise" style="animation-delay: 0ms;"><span class="live-dot" aria-hidden="true"></span><span>Built at <b>IIT Mandi</b></span><span class="pill-sep" aria-hidden="true"></span><span>Now piloting</span></div>
+<h1 class="h-display" id="hero-title"><span class="w" style="animation-delay: 80ms;">AI</span><span class="w" style="animation-delay: 140ms;">that</span><span class="w" style="animation-delay: 200ms;"><em>teaches,</em></span><br><span class="w" style="animation-delay: 260ms;">not</span><span class="w" style="animation-delay: 320ms;">answers.</span></h1>
+<p class="lead rise" style="animation-delay: 440ms;">SafeSight gives every student a tutor that builds real understanding, and gives every teacher a clear view of how AI is used in their class.</p>
+<div class="hero-ctas rise" style="animation-delay: 540ms;">
+<a class="btn btn--primary" href="#pilot">Request a pilot<svg class="nudge" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+<a class="btn btn--secondary" href="#demo"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m10 8 6 4-6 4z"></path></svg>See Sage in action</a>
+</div>
+<ul class="assure rise" style="animation-delay: 640ms;">
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Grounded in your own course notes</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>You set the rules for every assignment</li>
+</ul>
+</div>
+
+<div class="stage">
+<div class="glow" aria-hidden="true"></div>
+<figure class="chat" aria-label="Example conversation: a student asks Sage for an answer and Sage guides them instead">
+<div class="chat-head">
+<span class="avatar" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg></span>
+<div class="chat-id"><span class="chat-name">Sage</span><span class="chat-sub">ME-204 Thermodynamics · Assignment 3</span></div>
+<div class="badge"><span class="badge-mode"><i aria-hidden="true"></i>Learn mode</span><span class="{{hintClass}}">{{hintText}}</span></div>
+</div>
+
+<div class="{{bodyClass}}" aria-live="polite">
+<sc-for list="{{msgs}}" as="m" hint-placeholder-count="2">
+<sc-if value="{{m.isStudent}}" hint-placeholder-val="{{true}}">
+<div class="msg msg--student"><div class="bubble bubble--student"><p>{{m.text}}</p></div></div>
+</sc-if>
+<sc-if value="{{m.isSage}}" hint-placeholder-val="{{false}}">
+<div class="msg msg--sage">
+<span class="avatar avatar--sm" aria-hidden="true"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg></span>
+<div class="bubble bubble--sage">
+<sc-if value="{{m.typing}}" hint-placeholder-val="{{false}}"><span class="dots" aria-label="Sage is thinking"><span></span><span></span><span></span></span></sc-if>
+<sc-if value="{{m.hasText}}" hint-placeholder-val="{{true}}"><p>{{m.text}}<sc-if value="{{m.streaming}}" hint-placeholder-val="{{false}}"><span class="caret" aria-hidden="true"></span></sc-if></p></sc-if>
+<sc-if value="{{m.cite}}" hint-placeholder-val="{{false}}"><span class="cite"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"></path></svg>Lecture notes, p.12</span></sc-if>
+</div>
+</div>
+</sc-if>
+</sc-for>
+</div>
+
+<div class="composer" aria-hidden="true">
+<div class="composer-text">
+<sc-if value="{{hasDraft}}" hint-placeholder-val="{{false}}"><span>{{draft}}</span><span class="caret"></span></sc-if>
+<sc-if value="{{noDraft}}" hint-placeholder-val="{{true}}"><span class="composer-ph">Ask Sage about this assignment…</span></sc-if>
+</div>
+<span class="{{sendClass}}"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg></span>
+</div>
+<figcaption class="chat-foot"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Sage guides you to the answer. It won't write graded work for you.</figcaption>
+</figure>
+
+<div class="lens-card" aria-label="Lens, teacher view: Q3 is where most of the class asked for hints this week">
+<div class="lens-top"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg>Lens<span class="lens-tag">Teacher view</span></div>
+<p class="lens-text">Q3 (entropy) is where most of your class asked for hints this week.</p>
+<div class="bars" aria-hidden="true"><span style="height: 30%;"></span><span style="height: 46%;"></span><span class="on" style="height: 100%;"></span><span style="height: 38%;"></span><span style="height: 22%;"></span></div>
+<div class="bar-labels" aria-hidden="true"><span>Q1</span><span>Q2</span><span class="on">Q3</span><span>Q4</span><span>Q5</span></div>
+</div>
+</div>
+
+</div>
+</section>
+
+<!-- 3 · The problem -->
+<section class="sec" id="problem" data-rv="problem" aria-labelledby="problem-title">
+<div class="wrap">
+<div class="sec-head {{rv.problem}}">
+<p class="eyebrow">The problem</p>
+<h2 class="h-section" id="problem-title">Students are using AI. <em>Most aren't learning from it.</em></h2>
+</div>
+<div class="stats {{rv.problem}}">
+<article class="card stat rc" style="transition-delay: 80ms;">
+<p class="{{stats.a.cls}}">{{stats.a.text}}</p>
+<p class="stat-label">of students use AI for their assignments every week.</p>
+<p class="stat-src"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 16v-4"></path><path d="M12 16V8"></path><path d="M17 16v-6"></path></svg>From our survey of {{stats.nStudents}} students</p>
+</article>
+<article class="card stat rc" style="transition-delay: 180ms;">
+<p class="{{stats.b.cls}}">{{stats.b.text}}</p>
+<p class="stat-label">feel they learn less when AI does the work for them.</p>
+<p class="stat-src"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 16v-4"></path><path d="M12 16V8"></path><path d="M17 16v-6"></path></svg>From our survey of {{stats.nStudents}} students</p>
+</article>
+<article class="card stat rc" style="transition-delay: 280ms;">
+<p class="{{stats.c.cls}}">{{stats.c.text}}</p>
+<p class="stat-label">of professors have no view into how AI is used in their course.</p>
+<p class="stat-src"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="M7 16v-4"></path><path d="M12 16V8"></path><path d="M17 16v-6"></path></svg>From our survey of {{stats.nProfs}} professors</p>
+</article>
+</div>
+</div>
+</section>
+
+<!-- 4 · Before and after -->
+<section class="sec" id="demo" data-rv="demo" aria-labelledby="demo-title">
+<div class="wrap">
+<div class="sec-head {{rv.demo}}">
+<p class="eyebrow">See Sage in action</p>
+<h2 class="h-section" id="demo-title">Same question. <em>Very different outcome.</em></h2>
+<p class="sec-lead">A student asks for the answer to a graded thermodynamics problem. Here is what happens next.</p>
+</div>
+<div class="seg" role="group" aria-label="Compare responses">
+<button type="button" aria-pressed="{{cmp.genericPressed}}" onClick="{{cmp.showGeneric}}">Generic AI</button>
+<button type="button" class="is-sage" aria-pressed="{{cmp.sagePressed}}" onClick="{{cmp.showSage}}">Sage</button>
+</div>
+<div class="compare {{cmp.cls}} {{rv.demo}}">
+
+<div class="cmp-col cmp-col--generic rc" style="transition-delay: 80ms;">
+<p class="cmp-label"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>A generic chatbot</p>
+<figure class="win win--generic" aria-label="A generic chatbot gives the full solution">
+<div class="chat-head">
+<span class="avatar" aria-hidden="true"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg></span>
+<div class="chat-id"><span class="chat-name">Chatbot</span><span class="chat-sub">General-purpose AI</span></div>
+</div>
+<div class="win-body">
+<div class="msg msg--student"><div class="bubble bubble--student"><p>Solve Q3: 2 kg of water at 100 °C absorbs 4,514 kJ and fully evaporates at constant temperature. Find the entropy change.</p></div></div>
+<div class="msg msg--sage"><div class="bubble bubble--generic"><p>Sure! Here's the complete solution you can submit:</p>
+<p class="sol">ΔS = Q / T
+T = 100 + 273.15 = 373.15 K
+ΔS = 4,514 / 373.15
+<b>Final answer: ΔS ≈ 12.10 kJ/K</b></p>
+<p style="margin-top: 10px;">Want me to solve Q4 and Q5 as well?</p></div></div>
+</div>
+<figcaption class="win-out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M8 12h8"></path></svg><span><b>Outcome:</b> answer copied, concept skipped.</span></figcaption>
+</figure>
+</div>
+
+<div class="cmp-col cmp-col--sage rc" style="transition-delay: 200ms;">
+<div class="glow" aria-hidden="true"></div>
+<p class="cmp-label" style="position: relative; z-index: 1;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path></svg>Sage</p>
+<figure class="win win--sage" aria-label="Sage asks a guiding question instead">
+<div class="chat-head">
+<span class="avatar" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg></span>
+<div class="chat-id"><span class="chat-name">Sage</span><span class="chat-sub">ME-204 · Assignment 3</span></div>
+<div class="badge"><span class="badge-mode"><i aria-hidden="true"></i>Learn mode</span><span class="hint">Hint 1 of 5</span></div>
+</div>
+<div class="win-body">
+<div class="msg msg--student"><div class="bubble bubble--student"><p>Solve Q3: 2 kg of water at 100 °C absorbs 4,514 kJ and fully evaporates at constant temperature. Find the entropy change.</p></div></div>
+<div class="msg msg--sage"><div class="bubble bubble--sage"><p>Let's work it out together. The water boils at a constant temperature. What does that tell you about how to find ΔS here?</p><span class="cite"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"></path></svg>Lecture 7 notes, p.12</span></div></div>
+<div class="msg msg--student"><div class="bubble bubble--student"><p>So ΔS = Q/T, since T doesn't change?</p></div></div>
+<div class="msg msg--sage"><div class="bubble bubble--sage"><p>That's the key idea. One check before you calculate: which temperature scale must T be in? Try it and show me your number.</p></div></div>
+</div>
+<figcaption class="win-out"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg><span><b>Outcome:</b> the student reasons their way to ΔS = Q/T.</span></figcaption>
+</figure>
+</div>
+
+</div>
+<p class="cmp-caption {{rv.demo}}">One finishes the homework. <em>The other builds the engineer.</em></p>
+</div>
+</section>
+
+<!-- 5 · How it works -->
+<section class="sec" id="how" data-rv="how" aria-labelledby="how-title">
+<div class="wrap">
+<div class="sec-head {{rv.how}}">
+<p class="eyebrow">How it works</p>
+<h2 class="h-section" id="how-title">Three steps from your syllabus <em>to a clear picture.</em></h2>
+</div>
+<ol class="steps" id="how-steps" style="margin: 0; padding: 0; list-style: none;">
+<li aria-hidden="true" class="steps-track" style="list-style: none;"></li>
+<li aria-hidden="true" class="steps-fill" style="transform: scaleX({{how.p}});"></li>
+<li aria-hidden="true" class="steps-vtrack"></li>
+<li aria-hidden="true" class="steps-vfill" style="transform: scaleY({{how.p}});"></li>
+
+<li class="{{how.c1}}">
+<span class="step-num">01</span>
+<div class="step-body">
+<h3>Teachers set the rules</h3>
+<p>Choose Learn, Assist or Exam mode for each assignment. Sage follows it.</p>
+<div class="card step-ui" aria-hidden="true">
+<div class="modes">
+<span class="mode is-sel">Learn<small>Hints only</small></span>
+<span class="mode">Assist<small>Explains more</small></span>
+<span class="mode">Exam<small>Sage off</small></span>
+</div>
+<div class="ui-row"><span>Assignment 3 · Entropy</span><span class="mono">Due Fri</span></div>
+</div>
+</div>
+</li>
+
+<li class="{{how.c2}}">
+<span class="step-num">02</span>
+<div class="step-body">
+<h3>Students learn with Sage</h3>
+<p>Hints, questions and explanations grounded in your course notes.</p>
+<div class="card step-ui" aria-hidden="true">
+<div class="mini-bubble">Which formula links heat, temperature and entropy?</div>
+<div class="ui-row"><span class="ui-chip"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z"></path><path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z"></path></svg>Notes, p.12</span><span class="mono">Hint 2 of 5</span></div>
+</div>
+</div>
+</li>
+
+<li class="{{how.c3}}">
+<span class="step-num">03</span>
+<div class="step-body">
+<h3>Teachers see the picture</h3>
+<p>A dashboard, a Reliance Score, and Lens to ask anything about your class.</p>
+<div class="card step-ui" aria-hidden="true">
+<div class="ui-row"><span>Reliance Score · class average</span></div>
+<div class="score"><b>34</b><span>down 12 since week 2</span></div>
+<div class="meter"><i style="width: 34%;"></i></div>
+</div>
+</div>
+</li>
+</ol>
+</div>
+</section>
+
+<!-- 6 · Meet the agents -->
+<section class="sec" id="product" data-rv="agents" aria-labelledby="agents-title">
+<div class="wrap">
+<div class="sec-head {{rv.agents}}">
+<p class="eyebrow">The product</p>
+<h2 class="h-section" id="agents-title">Three agents. <em>One goal: real learning.</em></h2>
+</div>
+<div class="agents {{rv.agents}}">
+
+<article class="card agent lift rc" style="transition-delay: 60ms;">
+<div class="agent-art" aria-hidden="true">
+<div class="glow"></div>
+<div class="art-card" style="align-self: flex-end; max-width: 78%; background: var(--bubble); border-color: transparent; font-size: 13px; color: var(--text);">Can you just write the answer for Q3?</div>
+<div class="art-card" style="max-width: 88%; background: var(--primary-soft); border-color: transparent; font-size: 13px; color: var(--text);">Let's crack it together. What happens to entropy at constant temperature?</div>
+<div style="display: flex; gap: 6px;"><span class="ui-chip">Learn mode</span><span class="hint">Hint 1 of 5</span></div>
+</div>
+<div class="agent-body">
+<h3 class="agent-name"><span class="avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg></span>Sage<span class="agent-for">for students</span></h3>
+<p class="agent-role">An AI tutor that coaches students through problems and never hands over the final answer to graded work.</p>
+<ul class="ticks">
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Hints and questions that build understanding</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Explains using your notes, with page citations</li>
+</ul>
+</div>
+</article>
+
+<article class="card agent lift rc" style="transition-delay: 160ms;">
+<div class="agent-art" aria-hidden="true">
+<div class="glow"></div>
+<div class="art-card art-q"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Who is over-relying on AI this week?</div>
+<div class="art-card art-rows">
+<div class="art-row"><span>Arjun Mehta</span><div class="meter"><i style="width: 71%;"></i></div><b>71</b></div>
+<div class="art-row"><span>Kabir Khan</span><div class="meter"><i style="width: 64%;"></i></div><b>64</b></div>
+<div class="art-row"><span>Riya Sharma</span><div class="meter"><i style="width: 58%;"></i></div><b>58</b></div>
+</div>
+</div>
+<div class="agent-body">
+<h3 class="agent-name"><span class="avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v16a2 2 0 0 0 2 2h16"></path><path d="m19 9-5 5-4-4-3 3"></path></svg></span>Lens<span class="agent-for">for teachers</span></h3>
+<p class="agent-role">Your class analyst. Ask in plain English and get clear answers with charts.</p>
+<ul class="ticks">
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>No filters or reports to learn</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Every answer shows the data behind it</li>
+</ul>
+</div>
+</article>
+
+<article class="card agent lift rc" style="transition-delay: 260ms;">
+<div class="agent-art" aria-hidden="true">
+<div class="glow"></div>
+<div class="art-card" style="display: grid; gap: 10px;">
+<div class="art-meta"><span>Lab report 4</span><span>52 min · 3 sessions</span></div>
+<div class="mini-tl"><span class="k" style="height: 40%;"></span><span class="k" style="height: 62%;"></span><span class="k" style="height: 35%;"></span><span class="k" style="height: 55%;"></span><span class="k" style="height: 30%;"></span><span style="height: 12%;"></span><span class="k" style="height: 48%;"></span><span class="k" style="height: 58%;"></span><span class="p" style="height: 100%;"></span><span class="k" style="height: 26%;"></span><span style="height: 12%;"></span><span class="k" style="height: 44%;"></span><span class="k" style="height: 36%;"></span><span class="k" style="height: 22%;"></span></div>
+<div class="art-meta"><span>Mon</span><span style="color: var(--text);">Paste · 14:32</span><span>Wed</span></div>
+</div>
+</div>
+<div class="agent-body">
+<h3 class="agent-name"><span class="avatar" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg></span>Trace<span class="agent-for">for teachers</span></h3>
+<p class="agent-role">Records how an assignment was written, so you can replay the process instead of guessing.</p>
+<ul class="ticks">
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Typing, pastes and time spent, on one timeline</li>
+<li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Neutral evidence; it never accuses anyone</li>
+</ul>
+</div>
+</article>
+
+</div>
+</div>
+</section>
+
+<!-- 7 · Teacher dashboard -->
+<section class="sec" id="teachers" data-rv="dash" aria-labelledby="dash-title">
+<div class="wrap">
+<div class="sec-head {{rv.dash}}">
+<p class="eyebrow">For teachers</p>
+<h2 class="h-section" id="dash-title">Know your class <em>in 10 seconds.</em></h2>
+<p class="sec-lead">One page shows who is learning, where the class is stuck and how AI is being used, without reading a single chat log.</p>
+</div>
+<div class="dash-stage">
+<div class="glow" aria-hidden="true"></div>
+<div class="dash" id="dash-frame" style="transform: perspective(2200px) rotateX({{dash.rot}}deg) scale({{dash.scale}});" role="img" aria-label="SafeSight teacher dashboard for ME-204 Thermodynamics, week 9">
+
+<aside class="dash-side" aria-hidden="true">
+<span class="logo"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg><span>SafeSight</span></span>
+<div class="course-pick">ME-204 Thermodynamics<small>Monsoon 2026 · 112 students</small></div>
+<span class="side-item is-on"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"></rect><rect width="7" height="5" x="14" y="3" rx="1"></rect><rect width="7" height="9" x="14" y="12" rx="1"></rect><rect width="7" height="5" x="3" y="16" rx="1"></rect></svg>Overview</span>
+<span class="side-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>Students</span>
+<span class="side-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>Assignments</span>
+<span class="side-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>Lens</span>
+<span class="side-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Trace</span>
+<span class="side-item"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"></rect><line x1="8" x2="16" y1="21" y2="21"></line><line x1="12" x2="12" y1="17" y2="21"></line></svg>Lab Mode</span>
+</aside>
+
+<div class="dash-main">
+<div class="dash-top">
+<div><h3>Good morning, Dr. Kulkarni</h3><p class="dash-sub">ME-204 Thermodynamics · Week 9</p></div>
+<span class="chip-sel">This week<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
+</div>
+
+<div class="kpis">
+<div class="card kpi"><div class="kpi-label">Active students</div><div class="kpi-val">{{dash.k1}}</div><div class="kpi-delta">of 118 enrolled</div></div>
+<div class="card kpi"><div class="kpi-label">AI conversations this week</div><div class="kpi-val">{{dash.k2}}</div><div class="kpi-delta"><b>+6%</b> vs last week</div></div>
+<div class="card kpi"><span class="pin">1</span><div class="kpi-label">Average Reliance Score</div><div class="kpi-val">{{dash.k3}}</div><div class="kpi-delta"><b>−2</b> vs last week</div></div>
+<div class="card kpi"><div class="kpi-label">Open flags</div><div class="kpi-val">{{dash.k4}}</div><div class="kpi-delta">2 new since Monday</div></div>
+</div>
+
+<div class="dash-row">
+<div class="card panel">
+<p class="panel-h">Reliance Score, class average<small>lower means more independent work</small></p>
+<div class="chart" onMouseLeave="{{chart.leave}}">
+<svg viewBox="0 0 560 206" role="img" aria-label="Class average Reliance Score fell from 46 in week 2 to 34 in week 9">
+<g class="grid"><line x1="36" x2="552" y1="20" y2="20"></line><line x1="36" x2="552" y1="100" y2="100"></line><line x1="36" x2="552" y1="180" y2="180"></line></g>
+<text class="ax" x="0" y="24">50</text><text class="ax" x="0" y="104">40</text><text class="ax" x="0" y="184">30</text>
+<path class="area" d="M44,180 L44,52 L114,60 L184,76 L254,92 L324,100 L394,124 L464,132 L534,148 L534,180 Z"></path>
+<polyline class="line" points="44,52 114,60 184,76 254,92 324,100 394,124 464,132 534,148"></polyline>
+<sc-if value="{{chart.hasHover}}" hint-placeholder-val="{{false}}"><line class="xh" x1="{{chart.hx}}" x2="{{chart.hx}}" y1="16" y2="180"></line></sc-if>
+<sc-for list="{{chart.pts}}" as="pt" hint-placeholder-count="8">
+<text class="ax" x="{{pt.x}}" y="202" text-anchor="middle">{{pt.wk}}</text>
+<circle class="pt" cx="{{pt.x}}" cy="{{pt.y}}" r="{{pt.r}}"></circle>
+<rect class="hit" x="{{pt.hx}}" y="0" width="70" height="190" onMouseEnter="{{pt.enter}}"></rect>
+</sc-for>
+<text class="lbl" x="534" y="136" text-anchor="middle">34</text>
+</svg>
+<sc-if value="{{chart.hasHover}}" hint-placeholder-val="{{false}}"><div class="tip" style="left: {{chart.tipX}}%; top: {{chart.tipY}}%;">{{chart.tipWk}} · <b>{{chart.tipV}}</b></div></sc-if>
+</div>
+</div>
+<div class="card panel">
+<span class="pin">2</span>
+<p class="panel-h">Topics the class is stuck on<small>hint requests</small></p>
+<ul class="topics">
+<li class="topic is-hot"><div class="topic-top"><span>Entropy and the second law</span><b>41</b></div><div class="meter"><i class="hot" style="width: 100%;"></i></div></li>
+<li class="topic"><div class="topic-top"><span>Rankine cycle efficiency</span><b>28</b></div><div class="meter"><i style="width: 68%;"></i></div></li>
+<li class="topic"><div class="topic-top"><span>Steady-flow energy equation</span><b>19</b></div><div class="meter"><i style="width: 46%;"></i></div></li>
+<li class="topic"><div class="topic-top"><span>Ideal gas mixtures</span><b>11</b></div><div class="meter"><i style="width: 27%;"></i></div></li>
+</ul>
+</div>
+</div>
+
+<div class="dash-row">
+<div class="card panel lens-box">
+<span class="pin">3</span>
+<p class="panel-h">Lens<small>your class assistant</small></p>
+<div class="lens-input"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg><span>Ask anything about your class</span><span class="send"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m5 12 7-7 7 7"></path><path d="M12 19V5"></path></svg></span></div>
+<div class="lens-sugs"><span class="lens-sug">Who is over-relying on AI this week?</span><span class="lens-sug">Which question took longest?</span><span class="lens-sug">Compare section A and B</span></div>
+</div>
+<div class="card panel panel--people">
+<p class="panel-h">Worth a check-in<small>Reliance Score</small></p>
+<ul class="people">
+<li class="person"><span class="initials">AM</span><span>Arjun Mehta<small>Rising for 3 weeks</small></span><b>71</b></li>
+<li class="person"><span class="initials">KK</span><span>Kabir Khan<small>Mostly Assist mode</small></span><b>64</b></li>
+<li class="person"><span class="initials">RS</span><span>Riya Sharma<small>New this week</small></span><b>58</b></li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+<div class="callouts">
+<div class="{{dash.co}} callout--1"><span class="cnum">1</span><div><b>Reliance Score</b><span>How much of the work leans on AI, from 0 to 100. Lower means more independent thinking.</span></div></div>
+<div class="{{dash.co}} callout--2"><span class="cnum">2</span><div><b>Where they're stuck</b><span>Built from the hints students ask Sage for, so you can plan the next lecture.</span></div></div>
+<div class="{{dash.co}} callout--3"><span class="cnum">3</span><div><b>Ask Lens</b><span>Plain-English questions, answered with charts and the names behind them.</span></div></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 8 · Trace replay -->
+<section class="sec" id="trace" data-rv="trace" aria-labelledby="trace-title">
+<div class="wrap">
+<div class="sec-head {{rv.trace}}">
+<p class="eyebrow">Trace</p>
+<h2 class="h-section" id="trace-title">See how work was made, <em>not just what was submitted.</em></h2>
+</div>
+<div class="trace {{rv.trace}}">
+<div class="card replay rc" style="transition-delay: 80ms;">
+<div class="replay-head">
+<span class="initials" aria-hidden="true">SI</span>
+<div class="replay-who"><b>Sneha Iyer</b><span>ME-204 · Lab report 4: Rankine cycle</span></div>
+<span class="replay-badge"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l4 2"></path></svg>Replay</span>
+</div>
+<div class="doc" aria-live="off">
+<h4>Lab report 4: Efficiency of a simple Rankine cycle</h4>
+<p>{{trace.ta}}<sc-if value="{{trace.caretA}}" hint-placeholder-val="{{false}}"><span class="caret" aria-hidden="true"></span></sc-if></p>
+<sc-if value="{{trace.showPaste}}" hint-placeholder-val="{{true}}"><p class="pasted">The Rankine cycle is the idealised thermodynamic cycle of a steam power plant. It consists of four processes: isentropic compression in the pump, constant-pressure heat addition in the boiler, isentropic expansion in the turbine and constant-pressure heat rejection in the condenser. Raising the boiler pressure increases the mean temperature of heat addition, which raises the thermal efficiency of the cycle, although it also increases the moisture content at the turbine exit.</p></sc-if>
+<p>{{trace.tc}}<sc-if value="{{trace.caretC}}" hint-placeholder-val="{{false}}"><span class="caret" aria-hidden="true"></span></sc-if></p>
+</div>
+<div class="tl">
+<div class="tl-top">
+<button type="button" class="play" aria-label="{{trace.playLabel}}" onClick="{{trace.toggle}}">
+<sc-if value="{{trace.playing}}" hint-placeholder-val="{{false}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="14" y="4" width="4" height="16" rx="1"></rect><rect x="6" y="4" width="4" height="16" rx="1"></rect></svg></sc-if>
+<sc-if value="{{trace.paused}}" hint-placeholder-val="{{true}}"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="7 4 19 12 7 20 7 4"></polygon></svg></sc-if>
+</button>
+<div class="tl-time"><b>{{trace.clock}}</b><span>{{trace.session}}</span></div>
+<div class="tl-time tl-words"><b>{{trace.words}} words</b><span>{{trace.elapsed}} / 52:00 active</span></div>
+</div>
+<div class="track">
+<span class="paste-flag" style="left: 62.5%;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path></svg>Paste · 14:32</span>
+<div class="bars-tl" aria-hidden="true">
+<sc-for list="{{trace.bars}}" as="b" hint-placeholder-count="52"><span class="{{b.cls}}" style="height: {{b.h}}%;"></span></sc-for>
+</div>
+<div class="sess" aria-hidden="true"><span style="width: 34.6%;">Mon · 18 min</span><span style="width: 42.3%;">Tue · 22 min</span><span style="width: 23.1%;">Wed · 12 min</span></div>
+<input class="scrub" type="range" min="0" max="520" step="1" value="{{trace.t}}" onChange="{{trace.scrub}}" aria-label="Replay position" aria-valuetext="{{trace.valueText}}">
+<span class="playhead" style="left: {{trace.pct}}%;" aria-hidden="true"></span>
+</div>
+</div>
+</div>
+
+<aside class="card evidence rc" style="transition-delay: 200ms;" aria-label="Evidence summary">
+<div class="ev-top"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"></path><path d="M14 2v4a2 2 0 0 0 2 2h4"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg>Evidence summary</div>
+<p class="ev-quote">Written over 3 sessions, 52 minutes active. <mark>One paste at 14:32 made up 78% of the final text.</mark></p>
+<div class="ev-grid">
+<div><small>Sessions</small><b>3</b></div>
+<div><small>Active time</small><b>52 min</b></div>
+<div><small>Typed</small><b>22%</b></div>
+<div><small>Pasted</small><b>78%</b></div>
+</div>
+<p class="ev-note"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Trace reports evidence. Teachers decide.</p>
+</aside>
+</div>
+</div>
+</section>
+
+<!-- 9 · Live Lab Mode -->
+<section class="sec" id="lab" data-rv="lab" aria-labelledby="lab-title">
+<div class="wrap lab">
+<div class="{{rv.lab}}">
+<div class="sec-head sec-head--left" style="margin-bottom: 0;">
+<p class="eyebrow">Live Lab Mode</p>
+<h2 class="h-section" id="lab-title">Lab exams, <em>without the guesswork.</em></h2>
+<p class="sec-lead">For practical exams on college PCs. Turn it on for the session, and every seat shows up on one calm screen.</p>
+</div>
+<ul class="lab-points">
+<li><span class="lab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg></span><div><b>Blocks AI sites during the session</b><span>A list you control, active only while the exam runs.</span></div></li>
+<li><span class="lab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="7" height="7" x="3" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="3" rx="1"></rect><rect width="7" height="7" x="14" y="14" rx="1"></rect><rect width="7" height="7" x="3" y="14" rx="1"></rect></svg></span><div><b>Live view of every seat</b><span>See who is signed in and which seat needs a look.</span></div></li>
+<li><span class="lab-ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></span><div><b>Switches off when the exam ends</b><span>No monitoring outside the announced session.</span></div></li>
+</ul>
+</div>
+
+<div class="card seats-panel {{rv.lab}}" role="img" aria-label="Live grid of 30 lab seats. Seat 14 tried to open ChatGPT and the site was blocked.">
+<div class="sp-head">
+<div class="sp-title"><b>CS-102 Programming Lab · Practical</b><span>Lab 3 · 28 of 30 signed in</span></div>
+<span class="live-chip"><span class="live-dot" aria-hidden="true"></span>Live</span>
+<span class="sp-timer">01:12:40 left</span>
+</div>
+<div class="seats">
+<sc-for list="{{lab.seats}}" as="st" hint-placeholder-count="30">
+<div class="{{st.cls}}"><span class="seat-n">{{st.n}}</span><span class="seat-s"><i></i><em style="font-style: normal;">{{st.label}}</em></span></div>
+</sc-for>
+</div>
+<div class="legend"><span><i style="background: var(--good);"></i>Working</span><span><i style="background: var(--accent);"></i>Needs a look</span><span><i style="background: var(--border-strong);"></i>Not signed in</span></div>
+<sc-if value="{{lab.alert}}" hint-placeholder-val="{{true}}">
+<div class="alert">
+<span class="alert-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg></span>
+<div><b>Seat 14 tried to open ChatGPT</b><span>Blocked automatically · 10:42 AM. Nothing else needed unless you want to check in.</span></div>
+</div>
+</sc-if>
+</div>
+</div>
+</section>
+
+<!-- 10 · Privacy -->
+<section class="sec" id="privacy" data-rv="privacy" aria-labelledby="privacy-title">
+<div class="wrap">
+<div class="sec-head {{rv.privacy}}">
+<p class="eyebrow">Privacy first</p>
+<h2 class="h-section" id="privacy-title">Built to guide students, <em>not to watch them.</em></h2>
+</div>
+<div class="privacy {{rv.privacy}}">
+<div class="card pv rc" style="transition-delay: 80ms;">
+<h3><span class="pv-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>What we do</h3>
+<ul>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg><div><b>Teachers see summaries by default</b><span>Class patterns first. Individual detail only when a teacher opens it.</span></div></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg><div><b>Students see all their own data</b><span>Every chat, score and replay about them is visible to them too.</span></div></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg><div><b>Monitor only during announced exams</b><span>Live Lab Mode runs for the session students were told about, then stops.</span></div></li>
+</ul>
+</div>
+<div class="card pv pv--never rc" style="transition-delay: 180ms;">
+<h3><span class="pv-ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>What we never do</h3>
+<ul>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><div><b>Train AI models on student data</b><span>Student work and conversations are never used to train any model.</span></div></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><div><b>Label anyone as dishonest</b><span>We show neutral evidence. Judgement stays with the teacher.</span></div></li>
+<li><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><div><b>Monitor outside an exam session</b><span>No screen tracking during homework, lectures or personal time.</span></div></li>
+</ul>
+</div>
+</div>
+</div>
+</section>
+
+<!-- 11 · FAQ -->
+<section class="sec" id="faq" data-rv="faq" aria-labelledby="faq-title">
+<div class="wrap faq">
+<div class="faq-aside {{rv.faq}}">
+<div class="sec-head sec-head--left" style="margin-bottom: 0;">
+<p class="eyebrow">FAQ</p>
+<h2 class="h-section" id="faq-title">Questions professors <em>ask us.</em></h2>
+<p class="sec-lead">Something we haven't covered? <a href="#pilot">Write to us</a> with your pilot request and we'll answer it there.</p>
+</div>
+</div>
+<ul class="qa-list {{rv.faq}}">
+<sc-for list="{{faq}}" as="q" hint-placeholder-count="6">
+<li class="{{q.cls}}">
+<h3 style="margin: 0;"><button type="button" class="qa-btn" aria-expanded="{{q.expanded}}" aria-controls="{{q.id}}" onClick="{{q.toggle}}"><span>{{q.q}}</span><span class="qa-plus" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></span></button></h3>
+<sc-if value="{{q.open}}" hint-placeholder-val="{{false}}"><div class="qa-a" id="{{q.id}}"><p>{{q.a}}</p></div></sc-if>
+</li>
+</sc-for>
+</ul>
+</div>
+</section>
+
+<!-- 12 · Final call to action -->
+<section class="sec" id="pilot" data-rv="pilot" aria-label="Request a pilot">
+<div class="wrap {{rv.pilot}}">
+<dc-import name="PilotPanel" theme="{{theme}}" motion="{{motionOn}}" framed="{{false}}" hint-size="100%,640px"></dc-import>
+</div>
+</section>
+</main>
+
+<footer class="foot" aria-label="Footer">
+<div class="wrap">
+<div class="foot-grid">
+<div>
+<a class="logo" href="#top" aria-label="SafeSight home">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg>
+<span>SafeSight</span>
+</a>
+<p class="foot-mission">Guide, don't guard. AI that helps every student learn, and helps every teacher see how.</p>
+</div>
+<nav aria-label="Footer">
+<ul class="foot-links">
+<li><a href="#product">Product</a></li>
+<li><a href="#lab">Lab Mode</a></li>
+<li><a href="#privacy">Privacy</a></li>
+<li><a href="#top">About</a></li>
+<li><a href="#pilot">Contact</a></li>
+</ul>
+</nav>
+</div>
+<div class="foot-bottom">
+<span class="made"><i aria-hidden="true"><span></span></i>Made in India · Built at IIT Mandi</span>
+<span>© 2026 SafeSight. All rights reserved.</span>
+</div>
+</div>
+</footer>
+
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{false}}">
+<div class="menu" role="dialog" aria-modal="true" aria-label="Menu">
+<div class="menu-top">
+<a class="logo" href="#top" onClick="{{closeMenu}}">
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m14.31 8 5.74 9.94"></path><path d="M9.69 8h11.48"></path><path d="m7.38 12 5.74-9.94"></path><path d="M9.69 16 3.95 6.06"></path><path d="M14.31 16H2.83"></path><path d="m16.62 12-5.74 9.94"></path><path d="M12 9.7l.6 1.7 1.7.6-1.7.6-.6 1.7-.6-1.7-1.7-.6 1.7-.6z" fill="currentColor" stroke-width="0.5"></path></svg>
+<span>SafeSight</span>
+</a>
+<button type="button" class="icon-btn" aria-label="Close menu" onClick="{{closeMenu}}"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+</div>
+<ul class="menu-links">
+<li style="animation-delay: 40ms;"><a href="#product" onClick="{{closeMenu}}">Product<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></li>
+<li style="animation-delay: 100ms;"><a href="#how" onClick="{{closeMenu}}">How it works<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></li>
+<li style="animation-delay: 160ms;"><a href="#lab" onClick="{{closeMenu}}">Lab Mode<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></li>
+<li style="animation-delay: 220ms;"><a href="#privacy" onClick="{{closeMenu}}">Privacy<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></li>
+<li style="animation-delay: 280ms;"><a href="#teachers" onClick="{{closeMenu}}">For teachers<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a></li>
+</ul>
+<div class="menu-row"><span>Appearance</span><button type="button" class="theme-switch" onClick="{{toggleTheme}}" aria-label="{{themeLabel}}">{{themeName}}</button></div>
+<div class="menu-foot">
+<a class="btn btn--secondary btn--block" href="Auth.dc.html">Log in</a>
+<a class="btn btn--primary btn--block" href="#pilot" onClick="{{closeMenu}}">Request a pilot</a>
+</div>
+</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"motion":{"editor":"boolean","default":true},"statWeekly":{"editor":"int","default":0,"min":0,"max":100,"section":"Survey results (0 = placeholder)"},"statLearnLess":{"editor":"int","default":0,"min":0,"max":100,"section":"Survey results (0 = placeholder)"},"statNoView":{"editor":"int","default":0,"min":0,"max":100,"section":"Survey results (0 = placeholder)"},"surveyStudents":{"editor":"int","default":0,"min":0,"section":"Survey results (0 = placeholder)"},"surveyProfessors":{"editor":"int","default":0,"min":0,"section":"Survey results (0 = placeholder)"},"menuOpen":{"editor":null},"$preview":{"width":1440,"height":9800}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = {
+      themeOverride: null, menuOpen: !!props.menuOpen, scrolled: false,
+      msgs: [], draft: "", hint: 1, fading: false,
+      seen: {}, pc: 0, dc: 0, howP: 0, dashP: 0,
+      cmp: "sage", hp: -1,
+      tt: 0, playing: false, labAlert: false, faq: 0
+    };
+    this.timers = [];
+    this.script = [
+      { who: "student", text: "Just give me the answer to Q3, the entropy one." },
+      { who: "sage", hint: 1, text: "Let's crack it together. What happens to entropy when heat flows into a system at constant temperature?" },
+      { who: "student", text: "It increases?" },
+      { who: "sage", hint: 2, cite: true, text: "Exactly. Now, which formula links heat, temperature and entropy? Page 12 of your notes has it." }
+    ];
+    this.TA = "Aim: To find the thermal efficiency of a simple Rankine cycle and see how boiler pressure affects it. Readings were taken at three boiler pressures in the thermal engineering lab.";
+    this.TC = "Conclusion: Efficiency rose from 27.4% to 31.2% as boiler pressure went from 20 to 40 bar, which matches the trend in our notes.";
+    this.weeks = [["W2", 46, 52], ["W3", 45, 60], ["W4", 43, 76], ["W5", 41, 92], ["W6", 40, 100], ["W7", 37, 124], ["W8", 36, 132], ["W9", 34, 148]];
+    this.faqs = [
+      { q: "Can't students just use ChatGPT instead?", a: "They can, and some will. SafeSight doesn't try to wall off the internet outside exams. It earns its place by being more useful for coursework: Sage knows your notes, the assignment and where each student is stuck. And because Trace and Lens show how work was made, you can grade the thinking, not just the final answer." },
+      { q: "Which AI model does Sage use, and where does the data go?", a: "Sage is built on leading large language models accessed through enterprise APIs that do not train on your data. Your notes and your students' work stay in your institution's workspace, and student data is never used to train AI models. We'll share the exact model and hosting region for your pilot in writing before it starts." },
+      { q: "Does it work for coding assignments?", a: "Partly, today. Sage already explains programming concepts and error messages with hints instead of solutions. Full code review with hints, and Trace for coding sessions, are planned for the pilot semester." },
+      { q: "How long does setup take for a course?", a: "Most of it is uploading your lecture notes and choosing Learn, Assist or Exam mode for each assignment. During a pilot we sit with you and set up the first course together, then students join with a class link." },
+      { q: "Is it free for students?", a: "Yes. Students never pay. SafeSight is licensed by the institution, and we agree pilot terms with each college before anything starts." },
+      { q: "How does Live Lab Mode work on our lab computers?", a: "Your lab admin installs the SafeSight Lab extension in Chrome on each lab PC, once. It stays idle until a student joins an announced exam session with its code. During the session it blocks a list of AI sites and sends each seat's status to the teacher's grid, and when the session ends it switches off on its own. It covers Chrome only and cannot see phones, so an invigilator is still part of the plan." }
+    ];
+  }
+
+  componentDidMount() {
+    var self = this;
+    this.onScroll = function () {
+      if (self.raf) return;
+      self.raf = requestAnimationFrame(function () { self.raf = 0; self.measure(); });
+    };
+    window.addEventListener("scroll", this.onScroll, { passive: true });
+    window.addEventListener("resize", this.onScroll, { passive: true });
+    if (this.staticMode()) {
+      this.showFinal();
+      this.finalAll();
+    } else {
+      this.later(function () { self.run(0); }, 1100);
+      this.later(function () { self.observe(); self.measure(); }, 60);
+    }
+  }
+
+  componentWillUnmount() {
+    window.removeEventListener("scroll", this.onScroll);
+    window.removeEventListener("resize", this.onScroll);
+    this.timers.forEach(function (t) { clearTimeout(t); });
+    if (this.io) this.io.disconnect();
+    if (this.traceTimer) clearInterval(this.traceTimer);
+    if (this.raf) cancelAnimationFrame(this.raf);
+  }
+
+  reduced() {
+    if (this.props.motion === false) return true;
+    try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; }
+  }
+
+  // A canvas frame renders the whole page at once: show final states there.
+  staticMode() { return this.reduced() || (window.innerHeight || 0) > 1700; }
+
+  later(fn, ms) { var t = setTimeout(fn, ms); this.timers.push(t); return t; }
+
+  finalAll() {
+    this.setState({
+      seen: { problem: 1, demo: 1, how: 1, agents: 1, dash: 1, trace: 1, lab: 1, privacy: 1, faq: 1, pilot: 1 },
+      pc: 1, dc: 1, howP: 1, dashP: 1, tt: 520, labAlert: true
+    });
+  }
+
+  observe() {
+    var self = this;
+    var els = document.querySelectorAll("[data-rv]");
+    if (!els.length) { this.later(function () { self.observe(); }, 250); return; }
+    if (!("IntersectionObserver" in window)) { this.finalAll(); return; }
+    this.io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        var key = en.target.getAttribute("data-rv");
+        self.io.unobserve(en.target);
+        self.reveal(key);
+      });
+    }, { threshold: 0.06, rootMargin: "0px 0px -10% 0px" });
+    for (var i = 0; i < els.length; i++) this.io.observe(els[i]);
+  }
+
+  reveal(key) {
+    var self = this;
+    if (this.state.seen[key]) return;
+    var seen = Object.assign({}, this.state.seen); seen[key] = 1;
+    this.setState({ seen: seen });
+    if (key === "problem") this.later(function () { self.tween("pc", 1400); }, 250);
+    if (key === "dash") this.later(function () { self.tween("dc", 1400); }, 350);
+    if (key === "trace") this.later(function () { self.playTrace(true); }, 700);
+    if (key === "lab") this.later(function () { self.setState({ labAlert: true }); }, 2200);
+  }
+
+  tween(key, dur) {
+    var self = this, t0 = performance.now();
+    var step = function (now) {
+      var x = Math.min(1, (now - t0) / dur);
+      var e = 1 - Math.pow(1 - x, 3);
+      var patch = {}; patch[key] = e; self.setState(patch);
+      if (x < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }
+
+  measure() {
+    var vh = window.innerHeight || 800;
+    var patch = {};
+    var sc = (window.scrollY || document.documentElement.scrollTop || 0) > 8;
+    if (sc !== this.state.scrolled) patch.scrolled = sc;
+    if (!this.staticMode()) {
+      var how = document.getElementById("how-steps");
+      if (how) {
+        var r = how.getBoundingClientRect();
+        var p = Math.max(0, Math.min(1, (vh * 0.82 - r.top) / (vh * 0.5)));
+        p = Math.round(p * 100) / 100;
+        if (p !== this.state.howP) patch.howP = p;
+      }
+      var dash = document.getElementById("dash-frame");
+      if (dash) {
+        var d = dash.getBoundingClientRect();
+        var q = Math.max(0, Math.min(1, (vh - d.top) / (vh * 0.7)));
+        q = Math.round(q * 100) / 100;
+        if (q !== this.state.dashP) patch.dashP = q;
+      }
+    }
+    if (Object.keys(patch).length) this.setState(patch);
+  }
+
+  // ---------- hero chat ----------
+  showFinal() {
+    this.setState({ msgs: this.script.map(function (m) { return { who: m.who, text: m.text, cite: !!m.cite }; }), hint: 2, draft: "" });
+  }
+
+  run(i) {
+    var self = this;
+    if (i >= self.script.length) {
+      this.later(function () { self.setState({ fading: true }); }, 4800);
+      this.later(function () {
+        self.setState({ msgs: [], fading: false, hint: 1 });
+        self.later(function () { self.run(0); }, 700);
+      }, 5300);
+      return;
+    }
+    var step = self.script[i];
+    if (step.who === "student") this.typeStudent(step.text, function () { self.later(function () { self.run(i + 1); }, 450); });
+    else this.sageReply(step, function () { self.later(function () { self.run(i + 1); }, 1200); });
+  }
+
+  typeStudent(text, done) {
+    var self = this, n = 0;
+    var tick = function () {
+      n += 1;
+      self.setState({ draft: text.slice(0, n) });
+      if (n < text.length) self.later(tick, 26 + Math.random() * 34);
+      else self.later(function () {
+        self.setState({ draft: "", msgs: self.state.msgs.concat([{ who: "student", text: text }]) });
+        done();
+      }, 420);
+    };
+    this.later(tick, 300);
+  }
+
+  sageReply(step, done) {
+    var self = this, n = 0, words = step.text.split(" ");
+    this.setState({ msgs: this.state.msgs.concat([{ who: "sage", text: "", typing: true }]) });
+    var update = function (patch) {
+      var list = self.state.msgs.slice();
+      list[list.length - 1] = Object.assign({}, list[list.length - 1], patch);
+      self.setState({ msgs: list });
+    };
+    var tick = function () {
+      n += 1;
+      update({ typing: false, streaming: n < words.length, text: words.slice(0, n).join(" ") });
+      if (n < words.length) self.later(tick, 42 + Math.random() * 48);
+      else {
+        if (step.cite) self.later(function () { update({ cite: true }); }, 260);
+        done();
+      }
+    };
+    this.later(function () { self.setState({ hint: step.hint }); tick(); }, 1100);
+  }
+
+  // ---------- trace replay ----------
+  playTrace(fromStart) {
+    var self = this;
+    if (this.traceTimer) clearInterval(this.traceTimer);
+    var start = fromStart || this.state.tt >= 520 ? 0 : this.state.tt;
+    this.setState({ tt: start, playing: true });
+    this.hold = 0;
+    this.traceTimer = setInterval(function () {
+      if (self.hold > 0) { self.hold -= 1; return; }
+      var t = self.state.tt + 2;
+      if (self.state.tt < 320 && t >= 320) { t = 320; self.hold = 22; }
+      if (t >= 520) { t = 520; clearInterval(self.traceTimer); self.traceTimer = null; self.setState({ tt: t, playing: false }); return; }
+      self.setState({ tt: t });
+    }, 40);
+  }
+
+  pauseTrace() {
+    if (this.traceTimer) clearInterval(this.traceTimer);
+    this.traceTimer = null;
+    this.setState({ playing: false });
+  }
+
+  traceVals() {
+    var self = this, tt = this.state.tt, m = tt / 10;
+    var pad = function (n) { return (n < 10 ? "0" : "") + n; };
+    var sess, start, off;
+    if (m < 18) { sess = "Session 1 · Monday"; start = 20 * 60 + 10; off = m; }
+    else if (m < 40) { sess = "Session 2 · Tuesday"; start = 14 * 60 + 18; off = m - 18; }
+    else { sess = "Session 3 · Wednesday"; start = 21 * 60 + 2; off = m - 40; }
+    var mins = Math.floor(start + off);
+    var clock = pad(Math.floor(mins / 60) % 24) + ":" + pad(mins % 60);
+    var words;
+    if (m <= 18) words = 86 * m / 18;
+    else if (m < 32) words = 86 + 34 * (m - 18) / 14;
+    else if (m < 40) words = 620 + 8 * (m - 32) / 8;
+    else words = 628 + 12 * (m - 40) / 12;
+    var fa = Math.min(1, m / 32), fc = Math.max(0, Math.min(1, (m - 40) / 12));
+    var el = Math.floor(m), es = Math.floor((m - el) * 60);
+    var bars = [];
+    for (var i = 0; i < 52; i++) {
+      var gap = (i === 17 || i === 39);
+      var cls = i === 32 ? "paste" : (gap ? "gap" : (i < m ? "past" : ""));
+      var h = i === 32 ? 100 : (gap ? 0 : 18 + ((i * 37) % 47));
+      bars.push({ cls: cls, h: h });
+    }
+    return {
+      t: tt, pct: (tt / 520 * 100).toFixed(2), clock: clock, session: sess,
+      words: Math.round(words), elapsed: pad(el) + ":" + pad(es),
+      valueText: sess + ", " + clock,
+      ta: this.TA.slice(0, Math.round(this.TA.length * fa)),
+      tc: this.TC.slice(0, Math.round(this.TC.length * fc)),
+      caretA: this.state.playing && m < 32,
+      caretC: this.state.playing && m >= 40 && m < 52,
+      showPaste: m >= 32,
+      bars: bars,
+      playing: this.state.playing, paused: !this.state.playing,
+      playLabel: this.state.playing ? "Pause replay" : "Play replay",
+      toggle: function () { if (self.state.playing) self.pauseTrace(); else self.playTrace(false); },
+      scrub: function (e) { self.pauseTrace(); self.setState({ tt: +e.target.value }); }
+    };
+  }
+
+  renderVals() {
+    var self = this, s = this.state, p = this.props;
+    var theme = s.themeOverride || (p.theme === "dark" ? "dark" : "light");
+    var isDark = theme === "dark";
+    var keys = ["problem", "demo", "how", "agents", "dash", "trace", "lab", "privacy", "faq", "pilot"];
+    var rv = {};
+    keys.forEach(function (k) { rv[k] = s.seen[k] ? "rv in" : "rv"; });
+
+    var statOf = function (v) {
+      v = +v || 0;
+      if (v <= 0) return { text: "[XX]%", cls: "stat-num is-ph" };
+      return { text: Math.round(v * s.pc) + "%", cls: "stat-num" };
+    };
+    var nOf = function (v) { v = +v || 0; return v > 0 ? v.toLocaleString("en-IN") : "[N]"; };
+
+    var fmt = function (v) { return Math.round(v).toLocaleString("en-US"); };
+    var dp = s.dashP;
+    var hp = s.hp;
+    var pts = this.weeks.map(function (w, i) {
+      var x = 44 + i * 70;
+      return { wk: w[0], v: w[1], x: x, y: w[2], hx: x - 35, r: (i === 7 || i === hp) ? 5 : 3.5,
+        enter: function () { self.setState({ hp: i }); } };
+    });
+    var hpPt = hp >= 0 ? pts[hp] : null;
+
+    var seats = [];
+    for (var n = 1; n <= 30; n++) {
+      var off = (n === 7 || n === 22);
+      var alert = n === 14 && s.labAlert;
+      seats.push({
+        n: (n < 10 ? "0" : "") + n,
+        cls: "seat" + (off ? " is-off" : "") + (alert ? " is-alert" : ""),
+        label: off ? "Not signed in" : (alert ? "Needs a look" : "Working")
+      });
+    }
+
+    return {
+      theme: theme, isDark: isDark, isLight: !isDark,
+      motion: p.motion === false ? "off" : "on",
+      motionOn: p.motion !== false,
+      navClass: s.scrolled ? "nav is-scrolled" : "nav",
+      menuOpen: s.menuOpen,
+      menuExpanded: s.menuOpen ? "true" : "false",
+      themeLabel: isDark ? "Switch to light mode" : "Switch to dark mode",
+      themeName: isDark ? "Dark" : "Light",
+      toggleTheme: function () { self.setState({ themeOverride: isDark ? "light" : "dark" }); },
+      openMenu: function () { self.setState({ menuOpen: true }); },
+      closeMenu: function () { self.setState({ menuOpen: false }); },
+      msgs: s.msgs.map(function (m) {
+        return { isSage: m.who === "sage", isStudent: m.who === "student", text: m.text, typing: !!m.typing, hasText: !!m.text, streaming: !!m.streaming, cite: !!m.cite };
+      }),
+      draft: s.draft, hasDraft: !!s.draft, noDraft: !s.draft,
+      sendClass: s.draft ? "send" : "send is-idle",
+      bodyClass: s.fading ? "chat-body is-fading" : "chat-body",
+      hintText: "Hint " + s.hint + " of 5",
+      hintClass: s.hint === 2 ? "hint bump" : "hint",
+
+      rv: rv,
+      stats: {
+        a: statOf(p.statWeekly), b: statOf(p.statLearnLess), c: statOf(p.statNoView),
+        nStudents: nOf(p.surveyStudents), nProfs: nOf(p.surveyProfessors)
+      },
+      cmp: {
+        cls: s.cmp === "sage" ? "show-sage" : "show-generic",
+        sagePressed: s.cmp === "sage" ? "true" : "false",
+        genericPressed: s.cmp === "generic" ? "true" : "false",
+        showSage: function () { self.setState({ cmp: "sage" }); },
+        showGeneric: function () { self.setState({ cmp: "generic" }); }
+      },
+      how: {
+        p: s.howP,
+        c1: s.howP > 0.02 ? "step is-on" : "step",
+        c2: s.howP >= 0.5 ? "step is-on" : "step",
+        c3: s.howP >= 0.98 ? "step is-on" : "step"
+      },
+      dash: {
+        rot: (16 * (1 - dp)).toFixed(2),
+        scale: (0.94 + 0.06 * dp).toFixed(3),
+        co: dp >= 0.92 ? "callout is-in" : "callout",
+        k1: fmt(112 * s.dc), k2: fmt(1284 * s.dc), k3: fmt(34 * s.dc), k4: fmt(6 * s.dc)
+      },
+      chart: {
+        pts: pts,
+        hasHover: !!hpPt,
+        hx: hpPt ? hpPt.x : 0,
+        tipX: hpPt ? (hpPt.x / 560 * 100).toFixed(2) : 0,
+        tipY: hpPt ? (hpPt.y / 206 * 100).toFixed(2) : 0,
+        tipWk: hpPt ? "Week " + hpPt.wk.slice(1) : "",
+        tipV: hpPt ? hpPt.v : "",
+        leave: function () { self.setState({ hp: -1 }); }
+      },
+      trace: this.traceVals(),
+      lab: { seats: seats, alert: s.labAlert },
+      faq: this.faqs.map(function (f, i) {
+        var open = s.faq === i;
+        return { q: f.q, a: f.a, open: open, id: "faq-a-" + i, expanded: open ? "true" : "false",
+          cls: open ? "qa is-open" : "qa",
+          toggle: function () { self.setState({ faq: self.state.faq === i ? -1 : i }); } };
+      })
+    };
+  }
+}
+</script>
+</body>
+</html>
