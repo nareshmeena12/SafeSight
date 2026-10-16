@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>SafeSight Lab</title>
+  <link rel="stylesheet" href="ui.css">
+  <style>body { width: 340px; padding: 16px; }</style>
+</head>
+<body>
+  <div class="brand"><img src="icons/mark.svg" alt="">SafeSight Lab</div>
+
+  <section id="setup" class="card" hidden>
+    <h1>This PC isn't set up yet</h1>
+    <p class="muted">Ask the lab admin to add the SafeSight address in the extension options.</p>
+    <button class="ghost" id="open-options" type="button">Open options</button>
+  </section>
+
+  <form id="join" class="card" hidden novalidate>
+    <h1>Join your lab session</h1>
+    <p class="muted" id="last"></p>
+    <label for="roll">Roll number</label>
+    <input id="roll" name="roll" autocomplete="off" autocapitalize="characters" maxlength="32" required>
+    <label for="code">Session code</label>
+    <input id="code" name="code" class="code" inputmode="numeric" maxlength="7" autocomplete="off" placeholder="000000" required>
+    <p class="error" id="error" role="alert" hidden></p>
+    <button class="primary" type="submit" id="start">Start session</button>
+    <p class="muted" style="margin-top:12px">While the session runs, SafeSight records:</p>
+    <ul class="records">
+      <li>tab switches and moving to other apps</li>
+      <li>copy and paste (how many characters, never the text)</li>
+      <li>attempts to open AI sites, which are blocked</li>
+      <li>time with no keyboard or mouse input</li>
+    </ul>
+    <p class="muted" style="margin-top:8px">It stops by itself when the session ends.</p>
+  </form>
+
+  <section id="active" class="card" hidden>
+    <div class="live"><span class="dot"></span>Exam session active</div>
+    <p>SafeSight is recording activity.</p>
+    <dl>
+      <dt>Session</dt><dd id="s-title"></dd>
+      <dt>Course</dt><dd id="s-course"></dd>
+      <dt>Seat</dt><dd id="s-seat"></dd>
+      <dt>Ends</dt><dd id="s-ends"></dd>
+    </dl>
+    <p class="muted" id="s-unmatched" hidden>Your roll number isn't linked to a SafeSight account in this course. Your teacher still sees this seat; you can add your roll number on SafeSight later to see your summary.</p>
+    <button class="ghost" id="leave" type="button">I've finished</button>
+    <p class="muted" id="leave-confirm" hidden style="margin-top:8px">Press again to stop recording and leave the session.</p>
+  </section>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

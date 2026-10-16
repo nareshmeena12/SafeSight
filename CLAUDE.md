@@ -60,6 +60,9 @@ src/
     student/trace/          S9: "Your writing" list + [assignmentId] Trace editor (or the submitted view with replay)
     teacher/submissions/    S9: submitted Trace work + [submissionId] replay with the evidence summary
     api/trace/[submissionId]/  S9: batch (autosave every 5s), submit (+ Trace agent via after()), report (teacher re-run)
+    teacher/lab/            S13–S15: sessions list + new session; [sessionId] live seat grid (Realtime); [sessionId]/report summaries + CSV
+    student/lab/            S15: roll number + the student's own lab summaries
+    api/lab/                join + heartbeat (extension, seat token), sessions/[sessionId]/csv (teacher)
   components/
     ui/                     shadcn/ui (radix "nova" preset), restyled to our tokens. Add more with `pnpm dlx shadcn@latest add <name>`, then restyle (see Handoff)
     auth/                   login (password + magic link) and sign-up forms (client, useActionState); field.tsx also keeps the app-style Field used on /design
@@ -73,6 +76,7 @@ src/
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
     trace/                  S9: trace-editor (Tiptap + recorder), replay (scrubber), paste-mark, evidence-summary, trace.css
+    lab/                    S13–S15: live-lab (grid, feed, seat sheet), new-session-dialog, session-actions, roll-number-form, format
   lib/
     env.ts                  zod-checked public env
     supabase/               client.ts (browser), server.ts (RSC/actions/routes), proxy.ts, admin.ts (service role, server-only), database.types.ts (generated)
@@ -91,6 +95,9 @@ src/
     teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts, refresh.ts (S12: this week's metrics after a chat/submission)
     lens/                   model.ts (provider from env), tools.ts (7 read-only tools), prompt.ts, rate-limit.ts
     trace/                  S9: schemas, metrics, html (paste measure), replay clock, summary (template + banned words), report (Trace agent), ingest, queries
+    lab/                    S13–S15: domains (AI blocklist), schemas, status (seat colours), describe (feed), report (metrics, summary, CSV) — pure, tested;
+                            seat (join/heartbeat), queries, reports, report-data, actions, tokens (server)
+extension/                  S13: SafeSight Lab Chrome extension (MV3, no build step); README for lab admins
 supabase/
   config.toml               local Supabase (CLI is a devDependency)
   migrations/               SQL migrations, applied in order
@@ -105,14 +112,16 @@ public/demo/                me201-thermodynamics-notes.pdf (14 pages; page 12 = 
 docs/DEMO.md                the demo runbook: env, data, reset, the exact texts to paste, what to do when something breaks
 scripts/seed.mts            demo data (institution, users, courses, enrollments, assignments) via the service role
 scripts/db-push-hosted.mts  applies pending migrations to the hosted project via the Management API
+scripts/lab-simulate.mts    S15: `pnpm lab:simulate --create` — 30 simulated lab seats through the real API
 scripts/sage-eval.mts       S5: runs the 30 trick prompts (sage-trick-prompts.json) and lists replies that give away answers
 tests/db/rls.test.ts        RLS tests against local Supabase (skipped when it isn't running)
 tests/db/teacher-dashboard.test.ts  teacher RPC scoping and the Reliance Score formula
 tests/db/trace-rls.test.ts  S9: RLS for submissions, writing_events, writing_snapshots, integrity_reports
+tests/db/lab-rls.test.ts    S13: RLS for lab_* tables and set_my_roll_number
 tests/db/notes-search.test.ts  S12: keyword ranking weighs rare words
 ```
 
-Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `demo:data`, `demo:reset`, `demo:notes`, `mock:ai`, `sage:eval`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
+Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `demo:data`, `demo:reset`, `demo:notes`, `mock:ai`, `sage:eval`, `lab:simulate`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
 
 ## Routes (planned)
 
@@ -173,9 +182,21 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S11 demo data (2026-10-16): `pnpm demo:data` — 4 weeks, 5 heavy / 15 healthy / 10 light, chats, Trace work with events and snapshots, flags, notes PDF; `pnpm demo:reset`; applied on hosted
 - [x] S12 polish (2026-10-16): demo mode (fallback on slow model), friendly errors and 404s, My learning, nav entries, 375px fixes, live Reliance refresh, better notes ranking (migration applied on hosted), the §12 demo run end to end on hosted Supabase (mock model), `docs/DEMO.md`
 - [ ] **Production deploy not verified from the cloud session**: Vercel deployments are behind Vercel SSO and there is no Vercel token here, so the run used `next start` locally against the hosted Supabase. After merging, open the production URL and walk `docs/DEMO.md` once
-- [ ] S13 Live Lab Mode — **next**
+- [x] S13–S15 Live Lab Mode (2026-10-16): `lab_sessions`/`lab_seats`/`lab_seat_tokens`/`lab_events`/`lab_reports` + `profiles.roll_number` (migration `20261105090000_live_lab.sql`, applied on hosted), Chrome extension, live seat grid over Realtime, per-seat evidence summaries + CSV, `pnpm lab:simulate`
 
 ## Handoff notes
+
+- **S13–S15 (Live Lab Mode)** shipped from `claude/funny-bohr-hfyc2d`, built while another session polished the app, so only lab files were touched. Decisions made without asking:
+  - **Not linked in the nav yet** (nav.ts belonged to the polishing session): add "Lab sessions" → `/teacher/lab` (icon `MonitorCheck`) to the teacher nav and → `/student/lab` to the student nav.
+  - **The extension has no Supabase login.** `POST /api/lab/join {code, rollNumber, seatLabel?}` (public; the 6-digit code is the key; joining opens 15 min before the start) returns a random seat token; only its sha256 is stored, in `lab_seat_tokens` (RLS on, no policies, so no browser role or Realtime sees it). `POST /api/lab/heartbeat` (Bearer token) carries the queued events every 10 s and answers `session.active`; the extension stops when it is false, on 401 (same roll number joined on another PC — the new token replaces the old one, logged as `rejoined`), or at the end time even offline. All writes use the service role after the token check. Rate limit: 30 wrong codes / 10 min per IP (labs share one IP, so normal joins are allowed 600 / 10 min). Event times from PCs are clamped to [joined, min(now, end)]; events arrive up to 2 min after the end.
+  - **What is recorded**: event type + `{host?, chars?, seconds?}` only (zod `.strict()`); never page or clipboard text. Server-only events: `joined`, `rejoined`, `left` (student pressed "I've finished"), `stopped` (session over), `heartbeat_gap` (a heartbeat came > 30 s after the previous one; `seconds`). After the end, `last_heartbeat_at` stops moving, so a seat that went quiet and never came back counts as silent until the end in the report.
+  - **Seat colours** (`lib/lab/status.ts`, tested): red = no heartbeat for 30 s (client clock, ticks every 2 s); amber = any `blocked_site` or `heartbeat_gap`; green = recording; grey = stopped/session over. Tab switches and copy/paste are normal lab work and don't colour a seat. The feed groups repeats within 2 min ("Seat 14 tried to open ChatGPT twice").
+  - **Realtime**: `lab_seats` and `lab_events` are in `supabase_realtime`; RLS applies. The grid must call `supabase.realtime.setAuth(access_token)` before subscribing, otherwise Realtime checks RLS as anon and delivers nothing. A 15 s poll is the safety net.
+  - **Roll numbers**: new `profiles.roll_number` (upper case, no spaces). Students set it on `/student/lab` via `rpc('set_my_roll_number')`; seats link to the one enrolled student with that roll number, otherwise they show the roll number only. `pnpm lab:simulate --create` gives demo students `ME23B001…` (sorted by name) if they have none. Consider a roll-number field at sign-up later.
+  - **Reports (S15)**: template only (`labSummary`, Trace-style, checked with `usesBannedWords`; "copied" is banned, so it says "Used copy"). Written with the service role 15 s after "End session" (`after()`), and on the report page/CSV when missing or written within 2 min of the end. Gotcha: re-reading the same Supabase GET in one render returns Next's memoised response — `ensureLabReports` returns the rows it wrote instead. CSV: `/api/lab/sessions/<id>/csv`, BOM for Excel, formula-safe fields.
+  - **Teacher edits** are limited by a column grant to `title, room, ends_at, ended_at, blocklist`. "Add 15 min" (max 12 h total), "Blocked sites" (picked up by PCs on the next heartbeat), "End session". The code can't change.
+  - **Extension** (`extension/`, plain MV3, no build): DNR dynamic rules (main_frame → `blocked.html`, other request types blocked) from the server's list = `AI_DOMAINS` + the teacher's; `webNavigation` logs the attempt; `tabs.onActivated`, `windows.onFocusChanged` (re-checked after 800 ms because switching Chrome windows briefly reports "none"), `idle` (60 s), content script for copy/paste counts and the banner (bottom bar, shadow DOM). Queue in `chrome.storage.local` with serialised writes; 10 s `setInterval` keeps the worker alive, a 30 s alarm revives it. Settings: options page or Chrome policy (`managed_schema.json`). `chrome.storage.managed.get` can take ~2 s with no policy, so it is capped at 1 s. Tested in Chromium with Playwright: join, banner, copy/paste counts, ChatGPT redirect + event, leave, auto-stop at the end.
+  - **Verified** end to end against local Supabase: 30 simulated seats + the real extension, grid at 1440 and 390 in light and dark, seat sheet, report, CSV, student page. Not tried on a real lab PC or hosted Realtime yet.
 
 - **S11 + S12 shipped together** from `claude/awesome-fermi-5hda41`. Decisions made without asking:
   - **Demo data** (`scripts/demo-data.mts`, run with `--conditions=react-server` so it can call `ingestMaterial`). Deterministic PRNG; everything is dated relative to now (re-run before a demo). It **replaces** all conversations, submissions and flags of the 30 `@demo.safesight.in` students in the two demo courses (real sign-ups untouched), upserts 10 assignments with fresh due dates (5 new fixed ids `…0206`–`…0210`: problem sets 1–2, the heat-engines essay, fluid statics, the hydrostatic lab report), uploads the notes PDF as material `…0301`, and refreshes 6 weeks of metrics. It runs the app's own `nextHintLevel`, `decideFlags`, `computeMetrics`, `measureHtml` and `templateSummary`, so labels, flags and Trace numbers match what the app would compute. Flags older than 3 days are mostly resolved (open ≈ 15–20). Snapshots are every ~40 s (not 5 s) to keep storage small. PS3 has no class activity (Riya uses it on stage). PostgREST bulk inserts take the union of the rows' keys, so every row sets every column.

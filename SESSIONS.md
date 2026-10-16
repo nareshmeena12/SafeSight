@@ -49,10 +49,10 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 ## Live Lab Mode (after the core)
 
-- [ ] **S13 — Lab sessions and extension.** `lab_sessions`, `lab_seats`, `lab_events` with RLS. Chrome extension (Manifest V3): activates only with a valid session code and roll number, shows the "exam session active" banner, blocks the AI domain list plus the teacher's list, logs tab switches, copy, paste, blocked-site attempts and idle time, heartbeat every 10s, stops by itself when the session ends.
+- [x] **S13 — Lab sessions and extension.** `lab_sessions`, `lab_seats`, `lab_events` with RLS. Chrome extension (Manifest V3): activates only with a valid session code and roll number, shows the "exam session active" banner, blocks the AI domain list plus the teacher's list, logs tab switches, copy, paste, blocked-site attempts and idle time, heartbeat every 10s, stops by itself when the session ends.
 
-- [ ] **S14 — Live teacher grid.** Create a session and show its code; live seat grid (green / amber / red) via Supabase Realtime; event feed; click a seat for its timeline; flag seats with no heartbeat for 30s.
+- [x] **S14 — Live teacher grid.** Create a session and show its code; live seat grid (green / amber / red) via Supabase Realtime; event feed; click a seat for its timeline; flag seats with no heartbeat for 30s.
 
-- [ ] **S15 — Report and test.** Per-student evidence summary in Trace's neutral style after the session, CSV download, and a script that simulates 30 seats so the demo can be rehearsed without a lab.
+- [x] **S15 — Report and test.** Per-student evidence summary in Trace's neutral style after the session, CSV download, and a script that simulates 30 seats so the demo can be rehearsed without a lab.
 
 > Before installing anything on real lab PCs, get written permission from the course instructor and the lab administrator.

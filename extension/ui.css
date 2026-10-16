@@ -1,0 +1,35 @@
+/* SafeSight tokens (design/tokens.json), light and dark following the system. */
+:root {
+  --bg: #faf8f3; --surface: #ffffff; --text: #14161f; --muted: #6b6f7b; --border: #e7e3da;
+  --primary: #1f6f5c; --on-primary: #ffffff; --primary-soft: #e5efea; --critical: #d14b45;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0e1015; --surface: #171a22; --text: #ecedee; --muted: #9ba0ab; --border: #262a35;
+    --primary: #4fb59a; --on-primary: #0e1015; --primary-soft: #15302a; --critical: #e8706a;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 400 14px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+h1 { font-size: 18px; line-height: 1.3; margin: 0 0 4px; font-weight: 600; }
+p { margin: 0 0 8px; }
+.muted { color: var(--muted); font-size: 13px; }
+.card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px; }
+.brand { display: flex; align-items: center; gap: 8px; font-weight: 600; margin-bottom: 16px; }
+.brand img { width: 24px; height: 24px; }
+label { display: block; font-weight: 500; font-size: 13px; margin: 12px 0 4px; }
+input { width: 100%; height: 44px; padding: 0 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font: inherit; }
+input.code { font-family: ui-monospace, "SFMono-Regular", Menlo, monospace; letter-spacing: .2em; font-size: 18px; }
+button { height: 44px; padding: 0 16px; border-radius: 12px; border: 1px solid transparent; font: 600 14px/1 inherit; cursor: pointer; }
+button.primary { width: 100%; margin-top: 16px; background: var(--primary); color: var(--on-primary); }
+button.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+button:disabled { opacity: .6; cursor: default; }
+:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.error { color: var(--critical); font-size: 13px; margin-top: 8px; }
+.live { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-radius: 12px; background: var(--primary-soft); color: var(--primary); font-weight: 600; margin-bottom: 12px; }
+.live .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; margin: 0 0 12px; }
+dt { color: var(--muted); } dd { margin: 0; font-variant-numeric: tabular-nums; }
+ul.records { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+[hidden] { display: none !important; }

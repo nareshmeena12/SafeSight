@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "SafeSight Lab",
+  "short_name": "SafeSight Lab",
+  "version": "0.1.0",
+  "description": "Live Lab Mode for SafeSight: records exam-session activity on college lab PCs and blocks AI sites while a session runs.",
+  "minimum_chrome_version": "120",
+  "icons": { "16": "icons/16.png", "32": "icons/32.png", "48": "icons/48.png", "128": "icons/128.png" },
+  "action": {
+    "default_title": "SafeSight Lab",
+    "default_popup": "popup.html",
+    "default_icon": { "16": "icons/16.png", "32": "icons/32.png" }
+  },
+  "options_page": "options.html",
+  "background": { "service_worker": "background.js", "type": "module" },
+  "permissions": ["storage", "alarms", "tabs", "idle", "webNavigation", "declarativeNetRequestWithHostAccess"],
+  "host_permissions": ["<all_urls>"],
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_start",
+      "all_frames": true
+    }
+  ],
+  "web_accessible_resources": [{ "resources": ["blocked.html"], "matches": ["<all_urls>"] }],
+  "storage": { "managed_schema": "managed_schema.json" },
+  "incognito": "spanning"
+}

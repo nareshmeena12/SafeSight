@@ -316,6 +316,233 @@ export type Database = {
           },
         ]
       }
+      lab_events: {
+        Row: {
+          at: string
+          detail: Json
+          id: number
+          seat_id: string
+          session_id: string
+          type: Database["public"]["Enums"]["lab_event_type"]
+        }
+        Insert: {
+          at?: string
+          detail?: Json
+          id?: never
+          seat_id: string
+          session_id: string
+          type: Database["public"]["Enums"]["lab_event_type"]
+        }
+        Update: {
+          at?: string
+          detail?: Json
+          id?: never
+          seat_id?: string
+          session_id?: string
+          type?: Database["public"]["Enums"]["lab_event_type"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_events_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: false
+            referencedRelation: "lab_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_events_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
+      lab_reports: {
+        Row: {
+          created_at: string
+          metrics: Json
+          seat_id: string
+          session_id: string
+          student_id: string | null
+          summary: string
+        }
+        Insert: {
+          created_at?: string
+          metrics: Json
+          seat_id: string
+          session_id: string
+          student_id?: string | null
+          summary: string
+        }
+        Update: {
+          created_at?: string
+          metrics?: Json
+          seat_id?: string
+          session_id?: string
+          student_id?: string | null
+          summary?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_reports_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "lab_seats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_reports_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_reports_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
+      lab_seat_tokens: {
+        Row: {
+          created_at: string
+          seat_id: string
+          token_hash: string
+        }
+        Insert: {
+          created_at?: string
+          seat_id: string
+          token_hash: string
+        }
+        Update: {
+          created_at?: string
+          seat_id?: string
+          token_hash?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_seat_tokens_seat_id_fkey"
+            columns: ["seat_id"]
+            isOneToOne: true
+            referencedRelation: "lab_seats"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
+      lab_seats: {
+        Row: {
+          id: string
+          joined_at: string
+          last_heartbeat_at: string
+          roll_number: string
+          seat_label: string
+          session_id: string
+          stopped_at: string | null
+          student_id: string | null
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          last_heartbeat_at?: string
+          roll_number: string
+          seat_label: string
+          session_id: string
+          stopped_at?: string | null
+          student_id?: string | null
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          last_heartbeat_at?: string
+          roll_number?: string
+          seat_label?: string
+          session_id?: string
+          stopped_at?: string | null
+          student_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_seats_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "lab_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_seats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
+      lab_sessions: {
+        Row: {
+          blocklist: string[]
+          code: string
+          course_id: string
+          created_at: string
+          created_by: string
+          ended_at: string | null
+          ends_at: string
+          id: string
+          room: string
+          starts_at: string
+          title: string
+        }
+        Insert: {
+          blocklist?: string[]
+          code: string
+          course_id: string
+          created_at?: string
+          created_by: string
+          ended_at?: string | null
+          ends_at: string
+          id?: string
+          room?: string
+          starts_at: string
+          title: string
+        }
+        Update: {
+          blocklist?: string[]
+          code?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string
+          ended_at?: string | null
+          ends_at?: string
+          id?: string
+          room?: string
+          starts_at?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lab_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
       material_chunks: {
         Row: {
           content: string
@@ -479,6 +706,7 @@ export type Database = {
           id: string
           institution_id: string | null
           role: Database["public"]["Enums"]["user_role"]
+          roll_number: string | null
         }
         Insert: {
           created_at?: string
@@ -486,6 +714,7 @@ export type Database = {
           id: string
           institution_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          roll_number?: string | null
         }
         Update: {
           created_at?: string
@@ -493,6 +722,7 @@ export type Database = {
           id?: string
           institution_id?: string | null
           role?: Database["public"]["Enums"]["user_role"]
+          roll_number?: string | null
         }
         Relationships: [
           {
@@ -681,6 +911,7 @@ export type Database = {
         Args: { p_course_id?: string; p_weeks?: number }
         Returns: number
       }
+      set_my_roll_number: { Args: { p_roll_number: string }; Returns: string }
       teacher_student_activity: {
         Args: { p_course_id?: string; p_from?: string; p_to?: string }
         Returns: {
@@ -717,6 +948,20 @@ export type Database = {
         | "exam_mode_attempt"
         | "instruction_override"
         | "wellbeing"
+      lab_event_type:
+        | "joined"
+        | "rejoined"
+        | "left"
+        | "stopped"
+        | "tab_switch"
+        | "left_browser"
+        | "returned"
+        | "copy"
+        | "paste"
+        | "blocked_site"
+        | "idle"
+        | "active"
+        | "heartbeat_gap"
       message_intent:
         | "concept_question"
         | "answer_seeking"
@@ -862,6 +1107,21 @@ export const Constants = {
         "exam_mode_attempt",
         "instruction_override",
         "wellbeing",
+      ],
+      lab_event_type: [
+        "joined",
+        "rejoined",
+        "left",
+        "stopped",
+        "tab_switch",
+        "left_browser",
+        "returned",
+        "copy",
+        "paste",
+        "blocked_site",
+        "idle",
+        "active",
+        "heartbeat_gap",
       ],
       message_intent: [
         "concept_question",
