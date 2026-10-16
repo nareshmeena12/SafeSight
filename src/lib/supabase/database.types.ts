@@ -6,16 +6,36 @@ export type Database = {
   
   "public": {
           Tables: {
-            "assignments": {
+            "assignment_teacher_notes": {
                   Row: {
-                    "ai_mode": Database["public"]['Enums']["ai_mode"],"course_id": string,"created_at": string,"due_at": string | null,"id": string,"instructions": string,"teacher_notes": string,"title": string
+                    "assignment_id": string,"notes": string,"updated_at": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "ai_mode"?: Database["public"]['Enums']["ai_mode"],"course_id": string,"created_at"?: string,"due_at"?: string | null,"id"?: string,"instructions"?: string,"teacher_notes"?: string,"title": string
+                    "assignment_id": string,"notes"?: string,"updated_at"?: string
                   }
                   Update: {
-                    "ai_mode"?: Database["public"]['Enums']["ai_mode"],"course_id"?: string,"created_at"?: string,"due_at"?: string | null,"id"?: string,"instructions"?: string,"teacher_notes"?: string,"title"?: string
+                    "assignment_id"?: string,"notes"?: string,"updated_at"?: string
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "assignment_teacher_notes_assignment_id_fkey"
+      columns: ["assignment_id"]
+isOneToOne: true
+      referencedRelation: "assignments"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"assignments": {
+                  Row: {
+                    "ai_mode": Database["public"]['Enums']["ai_mode"],"course_id": string,"created_at": string,"due_at": string | null,"id": string,"instructions": string,"title": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "ai_mode"?: Database["public"]['Enums']["ai_mode"],"course_id": string,"created_at"?: string,"due_at"?: string | null,"id"?: string,"instructions"?: string,"title": string
+                  }
+                  Update: {
+                    "ai_mode"?: Database["public"]['Enums']["ai_mode"],"course_id"?: string,"created_at"?: string,"due_at"?: string | null,"id"?: string,"instructions"?: string,"title"?: string
                   }
                   Relationships: [
                     {
@@ -172,14 +192,14 @@ isOneToOne: true
                   ]
                 },"material_chunks": {
                   Row: {
-                    "content": string,"created_at": string,"embedding": string | null,"id": string,"material_id": string,"page": number | null
+                    "content": string,"created_at": string,"embedding": string | null,"fts": unknown,"id": string,"material_id": string,"page": number | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "content": string,"created_at"?: string,"embedding"?: string | null,"id"?: string,"material_id": string,"page"?: number | null
+                    "content": string,"created_at"?: string,"embedding"?: string | null,"fts"?: never,"id"?: string,"material_id": string,"page"?: number | null
                   }
                   Update: {
-                    "content"?: string,"created_at"?: string,"embedding"?: string | null,"id"?: string,"material_id"?: string,"page"?: number | null
+                    "content"?: string,"created_at"?: string,"embedding"?: string | null,"fts"?: never,"id"?: string,"material_id"?: string,"page"?: number | null
                   }
                   Relationships: [
                     {
@@ -192,14 +212,14 @@ isOneToOne: false
                   ]
                 },"materials": {
                   Row: {
-                    "course_id": string,"created_at": string,"file_path": string,"id": string,"title": string
+                    "course_id": string,"created_at": string,"error": string | null,"file_path": string,"id": string,"page_count": number | null,"status": string,"title": string
                   }
                   ComputedFields: never
                   Insert: {
-                    "course_id": string,"created_at"?: string,"file_path": string,"id"?: string,"title": string
+                    "course_id": string,"created_at"?: string,"error"?: string | null,"file_path": string,"id"?: string,"page_count"?: number | null,"status"?: string,"title": string
                   }
                   Update: {
-                    "course_id"?: string,"created_at"?: string,"file_path"?: string,"id"?: string,"title"?: string
+                    "course_id"?: string,"created_at"?: string,"error"?: string | null,"file_path"?: string,"id"?: string,"page_count"?: number | null,"status"?: string,"title"?: string
                   }
                   Relationships: [
                     {
@@ -212,14 +232,14 @@ isOneToOne: false
                   ]
                 },"messages": {
                   Row: {
-                    "content": string,"conversation_id": string,"created_at": string,"hint_level": number | null,"id": string,"intent": Database["public"]['Enums']["message_intent"] | null,"role": Database["public"]['Enums']["message_role"]
+                    "attempted": boolean | null,"citations": NonNullable<Json>,"content": string,"conversation_id": string,"created_at": string,"hint_level": number | null,"id": string,"intent": Database["public"]['Enums']["message_intent"] | null,"role": Database["public"]['Enums']["message_role"],"topic": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "content": string,"conversation_id": string,"created_at"?: string,"hint_level"?: number | null,"id"?: string,"intent"?: Database["public"]['Enums']["message_intent"] | null,"role": Database["public"]['Enums']["message_role"]
+                    "attempted"?: boolean | null,"citations"?: NonNullable<Json>,"content": string,"conversation_id": string,"created_at"?: string,"hint_level"?: number | null,"id"?: string,"intent"?: Database["public"]['Enums']["message_intent"] | null,"role": Database["public"]['Enums']["message_role"],"topic"?: string | null
                   }
                   Update: {
-                    "content"?: string,"conversation_id"?: string,"created_at"?: string,"hint_level"?: number | null,"id"?: string,"intent"?: Database["public"]['Enums']["message_intent"] | null,"role"?: Database["public"]['Enums']["message_role"]
+                    "attempted"?: boolean | null,"citations"?: NonNullable<Json>,"content"?: string,"conversation_id"?: string,"created_at"?: string,"hint_level"?: number | null,"id"?: string,"intent"?: Database["public"]['Enums']["message_intent"] | null,"role"?: Database["public"]['Enums']["message_role"],"topic"?: string | null
                   }
                   Relationships: [
                     {
@@ -344,6 +364,11 @@ isOneToOne: false
           Functions: {
             "join_course":
 { Args: { "p_join_code": string }; Returns: string
+                           },
+"match_material_chunks":
+{ Args: { "p_course_id": string,"p_embedding"?: string,"p_match_count"?: number,"p_query": string }; Returns: {
+              "content": string,"id": string,"material_id": string,"page": number,"score": number,"title": string
+            }[]
                            }
           }
           Enums: {
