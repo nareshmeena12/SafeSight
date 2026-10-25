@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { createUIMessageStream, type UIMessageStreamWriter } from "ai";
 import { careReply } from "./care";
 import { planTurn, writeReply, type Plan, type Reply, type TurnInput } from "./engine";
-import type { Citation, SageStage, SageUIMessage } from "./types";
+import type { Citation, SageMetadata, SageStage, SageUIMessage } from "./types";
 
 export type TurnOutcome = {
   plan: Plan;
@@ -34,6 +34,7 @@ export function sageTurnStream({
   beforeFinish,
   onDone,
   release,
+  finishMetadata,
   logTag = "sage_turn",
 }: {
   input: TurnInput;
@@ -51,6 +52,8 @@ export function sageTurnStream({
   onDone: (outcome: TurnOutcome) => Promise<void> | void;
   /** Called exactly once when the turn is over, however it ended. */
   release: () => void;
+  /** Extra metadata on the finished reply (S17: Practice / Explain it back / refresher offers). */
+  finishMetadata?: (plan: Plan, result: Reply) => Partial<SageMetadata>;
   logTag?: string;
 }) {
   let released = false;
@@ -109,6 +112,7 @@ export function sageTurnStream({
           hintLevel: plan.policy.step,
           citations,
           rules: g && g.id !== homeId ? { title: g.title, mode: g.mode } : null,
+          ...(result && finishMetadata ? finishMetadata(plan, result) : {}),
         },
       });
 

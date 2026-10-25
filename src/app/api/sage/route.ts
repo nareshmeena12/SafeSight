@@ -1,6 +1,9 @@
 import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { aiStatus } from "@/lib/ai/provider";
+import { readLearningContext, recordOffer, type LearningContext } from "@/lib/learning/data";
+import { logMistakeFromTurn } from "@/lib/learning/mistakes";
+import { decideOffers, NO_OFFERS, type LearningOffers } from "@/lib/learning/offers";
 import { searchCourseMaterial } from "@/lib/materials/search";
 import { careData } from "@/lib/sage/care";
 import {
@@ -99,7 +102,7 @@ export async function POST(req: Request) {
     const conversationId = existing?.conversationId ?? askedConversation ?? crypto.randomUUID();
     const userMessageId = existing?.messageId ?? crypto.randomUUID();
 
-    const [owns, candidates, home, past, activity, openFlags, hasMaterials, ladder] = await Promise.all([
+    const [owns, candidates, home, past, activity, openFlags, hasMaterials, ladder, learning] = await Promise.all([
       isNew || existing
         ? true
         : ownsConversation(supabase, { conversationId, studentId: user.id, assignmentId: assignmentId ?? null, courseId: course.id }),
@@ -110,6 +113,13 @@ export async function POST(req: Request) {
       recentOpenFlags(user.id, course.id),
       courseHasMaterials(course.id),
       readLadderForCourse(user.id, course.id),
+      // The prerequisite check's inputs; Sage still answers if this read fails.
+      examChat
+        ? null
+        : readLearningContext(user.id, course.id).catch((e): LearningContext | null => {
+            console.error("sage learning context:", e);
+            return null;
+          }),
     ]);
     if (!owns) return reply(403, "This chat belongs to another assignment. Please reload the page.");
 
@@ -139,6 +149,7 @@ export async function POST(req: Request) {
       usage: { userId: user.id, prefix: "sage" },
     };
     const replyId = crypto.randomUUID();
+    let offers: LearningOffers = NO_OFFERS;
     const context = home ? home.title : `Ask Sage (${course.code || course.name})`;
 
     const stream = sageTurnStream({
@@ -155,6 +166,14 @@ export async function POST(req: Request) {
       beforeFinish: () => saved,
       onDone: saveReply,
       release: done,
+      // Practice / Explain it back / a prerequisite refresher, decided in code (never for a fallback reply).
+      finishMetadata: (plan, result) => {
+        offers =
+          result.guard !== "safe_hint" && !examChat
+            ? decideOffers({ policy: plan.policy, labels: plan.labels, explore: !home, context: learning })
+            : NO_OFFERS;
+        return { courseId: course.id, ...offers };
+      },
     });
     streaming = true;
     return createUIMessageStreamResponse({ stream });
@@ -184,8 +203,16 @@ export async function POST(req: Request) {
       }
     }
 
-    async function saveReply({ plan, text, result, ttft, citations, latency }: TurnOutcome) {
+    async function saveReply({ plan, text, result, ttft, citations, latency, failed }: TurnOutcome) {
       if (!text.trim()) return;
+      // Runs alongside saving the reply; awaited so the background work isn't cut off.
+      const learningWork = Promise.all([
+        offers.refresher ? recordOffer(user!.id, course.id, offers.refresher.topic) : null,
+        // The mistake log: name the error pattern in working Sage just checked.
+        !failed && plan.policy.kind === "check_work" && result?.guard !== "safe_hint"
+          ? logMistakeFromTurn({ studentId: user!.id, courseId: course.id, working: message.text, reply: text, topic: plan.labels.topic })
+          : null,
+      ]).catch((e) => console.error("sage learning log:", e));
       try {
         await saved;
         await logSageReply({
@@ -202,6 +229,7 @@ export async function POST(req: Request) {
       } catch (error) {
         console.error("sage save reply:", error);
       }
+      await learningWork;
     }
   } finally {
     // The stream releases it when the reply is done.

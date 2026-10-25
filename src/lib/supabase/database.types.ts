@@ -267,6 +267,70 @@ export type Database = {
           },
         ]
       }
+      explain_backs: {
+        Row: {
+          conversation_id: string | null
+          course_id: string
+          created_at: string
+          explanation: string
+          feedback: string
+          gaps: Json
+          id: string
+          score: number
+          student_id: string
+          topic: string
+          topic_key: string
+        }
+        Insert: {
+          conversation_id?: string | null
+          course_id: string
+          created_at?: string
+          explanation: string
+          feedback: string
+          gaps?: Json
+          id?: string
+          score: number
+          student_id: string
+          topic: string
+          topic_key: string
+        }
+        Update: {
+          conversation_id?: string | null
+          course_id?: string
+          created_at?: string
+          explanation?: string
+          feedback?: string
+          gaps?: Json
+          id?: string
+          score?: number
+          student_id?: string
+          topic?: string
+          topic_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explain_backs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "explain_backs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "explain_backs_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       flags: {
         Row: {
           course_id: string
@@ -614,6 +678,45 @@ export type Database = {
         ]
       }
 
+      learning_offers: {
+        Row: {
+          course_id: string
+          kind: string
+          offered_at: string
+          student_id: string
+          topic_key: string
+        }
+        Insert: {
+          course_id: string
+          kind: string
+          offered_at?: string
+          student_id: string
+          topic_key: string
+        }
+        Update: {
+          course_id?: string
+          kind?: string
+          offered_at?: string
+          student_id?: string
+          topic_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "learning_offers_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "learning_offers_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       material_chunks: {
         Row: {
           content: string
@@ -778,6 +881,63 @@ export type Database = {
           },
         ]
       }
+      mistake_patterns: {
+        Row: {
+          count: number
+          course_id: string
+          first_seen_at: string
+          id: string
+          label: string
+          label_key: string
+          last_seen_at: string
+          reviewed_at: string | null
+          student_id: string
+          topic: string
+          topic_key: string
+        }
+        Insert: {
+          count?: number
+          course_id: string
+          first_seen_at?: string
+          id?: string
+          label: string
+          label_key: string
+          last_seen_at?: string
+          reviewed_at?: string | null
+          student_id: string
+          topic?: string
+          topic_key?: string
+        }
+        Update: {
+          count?: number
+          course_id?: string
+          first_seen_at?: string
+          id?: string
+          label?: string
+          label_key?: string
+          last_seen_at?: string
+          reviewed_at?: string | null
+          student_id?: string
+          topic?: string
+          topic_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mistake_patterns_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mistake_patterns_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pilot_requests: {
         Row: {
           created_at: string
@@ -807,6 +967,160 @@ export type Database = {
           role?: Database["public"]["Enums"]["pilot_role"]
         }
         Relationships: []
+      }
+      practice_item_keys: {
+        Row: {
+          correct_choice: number | null
+          final_answer: string
+          item_id: string
+          solution: string
+        }
+        Insert: {
+          correct_choice?: number | null
+          final_answer?: string
+          item_id: string
+          solution: string
+        }
+        Update: {
+          correct_choice?: number | null
+          final_answer?: string
+          item_id?: string
+          solution?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_item_keys_item_id_fkey"
+            columns: ["item_id"]
+            isOneToOne: false
+            referencedRelation: "practice_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_items: {
+        Row: {
+          topic: string | null
+          answer: string | null
+          answered_at: string | null
+          choice: number | null
+          difficulty: string
+          feedback: string | null
+          format: string
+          id: string
+          options: Json | null
+          position: number
+          question: string
+          score: number | null
+          set_id: string
+          solution: string | null
+          verdict: string | null
+        }
+        Insert: {
+          topic?: string | null
+          answer?: string | null
+          answered_at?: string | null
+          choice?: number | null
+          difficulty: string
+          feedback?: string | null
+          format?: string
+          id?: string
+          options?: Json | null
+          position: number
+          question: string
+          score?: number | null
+          set_id: string
+          solution?: string | null
+          verdict?: string | null
+        }
+        Update: {
+          topic?: string | null
+          answer?: string | null
+          answered_at?: string | null
+          choice?: number | null
+          difficulty?: string
+          feedback?: string | null
+          format?: string
+          id?: string
+          options?: Json | null
+          position?: number
+          question?: string
+          score?: number | null
+          set_id?: string
+          solution?: string | null
+          verdict?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_items_set_id_fkey"
+            columns: ["set_id"]
+            isOneToOne: false
+            referencedRelation: "practice_sets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      practice_sets: {
+        Row: {
+          targets: string[]
+          completed_at: string | null
+          course_id: string
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["practice_kind"]
+          lesson: string | null
+          score: number | null
+          skill: string | null
+          source: string
+          student_id: string
+          topic: string
+          topic_key: string
+        }
+        Insert: {
+          targets?: string[]
+          completed_at?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["practice_kind"]
+          lesson?: string | null
+          score?: number | null
+          skill?: string | null
+          source?: string
+          student_id: string
+          topic: string
+          topic_key: string
+        }
+        Update: {
+          targets?: string[]
+          completed_at?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["practice_kind"]
+          lesson?: string | null
+          score?: number | null
+          skill?: string | null
+          source?: string
+          student_id?: string
+          topic?: string
+          topic_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "practice_sets_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "practice_sets_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -940,6 +1254,70 @@ export type Database = {
           },
         ]
       }
+      sage_recaps: {
+        Row: {
+          conversation_id: string
+          course_id: string
+          created_at: string
+          flashcards: Json
+          from_at: string
+          id: string
+          learned: Json
+          messages: number
+          student_id: string
+          title: string
+          to_at: string
+        }
+        Insert: {
+          conversation_id: string
+          course_id: string
+          created_at?: string
+          flashcards: Json
+          from_at: string
+          id?: string
+          learned: Json
+          messages: number
+          student_id: string
+          title: string
+          to_at: string
+        }
+        Update: {
+          conversation_id?: string
+          course_id?: string
+          created_at?: string
+          flashcards?: Json
+          from_at?: string
+          id?: string
+          learned?: Json
+          messages?: number
+          student_id?: string
+          title?: string
+          to_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sage_recaps_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_recaps_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_recaps_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           assignment_id: string
@@ -978,6 +1356,54 @@ export type Database = {
           },
           {
             foreignKeyName: "submissions_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      topic_mastery: {
+        Row: {
+          course_id: string
+          evidence: number
+          last_source: string
+          mastery: number
+          student_id: string
+          topic: string
+          topic_key: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          evidence?: number
+          last_source: string
+          mastery: number
+          student_id: string
+          topic: string
+          topic_key: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          evidence?: number
+          last_source?: string
+          mastery?: number
+          student_id?: string
+          topic?: string
+          topic_key?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "topic_mastery_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "topic_mastery_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -1179,6 +1605,7 @@ export type Database = {
         | "deliverable_request"
         | "jailbreak"
       message_role: "user" | "assistant"
+      practice_kind: "practice" | "review" | "refresher"
       pilot_role: "teacher" | "hod" | "admin" | "student" | "other"
       user_role: "student" | "teacher" | "admin"
       writing_event_type: "type" | "paste" | "delete" | "focus" | "blur"
@@ -1345,6 +1772,7 @@ export const Constants = {
         "jailbreak",
       ],
       message_role: ["user", "assistant"],
+      practice_kind: ["practice", "review", "refresher"],
       pilot_role: ["teacher", "hod", "admin", "student", "other"],
       user_role: ["student", "teacher", "admin"],
       writing_event_type: ["type", "paste", "delete", "focus", "blur"],
