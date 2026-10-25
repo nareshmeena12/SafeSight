@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/dal";
-import { ingestMaterial } from "@/lib/materials/ingest";
+import { allowIngest, ingestMaterial } from "@/lib/materials/ingest";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -27,6 +27,9 @@ export async function POST(req: Request) {
   }
   const { courseId, title, path } = parsed.data;
   if (!path.startsWith(`${courseId}/`)) return Response.json({ error: "Upload the PDF first." }, { status: 400 });
+  if (!(await allowIngest(user.id))) {
+    return Response.json({ error: "You've added a lot of notes this hour. Please try again in a little while." }, { status: 429 });
+  }
 
   // Row-level security: only the course's teacher can add materials to it.
   const supabase = await createClient();
@@ -39,6 +42,6 @@ export async function POST(req: Request) {
     return Response.json({ error: "You can only add materials to your own courses." }, { status: 403 });
   }
 
-  const result = await ingestMaterial(material.id);
+  const result = await ingestMaterial(material.id, user.id);
   return Response.json({ id: material.id, ...result }, { status: result.status === "ready" ? 201 : 422 });
 }

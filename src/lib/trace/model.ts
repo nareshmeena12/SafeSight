@@ -6,6 +6,6 @@ import { aiStatus, chatModel } from "@/lib/ai/provider";
  * with demo mode's fallback), or null when it is not configured (Trace then
  * uses its template summary).
  */
-export function traceModel() {
-  return aiStatus().chat ? chatModel() : null;
+export function traceModel(userId: string | null) {
+  return aiStatus().chat ? chatModel({ feature: "trace_summary", userId }) : null;
 }

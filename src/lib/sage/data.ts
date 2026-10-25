@@ -58,6 +58,36 @@ export async function readAssignmentChat(supabase: UserClient, assignmentId: str
   return { assignment: data as AssignmentRow, course: data.courses as Course };
 }
 
+/**
+ * Preview Sage: the assignment (or, for Explore, the course) only if the
+ * signed-in teacher teaches its course. Read under RLS and checked by owner.
+ */
+export async function readTeacherChat(
+  supabase: UserClient,
+  teacherId: string,
+  { assignmentId, courseId }: { assignmentId: string | null; courseId: string | null },
+) {
+  if (assignmentId) {
+    const { data } = await supabase
+      .from("assignments")
+      .select(`${assignmentColumns}, courses!inner(id, name, code, teacher_id)`)
+      .eq("id", assignmentId)
+      .eq("courses.teacher_id", teacherId)
+      .maybeSingle();
+    if (!data) return null;
+    const { id, name, code } = data.courses;
+    return { assignment: data as AssignmentRow, course: { id, name, code } as Course };
+  }
+  if (!courseId) return null;
+  const { data } = await supabase
+    .from("courses")
+    .select("id, name, code")
+    .eq("id", courseId)
+    .eq("teacher_id", teacherId)
+    .maybeSingle();
+  return data ? { assignment: null, course: data as Course } : null;
+}
+
 /** A course the student is enrolled in, read under RLS. */
 export async function readCourse(supabase: UserClient, courseId: string): Promise<Course | null> {
   const { data } = await supabase.from("courses").select("id, name, code").eq("id", courseId).maybeSingle();

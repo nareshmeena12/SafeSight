@@ -1,6 +1,6 @@
 import "server-only";
 import { embed } from "ai";
-import { embeddingModel } from "@/lib/ai/provider";
+import { embeddingModel, recordEmbeddingUsage, type UsageTag } from "@/lib/ai/provider";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { toPgVector } from "./vector";
 
@@ -18,12 +18,17 @@ const EXCERPT_CHARS = 1500;
  * embedding model is configured) over one course's ready materials. The
  * caller must already have checked that the user belongs to the course.
  */
-export async function searchCourseMaterial(courseId: string, query: string, limit = 4): Promise<MaterialPassage[]> {
+export async function searchCourseMaterial(
+  courseId: string,
+  query: string,
+  { limit = 4, usage = { feature: "notes_search", userId: null } }: { limit?: number; usage?: UsageTag } = {},
+): Promise<MaterialPassage[]> {
   let embedding: string | null = null;
   const model = embeddingModel();
   if (model) {
     try {
       const result = await embed({ model, value: query, maxRetries: 1, abortSignal: AbortSignal.timeout(8_000) });
+      recordEmbeddingUsage(usage, result.usage.tokens);
       embedding = toPgVector(result.embedding);
     } catch (error) {
       console.warn("search_course_material: embedding failed, using keywords only:", error instanceof Error ? error.message : error);

@@ -15,6 +15,58 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage: {
+        Row: {
+          created_at: string
+          feature: string
+          id: number
+          input_tokens: number
+          institution_id: string | null
+          model: string
+          ok: boolean
+          output_tokens: number
+          total_tokens: number
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          feature: string
+          id?: never
+          input_tokens?: number
+          institution_id?: string | null
+          model?: string
+          ok?: boolean
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          feature?: string
+          id?: never
+          input_tokens?: number
+          institution_id?: string | null
+          model?: string
+          ok?: boolean
+          output_tokens?: number
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_usage_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_usage_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_teacher_notes: {
         Row: {
           answer_key: string
@@ -827,6 +879,61 @@ export type Database = {
           {
             foreignKeyName: "sage_ladder_state_student_id_fkey"
             columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sage_preview_chats: {
+        Row: {
+          assignment_id: string | null
+          course_id: string
+          created_at: string
+          id: string
+          ladder: Json
+          messages: Json
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          ladder?: Json
+          messages?: Json
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          assignment_id?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          ladder?: Json
+          messages?: Json
+          teacher_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sage_preview_chats_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_preview_chats_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_preview_chats_teacher_id_fkey"
+            columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
