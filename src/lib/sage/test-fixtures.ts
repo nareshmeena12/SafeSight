@@ -66,6 +66,7 @@ export function labels(over: Partial<Labels> = {}): Labels {
     distress: "none",
     topic: "",
     match: { assignmentId: null, similarity: 0 },
+    refersToTask: false,
     source: "model",
     ...over,
   };

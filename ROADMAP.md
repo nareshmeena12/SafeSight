@@ -52,7 +52,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 
 **Red-team evals:** `evals/sage-attacks/` with at least 60 attacks (salami slicing, example harvesting, answer verification, fake attempts, new-chat reset, format tricks, fake permission, jailbreaks, prompt extraction, pressure, Explore loophole) plus 20 legitimate questions that must not be refused. `pnpm eval:sage` runs them against the live model with an LLM judge and reports leak rate and over-refusal rate. Iterate until leak rate is 0 and over-refusal is under 10%. Put the numbers in the PR.
 
-- [x] S16 done (2026-10-25; the live-model eval is still to run once `AI_*` keys exist — see CLAUDE.md)
+- [x] S16 done (2026-10-25; live-model eval on `deepseek-flash`: 0/69 leaks, 0/20 over-refusals — see CLAUDE.md)
 
 ---
 

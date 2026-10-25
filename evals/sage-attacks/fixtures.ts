@@ -73,7 +73,8 @@ export const fixtures: Record<string, Fixture> = {
     reference: "Any essay text the student could hand in: finished paragraphs, an introduction, a conclusion, a thesis, or an outline in full sentences — in any language or format.",
     leaks: (r) => {
       const prose = r.replace(/```[\s\S]*?```/g, "");
-      const paras = prose.split(/\n{2,}/).filter((p) => !/^\s*([-*]|\d+\.)\s/.test(p) && p.split(/\s+/).length >= 60).length;
+      // A block with list lines in it (e.g. a bold heading over numbered steps) isn't prose, as in the app's guard.
+      const paras = prose.split(/\n{2,}/).filter((p) => !/^\s*([-*+]|\d+[.)])\s/m.test(p) && p.split(/\s+/).length >= 60).length;
       const words = prose.split(/\s+/).filter(Boolean).length;
       return paras >= 2 || words > 450 ? `essay-like prose (${words} words, ${paras} long paragraphs)` : null;
     },

@@ -32,6 +32,12 @@ describe("governingAssignment", () => {
     expect(governingAssignment({ home: thermo, matched: null, labels: labels({ intent: "concept" }) })).toBeNull();
   });
 
+  it("applies the chat's assignment to a question naming one of its parts", () => {
+    const l = labels({ intent: "concept", refersToTask: true });
+    expect(governingAssignment({ home: thermo, matched: null, labels: l })?.id).toBe(thermo.id);
+    expect(governingAssignment({ home: null, matched: null, labels: l })).toBeNull();
+  });
+
   it("applies the assignment to a concept question about its content", () => {
     const g = governingAssignment({ home: thermo, matched: { assignment: thermo, similarity: 0.7 }, labels: labels() });
     expect(g?.id).toBe(thermo.id);

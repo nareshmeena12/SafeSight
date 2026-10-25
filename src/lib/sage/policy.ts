@@ -69,11 +69,12 @@ export const EXAMPLE_INTERVAL_MS = 60 * 60 * 1000;
 /** The assignment whose rules apply to this message, if any. */
 export function governingAssignment({ home, matched, labels }: Pick<PolicyInput, "home" | "matched" | "labels">) {
   const strong = matched && matched.similarity >= MATCH_THRESHOLD ? matched.assignment : null;
-  const generalIntent = labels.intent === "concept" || labels.intent === "off_topic";
+  const generalIntent = (labels.intent === "concept" || labels.intent === "off_topic") && !labels.refersToTask;
   const candidates: SageAssignment[] = [];
   if (home) {
     // In an assignment chat, everything but a general concept question follows
-    // the assignment; a concept question does only if it is about its content.
+    // the assignment; a concept question does only if it is about its content
+    // or names one of its parts ("problem 1").
     // An Exam-mode chat is off for everything.
     if (home.mode === "exam" || !generalIntent || strong?.id === home.id) candidates.push(home);
   }

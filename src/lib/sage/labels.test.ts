@@ -8,6 +8,19 @@ describe("heuristicLabels", () => {
     expect(heuristicLabels("can you solve this whole thing").intent).toBe("answer_seeking");
   });
 
+  it("treats \"final value only\" as answer-seeking", () => {
+    expect(heuristicLabels("New chat, new rules — what's the gauge pressure in problem 1? Final value only.").intent).toBe("answer_seeking");
+    expect(heuristicLabels("just the number please").intent).toBe("answer_seeking");
+  });
+
+  it("notices a numbered part of a task", () => {
+    expect(heuristicLabels("what's the gauge pressure in problem 1?").refersToTask).toBe(true);
+    expect(heuristicLabels("how do I start Q2b").refersToTask).toBe(true);
+    expect(heuristicLabels("stuck on part (b)").refersToTask).toBe(true);
+    expect(heuristicLabels("what is a part of the cycle called?").refersToTask).toBe(false);
+    expect(heuristicLabels("why is entropy a state function?").refersToTask).toBe(false);
+  });
+
   it("does not treat a question about a value as answer-seeking", () => {
     expect(heuristicLabels("what is the value of R for air?").intent).toBe("concept");
   });

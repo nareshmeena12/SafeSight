@@ -68,18 +68,24 @@ function sameValue(a: number, b: number) {
 }
 
 /** Answer-key values the student hasn't seen: numbers in the key that aren't given in the question or by the student. */
-export function protectedNumbers(answerKeys: string[], visibleText: string): number[] {
+export function protectedNumbers(answerKeys: string[], visibleText: string, distinctiveOnly = false): number[] {
   const visible = numbersIn(visibleText);
   const out: number[] = [];
   for (const key of answerKeys) {
     for (const s of significantNumbers(key)) {
       const n = Number(s);
       if (Math.abs(n) < 10 && Number.isInteger(n)) continue;
+      if (distinctiveOnly && isRound(n)) continue;
       if (visible.some((v) => sameValue(v, n))) continue;
       if (!out.some((o) => sameValue(o, n))) out.push(n);
     }
   }
   return out;
+}
+
+/** One significant digit (300, 600, 1000): common in any example, so it says nothing on its own. */
+function isRound(n: number) {
+  return Number.isInteger(n) && /^-?[1-9]0*$/.test(String(n));
 }
 
 function proseParagraphs(text: string) {
@@ -109,7 +115,9 @@ export function deterministicGuard(draft: string, ctx: GuardContext): GuardResul
   if (kind === "care" || kind === "exam_off" || kind === "jailbreak") return ok;
 
   // 1. Values from the private answer key the student hasn't given themselves.
-  const keyNumbers = protectedNumbers(ctx.answerKeys, ctx.visibleText);
+  // A free explanation (no assignment governs) may use round values like 300 K
+  // that also happen to appear in a key; the distinctive ones stay protected.
+  const keyNumbers = protectedNumbers(ctx.answerKeys, ctx.visibleText, !ctx.policy.governing);
   if (keyNumbers.length) {
     const hit = numbersIn(text).find((n) => keyNumbers.some((k) => sameValue(k, n)));
     if (hit !== undefined) return fail("final_answer", `Contains ${hit}, a value from the private answer key.`);
