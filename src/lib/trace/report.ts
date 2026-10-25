@@ -43,9 +43,13 @@ export function factsForModel(m: TraceMetrics) {
 }
 
 /** Asks the model for the summary; falls back to the template on any problem. */
-export async function writeSummary(m: TraceMetrics): Promise<{ summary: string; source: "model" | "template" }> {
+export async function writeSummary(
+  m: TraceMetrics,
+  /** Who asked (for ai_usage): the student on submit, the teacher on a re-run. */
+  userId: string | null = null,
+): Promise<{ summary: string; source: "model" | "template" }> {
   const fallback = { summary: templateSummary(m), source: "template" as const };
-  const model = traceModel();
+  const model = traceModel(userId);
   if (!model || m.firstAt === null || m.finalChars === 0) return fallback;
 
   try {
@@ -72,7 +76,7 @@ export async function writeSummary(m: TraceMetrics): Promise<{ summary: string; 
  * computes the evidence numbers and writes the integrity report. Runs with
  * the service role — callers must already have checked who is asking.
  */
-export async function generateIntegrityReport(submissionId: string) {
+export async function generateIntegrityReport(submissionId: string, userId: string | null = null) {
   const db = createAdminClient();
 
   const { data: submission, error } = await db
@@ -85,7 +89,7 @@ export async function generateIntegrityReport(submissionId: string) {
 
   const events = await fetchAllEvents(db, submissionId);
   const metrics = computeMetrics(events, measureHtml(submission.content));
-  const { summary } = await writeSummary(metrics);
+  const { summary } = await writeSummary(metrics, userId);
 
   const report = {
     submission_id: submissionId,

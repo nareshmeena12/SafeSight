@@ -53,7 +53,9 @@ src/
       flags/                flags with status/type filters, resolve/reopen
       conversations/[conversationId] a flagged or shared chat (RLS decides what text shows)
       lens/                 Lens full page (?q= asks straight away, ?course= scopes it)
+      courses/[courseId]/preview  S16: "Preview Sage" (?assignment= or Explore); chats in sage_preview_chats, never in metrics
       materials/            upload course PDFs for notes search (S6); linked from the course page, not in the sidebar yet
+    api/sage/preview/route.ts  S16: POST one preview turn (teachers, same engine), DELETE = start over
     api/sage/route.ts       POST: one Sage turn — parallel reads, idempotent per message id, engine (lib/sage/engine.ts), background logging, latency log
     api/materials/          POST create+ingest; [materialId] POST re-read / DELETE; [materialId]/file GET → signed PDF URL #page=N
     api/lens/route.ts       Lens chat (teachers only; streamText + read-only tools)
@@ -89,10 +91,12 @@ src/
     auth/schemas.ts         zod schemas for the auth forms
     reliance.ts             Reliance Score bands (low < 40 ≤ medium < 70 ≤ high)
     ai/provider.ts          server-only: OpenAI-compatible chat + embedding models from env, aiStatus(); one chatModel() for Sage, labels, Lens and Trace
+    ai/usage.ts, usage-log.ts  S16: middleware logging tokens per call to ai_usage (tested); allowAiCall() per-user limits from ai_usage
     ai/fallback.ts          S12 demo mode: middleware that switches to AI_FALLBACK_MODEL when the main model is slow or fails (tested)
     sage/                   S16 pipeline. Pure, unit-tested: labels (8 intents + keyword safety net), match (assignment matching), policy (the policy
                             engine), guard (deterministic output guard), flags, prompt (prompts + fixed/safe replies), ladder (step names), care, types.
-                            Server-only: classify, guard-model (2nd model call), engine (one turn, shared by the route and the evals), data, ui-history
+                            Server-only: classify, guard-model (2nd model call), engine (one turn, shared by the route and the evals), data, ui-history,
+                            turn-stream (the UI stream for one turn, shared by /api/sage and the preview), preview (preview chat storage)
     materials/              chunk (pure), constants, vector, ingest + search (server-only)
     teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts, refresh.ts (S12: this week's metrics after a chat/submission)
     lens/                   model.ts (provider from env), tools.ts (7 read-only tools), prompt.ts, rate-limit.ts
@@ -121,6 +125,7 @@ tests/db/teacher-dashboard.test.ts  teacher RPC scoping and the Reliance Score f
 tests/db/trace-rls.test.ts  S9: RLS for submissions, writing_events, writing_snapshots, integrity_reports
 tests/db/lab-rls.test.ts    S13: RLS for lab_* tables and set_my_roll_number
 tests/db/notes-search.test.ts  S12: keyword ranking weighs rare words
+tests/db/ai-usage-preview-rls.test.ts  S16: RLS for ai_usage and sage_preview_chats
 ```
 
 Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `demo:data`, `demo:reset`, `demo:notes`, `mock:ai`, `eval:sage` (alias `sage:eval`), `lab:simulate`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
@@ -186,9 +191,17 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [ ] **Production deploy not verified from the cloud session**: Vercel deployments are behind Vercel SSO and there is no Vercel token here, so the run used `next start` locally against the hosted Supabase. After merging, open the production URL and walk `docs/DEMO.md` once
 - [x] S16 Sage safety and speed (2026-10-16): classify → TypeScript policy engine → generate → output guard; ladder state per student per assignment; private answer key, max hint level and worked-examples switch per assignment; "Ask Sage" Explore chat; timeouts + one retry/fallback; Thinking…/Stop/Retry with idempotent message ids; TTFT + latency per reply; `pnpm eval:sage` (89 cases). Migrations `20261106090000_sage_policy.sql` + `…090100_sage_policy_functions.sql` applied on hosted
 - [ ] **`pnpm eval:sage` not yet run against a real model** (no `AI_*` keys in the cloud env): it was run against the mock (0/69 leaks, 0/20 over-refusals) and against a mock that tries to leak on every reply (0/69 leaks: the deterministic guard held all of them). With keys: run it, fix every listed failure, and record the numbers here
+- [x] S16 follow-up from ROADMAP.md (2026-10-25): teacher "Preview Sage" (course + assignment pages, excluded from all metrics), `ai_usage` token log for every chat/embedding call, per-user limits on Trace re-runs and notes ingest. Migration `20261107090000_ai_usage_sage_preview.sql` **not yet applied on hosted** (the hosted project was paused/INACTIVE): restore it, then `pnpm db:push:hosted`
 - [x] S13–S15 Live Lab Mode (2026-10-16): `lab_sessions`/`lab_seats`/`lab_seat_tokens`/`lab_events`/`lab_reports` + `profiles.roll_number` (migration `20261105090000_live_lab.sql`, applied on hosted), Chrome extension, live seat grid over Realtime, per-seat evidence summaries + CSV, `pnpm lab:simulate`
 
 ## Handoff notes
+
+- **S16 follow-up (ROADMAP.md)** from `claude/jolly-ride-r8cm53`. S16 itself had shipped (below); ROADMAP.md's version added "Preview Sage" and the every-session rules (ai_usage, rate limit on every AI call). Decisions made without asking:
+  - **Preview Sage** (`/teacher/courses/[courseId]/preview`, `?assignment=<id>` or Explore; "Preview Sage" button on the course page, a chat icon on each assignment row). `POST /api/sage/preview` runs the **same** `planTurn`/`writeReply` as students (classifier, policy engine, ladder, answer key, guard), through the shared `lib/sage/turn-stream.ts`. Preview chats are stored in their **own table** `sage_preview_chats` (one row per teacher per target: messages jsonb capped at 80, its own ladder jsonb), never in `conversations`/`messages`, so they cannot reach labels, flags, Reliance, weekly_metrics or Lens — exclusion by construction, no filters to forget. RLS: the teacher reads/deletes their own rows for courses they teach; the service role writes. "New chat" in a preview DELETEs the row (ladder resets too). Same 60/hour limit as students (counted from the preview rows), same idempotency (message id → replay of the stored reply). Exam assignments preview the fixed "Sage is off" reply.
+  - **ai_usage** (`id, created_at, institution_id, user_id, feature, model, input_tokens, output_tokens, total_tokens (generated), ok`). `chatModel(usage)` now **requires** `{feature, userId}`; `usageMiddleware` (outermost, around the fallback) writes one row per call, failures included (`ok=false`, 0 tokens), with the model that actually answered. Embeddings log via `recordEmbeddingUsage`. A trigger fills `institution_id` from the user's profile. Users read their own rows; nothing else. Writes are fire-and-forget, kept alive with `after()` in requests; a logging failure never breaks a reply. Features: `sage_classify|reply|guard`, `sage_notes_search`, `sage_preview_*`, `lens`, `trace_summary`, `notes_ingest`, `notes_search`, `eval_*` (evals log with user null).
+  - **Rate limits on every AI call**: Sage 60/h and Lens 40/10 min as before; Trace "Prepare/Refresh summary" 20 `trace_summary` calls/h per teacher and notes ingest 200 embedding batches/h per teacher, both counted from `ai_usage` (`allowAiCall`, fails open if the table can't be read). Trace on submit runs once per submission. The `embedMany` call got a 30 s timeout.
+  - **Verified** on local Supabase + `pnpm mock:ai` + `next start` (Playwright, 1440 light / 375 dark, no console errors, no overflow): preview turn, persistence across reloads, reset, ai_usage rows with user + institution, zero teacher rows in `conversations`. `pnpm eval:sage` vs the mock: 0/69 leaks, 0/20 over-refusals; vs `mock-leaky`: 0/69 leaks (guard stepped in on 106/114). **Still not run against a real model** (no `AI_*` keys).
+  - Not done: an admin view of `ai_usage` (S23/S26 own that); budgets (S26).
 
 - **S16 (Sage safety and speed)** shipped from `claude/great-bohr-o1sjsj`. The policy is in code, not only in the prompt. Decisions made without asking:
   - **Pipeline** (`lib/sage/engine.ts`, used by `/api/sage` and `pnpm eval:sage`): `planTurn` runs `classifyMessage` and the notes search **in parallel** (notes are now prefetched with the student's message as the query and put in the prompt; the model-called `search_course_material` tool is gone, which saves a model round-trip) → `decidePolicy` → prompt with explicit ALLOWED/FORBIDDEN lists → `writeReply` → guard. Exam chats skip the classifier model (keyword labels only, no model call at all for the fixed reply).

@@ -1,6 +1,6 @@
 import "server-only";
 import { generateText, Output } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { chatModel, type UsageTag } from "@/lib/ai/provider";
 import { guardJsonShape, guardVerdictSchema, type GuardVerdict } from "./guard";
 import type { Policy } from "./policy";
 import { guardPrompt } from "./prompt";
@@ -17,16 +17,18 @@ export async function modelGuard({
   policy,
   studentMessage,
   signal,
+  usage,
 }: {
   draft: string;
   policy: Policy;
   studentMessage: string;
   signal?: AbortSignal;
+  usage: UsageTag;
 }): Promise<GuardVerdict | null> {
   const g = policy.governing;
   try {
     const { output } = await generateText({
-      model: chatModel(),
+      model: chatModel(usage),
       system: guardPrompt(guardJsonShape),
       prompt: `ASSIGNMENT: ${g ? `"${g.title}" — ${g.mode.toUpperCase()} mode, ${g.kind}` : "none matched (general learning); the student asked for work to hand in"}
 INSTRUCTIONS:

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { MATERIALS_BUCKET } from "@/lib/materials/constants";
-import { ingestMaterial } from "@/lib/materials/ingest";
+import { allowIngest, ingestMaterial } from "@/lib/materials/ingest";
 import { createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 60;
@@ -19,15 +19,18 @@ async function ownMaterial(params: Promise<{ materialId: string }>) {
     .eq("id", materialId)
     .eq("courses.teacher_id", user.id)
     .maybeSingle();
-  return data ? { supabase, material: data } : null;
+  return data ? { supabase, material: data, userId: user.id } : null;
 }
 
 /** POST /api/materials/:id — read the PDF again (e.g. after adding an embedding model). */
 export async function POST(_req: Request, { params }: RouteContext<"/api/materials/[materialId]">) {
   const found = await ownMaterial(params);
   if (!found) return Response.json({ error: "We couldn't find this material in your courses." }, { status: 404 });
+  if (!(await allowIngest(found.userId))) {
+    return Response.json({ error: "You've added a lot of notes this hour. Please try again in a little while." }, { status: 429 });
+  }
   await found.supabase.from("materials").update({ status: "processing", error: null }).eq("id", found.material.id);
-  const result = await ingestMaterial(found.material.id);
+  const result = await ingestMaterial(found.material.id, found.userId);
   return Response.json(result, { status: result.status === "ready" ? 200 : 422 });
 }
 

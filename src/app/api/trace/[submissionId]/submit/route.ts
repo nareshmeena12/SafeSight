@@ -32,7 +32,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/trace/[subm
 
   after(async () => {
     try {
-      await generateIntegrityReport(auth.submissionId);
+      await generateIntegrityReport(auth.submissionId, auth.user.id);
     } catch (e) {
       console.error("Trace report failed", e);
     }

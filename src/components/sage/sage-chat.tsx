@@ -43,6 +43,7 @@ export function SageChat({
   initialConversationId,
   initialMessages,
   available,
+  preview = false,
 }: {
   target: SageChatTarget;
   studentFirstName: string;
@@ -50,6 +51,8 @@ export function SageChat({
   initialMessages: SageUIMessage[];
   /** False when the model provider isn't configured yet. */
   available: boolean;
+  /** A teacher's "Preview Sage": same replies, nothing counted (/api/sage/preview). */
+  preview?: boolean;
 }) {
   const mode: AiMode | "explore" = target.kind === "assignment" ? target.mode : "explore";
   const targetKey = target.kind === "assignment" ? target.assignmentId : target.courseId;
@@ -57,7 +60,7 @@ export function SageChat({
   const [transport] = useState(
     () =>
       new DefaultChatTransport<SageUIMessage>({
-        api: "/api/sage",
+        api: preview ? "/api/sage/preview" : "/api/sage",
         // The server keeps the history; send only the new message. Its id is
         // the idempotency key: a retry of the same message is answered once.
         prepareSendMessagesRequest: ({ messages, body }) => {
@@ -119,8 +122,13 @@ export function SageChat({
     setInput("");
   }
 
-  function newChat() {
+  const targetQuery =
+    target.kind === "assignment" ? `assignmentId=${target.assignmentId}` : `courseId=${target.courseId}`;
+
+  async function newChat() {
     stop();
+    // A preview's chat and hint ladder live on the server: clear them first.
+    if (preview) await fetch(`/api/sage/preview?${targetQuery}`, { method: "DELETE" }).catch(() => {});
     setConversationId(null);
     setMessages([]);
     clearError();
@@ -156,7 +164,7 @@ export function SageChat({
           )}
         </div>
         {messages.length ? (
-          <Button variant="ghost" onClick={newChat} className="self-start sm:self-auto">
+          <Button variant="ghost" onClick={() => void newChat()} className="self-start sm:self-auto">
             <RotateCcw aria-hidden="true" />
             New chat
           </Button>
@@ -274,7 +282,11 @@ export function SageChat({
           )}
         </div>
         <p className="mt-2 flex justify-between gap-4 text-small text-muted-foreground">
-          <span id="sage-privacy">Your teacher sees a summary, not your chats — unless a message is flagged or you share it.</span>
+          <span id="sage-privacy">
+            {preview
+              ? "Preview: replies follow the same rules students get. Nothing here is flagged or counted in your class numbers."
+              : "Your teacher sees a summary, not your chats — unless a message is flagged or you share it."}
+          </span>
           {input.length > MAX_CHARS - 500 ? (
             <span className="shrink-0 font-mono">
               {input.length}/{MAX_CHARS}

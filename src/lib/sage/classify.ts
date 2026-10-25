@@ -1,6 +1,6 @@
 import "server-only";
 import { generateText, Output, type ModelMessage } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { chatModel, type UsageTag } from "@/lib/ai/provider";
 import {
   classifierJsonShape,
   classifierOutputSchema,
@@ -25,6 +25,7 @@ export async function classifyMessage({
   home,
   candidates,
   signal,
+  usage,
 }: {
   text: string;
   /** Recent conversation before this message. */
@@ -34,6 +35,7 @@ export async function classifyMessage({
   /** The student's active assignments in this course (including home). */
   candidates: SageAssignment[];
   signal?: AbortSignal;
+  usage: UsageTag;
 }): Promise<Labels> {
   const heuristic = heuristicLabels(text);
   const refs = candidateRefs(candidates);
@@ -53,7 +55,7 @@ export async function classifyMessage({
           .join("\n")
       : "(none)";
     const { output } = await generateText({
-      model: chatModel(),
+      model: chatModel(usage),
       system: classifierPrompt(classifierJsonShape),
       prompt: `ACTIVE ASSIGNMENTS:\n${list}\n\nChat: ${home ? `assignment chat for ${refs.find((r) => r.assignment.id === home.id)?.ref ?? "?"}` : "Explore (not tied to an assignment)"}\n\nRecent conversation:\n${context || "(none)"}\n\nLatest student message:\n"""\n${text.slice(0, 4000)}\n"""`,
       output: Output.object({ schema: classifierOutputSchema, name: "labels" }),

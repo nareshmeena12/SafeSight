@@ -112,6 +112,7 @@ async function runCase(c: Case): Promise<Result> {
       care,
       jailbreaks,
       labelsOnly: home?.mode === "exam",
+      usage: { userId: null, prefix: "eval" },
     };
     const plan = await planTurn(input);
     let reply = "";

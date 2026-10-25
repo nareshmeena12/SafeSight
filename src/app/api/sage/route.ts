@@ -1,9 +1,8 @@
-import { after } from "next/server";
-import { createUIMessageStream, createUIMessageStreamResponse, type UIMessageStreamWriter } from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse } from "ai";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { aiStatus } from "@/lib/ai/provider";
 import { searchCourseMaterial } from "@/lib/materials/search";
-import { careData, careReply } from "@/lib/sage/care";
+import { careData } from "@/lib/sage/care";
 import {
   activeAssignments,
   assignmentWithSecrets,
@@ -25,9 +24,10 @@ import {
   saveLadder,
   type Course,
 } from "@/lib/sage/data";
-import { planTurn, writeReply, type Plan, type TurnInput } from "@/lib/sage/engine";
+import type { Plan, TurnInput } from "@/lib/sage/engine";
 import { decideFlags } from "@/lib/sage/flags";
-import { citationsSchema, sageRequestSchema, type Citation, type SageStage, type SageUIMessage } from "@/lib/sage/types";
+import { sageTurnStream, type TurnOutcome } from "@/lib/sage/turn-stream";
+import { citationsSchema, sageRequestSchema, type SageUIMessage } from "@/lib/sage/types";
 import { createClient } from "@/lib/supabase/server";
 import { refreshCurrentWeek } from "@/lib/teacher/refresh";
 
@@ -130,97 +130,31 @@ export async function POST(req: Request) {
       course,
       studentFirstName: user.fullName.split(" ")[0] ?? "",
       earlierStudentText: past.earlierStudentText,
-      search: hasMaterials ? (q) => searchCourseMaterial(course.id, q) : null,
+      search: hasMaterials
+        ? (q) => searchCourseMaterial(course.id, q, { usage: { feature: "sage_notes_search", userId: user.id } })
+        : null,
       care,
       jailbreaks: activity.jailbreaks,
       labelsOnly: examChat,
+      usage: { userId: user.id, prefix: "sage" },
     };
     const replyId = crypto.randomUUID();
     const context = home ? home.title : `Ask Sage (${course.code || course.name})`;
 
-    const stream = createUIMessageStream<SageUIMessage>({
-      execute: async ({ writer }) => {
-        writer.write({ type: "start", messageId: replyId, messageMetadata: { conversationId, hintLevel: null } });
-        status(writer, "reading");
-
-        const plan = await planTurn(input, req.signal);
-        const timings = { ...plan.timings, planMs: Date.now() - started };
-        after(() => saveTurn(plan));
-
-        if (plan.policy.kind === "care") writer.write({ type: "data-care", id: "care", data: care });
-
-        let text = "";
-        let ttft: number | null = null;
-        const emit = (delta: string) => {
-          if (!delta) return;
-          if (ttft === null) {
-            ttft = Date.now() - started;
-            writer.write({ type: "text-start", id: "reply" });
-          }
-          text += delta;
-          writer.write({ type: "text-delta", id: "reply", delta });
-        };
-
-        let result: Awaited<ReturnType<typeof writeReply>> | null = null;
-        try {
-          result = await writeReply(plan, input, {
-            signal: req.signal,
-            emit,
-            stage: (s) => status(writer, s),
-            deadline: started + DEADLINE_MS,
-          });
-        } catch (error) {
-          // Wellbeing replies never fail: fall back to a fixed, caring reply.
-          if (plan.policy.kind === "care" && !req.signal.aborted) {
-            emit(careReply(care));
-          } else {
-            after(() => saveReply(plan, text, null, ttft));
-            done();
-            throw error;
-          }
-        }
-        if (ttft !== null) writer.write({ type: "text-end", id: "reply" });
-
-        // The chat must exist before the client can send its next message in it
-        // (the text is already out; this only delays the end of the stream).
-        await saved.catch(() => {});
-        const citations: Citation[] = (result?.cited ?? []).map((p) => ({ materialId: p.materialId, title: p.title, page: p.page }));
-        const g = plan.policy.governing;
-        writer.write({
-          type: "finish",
-          messageMetadata: {
-            conversationId,
-            hintLevel: plan.policy.step,
-            citations,
-            rules: g && g.id !== home?.id ? { title: g.title, mode: g.mode } : null,
-          },
-        });
-
-        const latency = Date.now() - started;
-        console.info(
-          JSON.stringify({
-            event: "sage_turn",
-            kind: plan.policy.kind,
-            step: plan.policy.step,
-            intent: plan.labels.intent,
-            labels: plan.labels.source,
-            guard: result?.guard ?? "fixed",
-            rejected: result?.rejected.length ?? 0,
-            ttftMs: ttft,
-            latencyMs: latency,
-            ...timings,
-            ...(result?.timings ?? {}),
-          }),
-        );
-        after(() => saveReply(plan, text, result, ttft, citations, latency));
-        done();
-      },
-      onError: (error) => {
-        done();
-        if (req.signal.aborted) return "Stopped.";
-        console.error("sage:", error);
-        return "Sage couldn't finish that reply. Please try again in a moment.";
-      },
+    const stream = sageTurnStream({
+      input,
+      started,
+      signal: req.signal,
+      deadline: started + DEADLINE_MS,
+      replyId,
+      conversationId,
+      homeId: home?.id ?? null,
+      onPlan: saveTurn,
+      // The chat must exist before the client can send its next message in it
+      // (the text is already out; this only delays the end of the stream).
+      beforeFinish: () => saved,
+      onDone: saveReply,
+      release: done,
     });
     streaming = true;
     return createUIMessageStreamResponse({ stream });
@@ -250,14 +184,7 @@ export async function POST(req: Request) {
       }
     }
 
-    async function saveReply(
-      plan: Plan,
-      text: string,
-      result: Awaited<ReturnType<typeof writeReply>> | null,
-      ttft: number | null,
-      citations: Citation[] = [],
-      latency = Date.now() - started,
-    ) {
+    async function saveReply({ plan, text, result, ttft, citations, latency }: TurnOutcome) {
       if (!text.trim()) return;
       try {
         await saved;
@@ -280,10 +207,6 @@ export async function POST(req: Request) {
     // The stream releases it when the reply is done.
     if (!streaming) done();
   }
-}
-
-function status(writer: UIMessageStreamWriter<SageUIMessage>, stage: SageStage) {
-  writer.write({ type: "data-status", data: { stage }, transient: true });
 }
 
 /** Send a reply that was already saved (the student retried a message Sage had answered). */

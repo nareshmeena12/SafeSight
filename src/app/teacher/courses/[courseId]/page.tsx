@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, ClipboardList, FileText, Pencil, Plus, Users } from "lucide-react";
+import { ChevronLeft, ClipboardList, FileText, MessagesSquare, Pencil, Plus, Users } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { EmptyState } from "@/components/product/empty-state";
@@ -70,6 +70,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                 Notes and PDFs
               </Link>
             </Button>
+            <Button asChild variant="outline">
+              {/* Chat with Sage as a student would; previews never count in any number. */}
+              <Link href={`/teacher/courses/${course.id}/preview`}>
+                <MessagesSquare aria-hidden="true" />
+                Preview Sage
+              </Link>
+            </Button>
             <CourseDialog
               course={course}
               trigger={
@@ -124,6 +131,15 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                       ) : null}
                     </div>
                     <div className="flex shrink-0 gap-1">
+                      <Button asChild variant="ghost" size="icon">
+                        <Link
+                          href={`/teacher/courses/${course.id}/preview?assignment=${a.id}`}
+                          aria-label={`Preview Sage on ${a.title}`}
+                          title="Preview Sage"
+                        >
+                          <MessagesSquare aria-hidden="true" />
+                        </Link>
+                      </Button>
                       <AssignmentDialog
                         courseId={course.id}
                         assignment={a}

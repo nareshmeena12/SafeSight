@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { allowAiCall } from "@/lib/ai/usage-log";
 import { createClient } from "@/lib/supabase/server";
 import { generateIntegrityReport } from "@/lib/trace/report";
 import { authorize, jsonError } from "../../request";
@@ -19,9 +20,12 @@ export async function POST(_request: Request, ctx: RouteContext<"/api/trace/[sub
     .maybeSingle();
   if (!submission) return jsonError(404, "This piece of work wasn't found.");
   if (!submission.submitted_at) return jsonError(409, "This work hasn't been submitted yet.");
+  if (!(await allowAiCall(auth.user.id, "trace_summary", { limit: 20, windowMs: 60 * 60_000 }))) {
+    return jsonError(429, "You've prepared a lot of summaries this hour. Please try again in a little while.");
+  }
 
   try {
-    const report = await generateIntegrityReport(auth.submissionId);
+    const report = await generateIntegrityReport(auth.submissionId, auth.user.id);
     return NextResponse.json({ ok: true, report });
   } catch (e) {
     console.error("Trace report failed", e);
