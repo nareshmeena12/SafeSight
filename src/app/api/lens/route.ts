@@ -41,7 +41,7 @@ export async function POST(request: Request) {
   const parsed = bodySchema.safeParse(await request.json().catch(() => null));
   if (!parsed.success) return problem(400, "That request didn't look right. Please try again.");
 
-  const model = lensModel();
+  const model = lensModel(user.id);
   if (!model) return problem(503, "Lens isn't connected to its AI model yet. Ask your admin to add the model settings.");
 
   const db = await createClient();

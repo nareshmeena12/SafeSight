@@ -1,7 +1,8 @@
 import "server-only";
 import { embedMany } from "ai";
 import { extractText, getDocumentProxy } from "unpdf";
-import { embeddingModel } from "@/lib/ai/provider";
+import { embeddingModel, recordEmbeddingUsage } from "@/lib/ai/provider";
+import { allowAiCall } from "@/lib/ai/usage-log";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { chunkPages } from "./chunk";
 import { MATERIALS_BUCKET, MAX_PDF_BYTES } from "./constants";
@@ -20,7 +21,15 @@ export type IngestResult =
  * in material_chunks. Without an embedding model, chunks are still stored and
  * found by keyword search; re-run this later to add vectors.
  */
-export async function ingestMaterial(materialId: string): Promise<IngestResult> {
+/** Embedding calls (batches of 32 chunks) a teacher may make per hour: ~25 long PDFs. */
+const INGEST_CALLS_PER_HOUR = 200;
+
+/** False when the teacher has embedded a lot of notes this hour (ai_usage). */
+export function allowIngest(userId: string) {
+  return allowAiCall(userId, "notes_ingest", { limit: INGEST_CALLS_PER_HOUR, windowMs: 60 * 60_000 });
+}
+
+export async function ingestMaterial(materialId: string, userId: string | null = null): Promise<IngestResult> {
   const admin = createAdminClient();
   const fail = async (error: string): Promise<IngestResult> => {
     await admin.from("materials").update({ status: "failed", error: error.slice(0, 500) }).eq("id", materialId);
@@ -57,11 +66,13 @@ export async function ingestMaterial(materialId: string): Promise<IngestResult> 
     if (model) {
       vectors = [];
       for (let i = 0; i < chunks.length; i += EMBED_BATCH) {
-        const { embeddings } = await embedMany({
+        const { embeddings, usage } = await embedMany({
           model,
           values: chunks.slice(i, i + EMBED_BATCH).map((c) => c.content),
           maxRetries: 2,
+          abortSignal: AbortSignal.timeout(30_000),
         });
+        recordEmbeddingUsage({ feature: "notes_ingest", userId }, usage.tokens);
         vectors.push(...embeddings.map(toPgVector));
       }
     }

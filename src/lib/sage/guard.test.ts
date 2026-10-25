@@ -33,6 +33,14 @@ describe("numbers", () => {
 });
 
 describe("deterministicGuard", () => {
+  it("lets a free explanation use round values that happen to be in a key", () => {
+    const free = ctx(thermo, labels({ intent: "concept" }));
+    expect(free.policy.governing).toBeNull();
+    expect(deterministicGuard("Air heated from 300 K to 600 K at 100 kPa: what happens to its entropy?", free).ok).toBe(true);
+    expect(deterministicGuard("That gives W = 68.9 kJ.", free).ok).toBe(false);
+    expect(deterministicGuard("So T2 = 600 K.", ctx()).ok).toBe(false);
+  });
+
   it("passes a normal hint", () => {
     expect(deterministicGuard("Let's work through this together. What have you tried so far?", ctx()).ok).toBe(true);
   });

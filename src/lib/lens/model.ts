@@ -6,6 +6,6 @@ import { aiStatus, chatModel } from "@/lib/ai/provider";
  * mode's slow-model fallback applies here too. Null when the provider is not
  * configured, so the route can answer with a friendly message.
  */
-export function lensModel() {
-  return aiStatus().chat ? chatModel() : null;
+export function lensModel(userId: string) {
+  return aiStatus().chat ? chatModel({ feature: "lens", userId }) : null;
 }

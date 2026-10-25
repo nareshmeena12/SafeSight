@@ -1,6 +1,6 @@
 import "server-only";
-import { generateText, Output, type LanguageModelUsage } from "ai";
-import { aiProviderOptions, chatModel } from "@/lib/ai/provider";
+import { generateText, Output } from "ai";
+import { chatModel, type UsageTag } from "@/lib/ai/provider";
 import { guardJsonShape, guardVerdictSchema, type GuardVerdict } from "./guard";
 import type { Policy } from "./policy";
 import { guardPrompt } from "./prompt";
@@ -17,18 +17,18 @@ export async function modelGuard({
   policy,
   studentMessage,
   signal,
-  onUsage,
+  usage,
 }: {
   draft: string;
   policy: Policy;
   studentMessage: string;
   signal?: AbortSignal;
-  onUsage?: (usage: LanguageModelUsage | undefined) => void;
+  usage: UsageTag;
 }): Promise<GuardVerdict | null> {
   const g = policy.governing;
   try {
-    const { output, usage } = await generateText({
-      model: chatModel(),
+    const { output } = await generateText({
+      model: chatModel(usage),
       system: guardPrompt(guardJsonShape),
       prompt: `ASSIGNMENT: ${g ? `"${g.title}" — ${g.mode.toUpperCase()} mode, ${g.kind}` : "none matched (general learning); the student asked for work to hand in"}
 INSTRUCTIONS:
@@ -55,11 +55,9 @@ ${draft.slice(0, 6000)}
       output: Output.object({ schema: guardVerdictSchema, name: "verdict" }),
       temperature: 0,
       maxOutputTokens: 200,
-      providerOptions: aiProviderOptions(),
       maxRetries: 0,
       abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(GUARD_TIMEOUT_MS)]) : AbortSignal.timeout(GUARD_TIMEOUT_MS),
     });
-    onUsage?.(usage);
     return output;
   } catch (error) {
     console.warn("sage guard call failed:", error instanceof Error ? error.message : error);

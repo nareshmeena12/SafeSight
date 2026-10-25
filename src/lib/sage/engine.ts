@@ -1,6 +1,6 @@
 import "server-only";
-import { streamText, type LanguageModelUsage, type ModelMessage } from "ai";
-import { aiProviderOptions, chatModel } from "@/lib/ai/provider";
+import { streamText, type ModelMessage } from "ai";
+import { chatModel, type UsageTag } from "@/lib/ai/provider";
 import { classifyMessage } from "./classify";
 import { codeNamesIn, deterministicGuard, lastSafeBoundary, riskyWithoutModelCheck, type GuardContext } from "./guard";
 import { modelGuard } from "./guard-model";
@@ -41,11 +41,9 @@ export type TurnInput = {
   jailbreaks: number;
   /** Skip the classifier model (Exam-mode chats): keyword labels only, matched to the home assignment. */
   labelsOnly?: boolean;
-  /** Tokens used by each model call (the route logs them to ai_usage). */
-  onUsage?: UsageHook;
+  /** Whose tokens these are (ai_usage): features are `${prefix}_classify`, `_reply`, `_guard`. */
+  usage: { userId: string | null; prefix: "sage" | "sage_preview" | "eval" };
 };
-
-export type UsageHook = (feature: "sage_classify" | "sage_reply" | "sage_guard", usage: LanguageModelUsage | undefined) => void;
 
 export type Plan = {
   labels: Labels;
@@ -99,7 +97,7 @@ export async function planTurn(input: TurnInput, signal?: AbortSignal): Promise<
           home: input.home,
           candidates: input.candidates,
           signal,
-          onUsage: input.onUsage && ((u) => input.onUsage!("sage_classify", u)),
+          usage: { feature: `${input.usage.prefix}_classify`, userId: input.usage.userId },
         });
   const classifyMs = Math.round(performance.now() - started);
 
@@ -192,7 +190,7 @@ export async function writeReply(
 
   stage?.("writing");
   if (policy.guard === "light") {
-    const light = await streamLight(plan, messages, { signal, emit, timings, onUsage: input.onUsage });
+    const light = await streamLight(plan, messages, { signal, emit, timings, usage: replyUsage(input) });
     if (light.ok) return finish(light.text, "pass");
     rejected.push(light.reason);
     if (light.emitted) {
@@ -221,9 +219,9 @@ export async function writeReply(
             care: input.care,
             rejected: rejected.at(-1),
           });
-    const draft = await draftText(system, messages, signal, timings, rejected.length ? 0.2 : 0.4, input.onUsage);
+    const draft = await draftText(system, messages, signal, timings, rejected.length ? 0.2 : 0.4, replyUsage(input));
     stage?.("checking");
-    const verdict = await check(draft, plan, input.text, signal, timings, input.onUsage);
+    const verdict = await check(draft, plan, input, signal, timings);
     if (verdict.ok) {
       emit(draft);
       return finish(draft, rejected.length ? "regenerated" : "pass");
@@ -236,24 +234,25 @@ export async function writeReply(
   return finish(hint, "safe_hint");
 }
 
+const replyUsage = (input: TurnInput): UsageTag => ({ feature: `${input.usage.prefix}_reply`, userId: input.usage.userId });
+
 async function draftText(
   system: string,
   messages: ModelMessage[],
   signal: AbortSignal | undefined,
   timings: Reply["timings"],
   temperature: number,
-  onUsage?: UsageHook,
+  usage: UsageTag,
 ) {
   const started = performance.now();
   let error: unknown = null;
   const result = streamText({
-    model: chatModel(),
+    model: chatModel(usage),
     system,
     messages,
     temperature,
     maxOutputTokens: 900,
     maxRetries: 0,
-    providerOptions: aiProviderOptions(),
     abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(DRAFT_TIMEOUT_MS)]) : AbortSignal.timeout(DRAFT_TIMEOUT_MS),
     onError: ({ error: e }) => {
       error = e;
@@ -261,7 +260,6 @@ async function draftText(
   });
   const text = (await result.text).trim();
   timings.draftMs += Math.round(performance.now() - started);
-  if (onUsage) void result.usage.then((u) => onUsage("sage_reply", u), () => {});
   if (!text) throw error ?? new Error("The model returned an empty reply.");
   return text;
 }
@@ -269,10 +267,9 @@ async function draftText(
 async function check(
   draft: string,
   plan: Plan,
-  studentMessage: string,
+  input: TurnInput,
   signal: AbortSignal | undefined,
   timings: Reply["timings"],
-  onUsage?: UsageHook,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const fast = deterministicGuard(draft, plan.guard);
   if (!fast.ok) return { ok: false, reason: `${fast.category}: ${fast.reason}` };
@@ -280,9 +277,9 @@ async function check(
   const verdict = await modelGuard({
     draft,
     policy: plan.policy,
-    studentMessage,
+    studentMessage: input.text,
     signal,
-    onUsage: onUsage && ((u) => onUsage("sage_guard", u)),
+    usage: { feature: `${input.usage.prefix}_guard`, userId: input.usage.userId },
   });
   timings.guardMs += Math.round(performance.now() - started);
   if (!verdict) {
@@ -302,20 +299,19 @@ async function streamLight(
     signal,
     emit,
     timings,
-    onUsage,
-  }: { signal?: AbortSignal; emit: (t: string) => void; timings: Reply["timings"]; onUsage?: UsageHook },
+    usage,
+  }: { signal?: AbortSignal; emit: (t: string) => void; timings: Reply["timings"]; usage: UsageTag },
 ): Promise<{ ok: true; text: string } | { ok: false; reason: string; emitted: boolean; text: string }> {
   const started = performance.now();
   const local = new AbortController();
   let error: unknown = null;
   const result = streamText({
-    model: chatModel(),
+    model: chatModel(usage),
     system: plan.system,
     messages,
     temperature: 0.4,
     maxOutputTokens: 1200,
     maxRetries: 0,
-    providerOptions: aiProviderOptions(),
     abortSignal: AbortSignal.any([
       local.signal,
       AbortSignal.timeout(DRAFT_TIMEOUT_MS),
@@ -343,7 +339,6 @@ async function streamLight(
     }
   } finally {
     timings.draftMs += Math.round(performance.now() - started);
-    if (onUsage) void result.usage.then((u) => onUsage("sage_reply", u), () => {});
   }
   if (!full.trim()) throw error ?? new Error("The model returned an empty reply.");
   const verdict = deterministicGuard(full, plan.guard);

@@ -48,10 +48,10 @@ function courseLabel(c: Course) {
   return c.code ? `${c.code} ${c.name}` : c.name;
 }
 
-async function notesFor(courseId: string, topic: string) {
+async function notesFor(courseId: string, topic: string, studentId: string) {
   try {
     const passages = await Promise.race([
-      searchCourseMaterial(courseId, topic, 2),
+      searchCourseMaterial(courseId, topic, { limit: 2, usage: { feature: "practice_notes_search", userId: studentId } }),
       new Promise<never[]>((resolve) => setTimeout(() => resolve([]), SEARCH_MS)),
     ]);
     return passages.map((p) => ({ title: p.title, page: p.page, content: p.content }));
@@ -124,7 +124,7 @@ async function createProblems({
   }
 
   const started = Date.now();
-  const passages = await notesFor(course.id, kind === "review" ? (focus ?? []).join(" ") : topic);
+  const passages = await notesFor(course.id, kind === "review" ? (focus ?? []).join(" ") : topic, studentId);
   const accepted: { difficulty: (typeof difficulties)[number]; question: string; solution: string; finalAnswer: string; topic?: string }[] = [];
   const rejected: string[] = [];
   for (let round = 0; round < 2 && accepted.length < 3; round++) {

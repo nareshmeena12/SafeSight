@@ -124,7 +124,7 @@ describe.skipIf(!env)("learning tools row-level security", () => {
       ]),
     );
     await ok(admin.from("learning_offers").insert({ student_id: ids.studentA, course_id: courseId, topic_key: "entropy", kind: "refresher" }));
-    await ok(admin.from("ai_usage").insert({ user_id: ids.studentA, feature: "practice_generate", input_tokens: 10, output_tokens: 20, total_tokens: 30 }));
+    await ok(admin.from("ai_usage").insert({ user_id: ids.studentA, feature: "practice_generate", input_tokens: 10, output_tokens: 20 }));
   }, 60_000);
 
   afterAll(async () => {

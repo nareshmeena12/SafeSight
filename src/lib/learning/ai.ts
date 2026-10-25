@@ -1,14 +1,14 @@
 import "server-only";
 import { Output, streamText } from "ai";
 import type { z } from "zod";
-import { aiProviderOptions, chatModel } from "@/lib/ai/provider";
-import { logAiUsage, type AiFeature } from "./usage";
+import { chatModel } from "@/lib/ai/provider";
+import type { AiFeature } from "./usage";
 
 /**
  * One structured-JSON model call for the learning tools: streamed (so the
  * provider's slow-start retry judges the first token, not the whole answer),
  * with a timeout, one more attempt if the first fails or returns JSON that
- * doesn't fit the schema, and the tokens logged to ai_usage. Returns null
+ * doesn't fit the schema; the provider logs the tokens to ai_usage. Returns null
  * when both attempts fail, so every caller can show a friendly message.
  */
 export async function generateJson<T>({
@@ -41,21 +41,20 @@ export async function generateJson<T>({
     let streamError: unknown = null;
     try {
       const result = streamText({
-        model: chatModel(),
+        // Tokens of every call (failures too) go to ai_usage under this feature and student.
+        model: chatModel({ feature, userId }),
         system,
         prompt,
         output: Output.object({ schema, name }),
         temperature: attempt ? Math.max(0, temperature - 0.2) : temperature,
         maxOutputTokens,
         maxRetries: 0,
-        providerOptions: aiProviderOptions(),
         abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
         onError: ({ error }) => {
           streamError = error;
         },
       });
       const output = await result.output;
-      void result.usage.then((u) => logAiUsage(userId, feature, u), () => {});
       return output;
     } catch (error) {
       const reason = streamError ?? error;

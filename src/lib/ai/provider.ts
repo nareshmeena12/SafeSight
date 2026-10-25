@@ -1,8 +1,12 @@
 import "server-only";
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
-import { wrapLanguageModel } from "ai";
+import { wrapLanguageModel, type LanguageModelMiddleware } from "ai";
 import { z } from "zod";
 import { fallbackMiddleware, type FallbackState } from "./fallback";
+import { usageMiddleware, type UsageTag } from "./usage";
+import { recordUsage } from "./usage-log";
+
+export type { UsageTag } from "./usage";
 
 /**
  * The model provider (OpenAI-compatible: DeepInfra or OpenRouter). Server
@@ -18,9 +22,10 @@ import { fallbackMiddleware, type FallbackState } from "./fallback";
  *   EMBEDDING_MODEL                         1024-dimension model, e.g. BAAI/bge-m3
  *   EMBEDDING_BASE_URL, EMBEDDING_API_KEY   optional; default to AI_BASE_URL / AI_API_KEY
  *   AI_STRUCTURED_OUTPUTS=true              send json_schema instead of json_object
- *   AI_EXTRA_BODY                           optional JSON merged into every chat request body, e.g.
- *                                           {"thinking":{"type":"disabled"}} for a reasoning model
- *                                           (see aiProviderOptions)
+ *   AI_REASONING_EFFORT                     sent as reasoning_effort on every chat call, for
+ *                                           reasoning models (e.g. "none" or "low" on DeepSeek V4).
+ *                                           Hidden reasoning counts against max tokens, so without
+ *                                           it short JSON calls can come back empty.
  */
 
 const optional = z
@@ -38,6 +43,7 @@ const aiEnvSchema = z.object({
   EMBEDDING_BASE_URL: optional.pipe(z.url().optional()),
   EMBEDDING_API_KEY: optional,
   AI_STRUCTURED_OUTPUTS: optional,
+  AI_REASONING_EFFORT: optional,
   DEMO_MODE: optional,
   AI_SLOW_MS: optional.pipe(z.coerce.number<string | undefined>().int().min(500).max(60_000).optional()),
 });
@@ -52,6 +58,7 @@ function aiEnv() {
     EMBEDDING_BASE_URL: process.env.EMBEDDING_BASE_URL,
     EMBEDDING_API_KEY: process.env.EMBEDDING_API_KEY,
     AI_STRUCTURED_OUTPUTS: process.env.AI_STRUCTURED_OUTPUTS,
+    AI_REASONING_EFFORT: process.env.AI_REASONING_EFFORT,
     DEMO_MODE: process.env.DEMO_MODE,
     AI_SLOW_MS: process.env.AI_SLOW_MS,
   });
@@ -102,8 +109,9 @@ function fallbackModelId(env: ReturnType<typeof aiEnv>) {
  * is cancelled and retried on AI_FALLBACK_MODEL (or the main model again when
  * no fallback is set). Streams only switch before the first token. In demo
  * mode, after a switch every call goes straight to the fallback for 5 minutes.
+ * Every call's tokens go to ai_usage under `usage` (feature + user).
  */
-export function chatModel() {
+export function chatModel(usage: UsageTag) {
   const env = aiEnv();
   const missing = [
     !env.AI_BASE_URL && "AI_BASE_URL",
@@ -124,14 +132,34 @@ export function chatModel() {
   const slowMs = env.AI_SLOW_MS ?? (demo ? DEMO_SLOW_MS : DEFAULT_SLOW_MS);
   return wrapLanguageModel({
     model: main,
-    middleware: fallbackMiddleware({
-      fallback: fallback ? provider.chatModel(fallback) : main,
-      slowMs,
-      stickyMs: demo ? FALLBACK_STICKY_MS : 0,
-      state: fallbackState,
-      onSwitch: (reason) => console.warn(`ai retry: ${env.AI_MODEL} → ${fallback ?? env.AI_MODEL} (${reason})`),
-    }),
+    middleware: [
+      ...(env.AI_REASONING_EFFORT ? [reasoningMiddleware(env.AI_REASONING_EFFORT)] : []),
+      usageMiddleware({ tag: usage, modelId: env.AI_MODEL!, record: recordUsage }),
+      fallbackMiddleware({
+        fallback: fallback ? provider.chatModel(fallback) : main,
+        slowMs,
+        stickyMs: demo ? FALLBACK_STICKY_MS : 0,
+        state: fallbackState,
+        onSwitch: (reason) => console.warn(`ai retry: ${env.AI_MODEL} → ${fallback ?? env.AI_MODEL} (${reason})`),
+      }),
+    ],
   });
+}
+
+/** Adds reasoning_effort to every call (the provider's options are keyed by its name, "safesight"). */
+function reasoningMiddleware(effort: string): LanguageModelMiddleware {
+  return {
+    specificationVersion: "v4",
+    transformParams: async ({ params }) => ({
+      ...params,
+      providerOptions: { ...params.providerOptions, safesight: { ...params.providerOptions?.safesight, reasoningEffort: effort } },
+    }),
+  };
+}
+
+/** Log an embedding call's tokens (embed/embedMany report `usage.tokens`). */
+export function recordEmbeddingUsage(usage: UsageTag, tokens: number | undefined, ok = true) {
+  recordUsage({ ...usage, model: aiEnv().EMBEDDING_MODEL ?? "", inputTokens: Math.max(0, Math.round(tokens ?? 0)), outputTokens: 0, ok });
 }
 
 /** The embedding model for notes search, or null if unconfigured. */
@@ -143,27 +171,4 @@ export function embeddingModel() {
   return createOpenAICompatible({ name: "safesight-embeddings", baseURL, apiKey }).embeddingModel(
     env.EMBEDDING_MODEL,
   );
-}
-
-let extraBody: Record<string, never> | null | undefined;
-
-/**
- * providerOptions for a chat call: AI_EXTRA_BODY (JSON) goes into the request
- * body. A reasoning model can otherwise spend the whole output budget
- * thinking, so short structured calls (labels, the guard) come back empty.
- */
-export function aiProviderOptions(): { safesight: Record<string, never> } | undefined {
-  if (extraBody === undefined) {
-    extraBody = null;
-    const raw = process.env.AI_EXTRA_BODY?.trim();
-    if (raw) {
-      try {
-        const parsed = z.record(z.string(), z.unknown()).safeParse(JSON.parse(raw));
-        if (parsed.success) extraBody = parsed.data as Record<string, never>;
-      } catch {
-        console.warn("AI_EXTRA_BODY is not valid JSON; ignoring it.");
-      }
-    }
-  }
-  return extraBody ? { safesight: extraBody } : undefined;
 }

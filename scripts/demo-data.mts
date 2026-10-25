@@ -226,6 +226,7 @@ function labelsFor(turn: Turn, topic: Topic | null, assignmentId: string): Label
     topic: topic?.label ?? "",
     // Demo chats are about their own assignment.
     match: { assignmentId, similarity: 0.7 },
+    refersToTask: false,
     source: "model" as const,
   };
   switch (turn.kind) {

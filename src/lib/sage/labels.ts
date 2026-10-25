@@ -63,6 +63,8 @@ export type Labels = {
   topic: string;
   /** Best-matching active assignment for this student, if any. */
   match: { assignmentId: string | null; similarity: number };
+  /** Names a numbered part of a task ("problem 1", "Q2", "part (b)"): in an assignment chat, that's the assignment. */
+  refersToTask: boolean;
   /** Where the labels came from (model + heuristic, or heuristic only). */
   source: "model" | "heuristic";
 };
@@ -90,13 +92,14 @@ const patterns = {
   deliverable:
     /\b(write|draft|compose|generate|produce|make|type)\b[^.?!]{0,40}\b(essay|report|paragraph|introduction|conclusion|outline|program|code|function|script|answer sheet|assignment|lab report|abstract|summary for submission)\b|\b(full|complete|whole|entire|working)\s+(code|program|essay|report|function)\b/i,
   answerSeeking:
-    /\b((give|tell|show|send|share) me (the |a |an )?(final |full |complete |whole |exact |correct |numerical )?(answer|solution|answers|solutions|working|result|value)|(just|only) (the )?(answer|solution|number|final)|solve (it|this|these|the (whole|entire|full|question|problem))|do (it|this|my (homework|assignment)) for me|what('?s| is) the (final |correct |exact )?answer|what('?s| is) the (final|correct|exact) (value|result)|full solution|complete solution|step[- ]by[- ]step solution|answer key|fill in the blanks?)\b/i,
+    /\b((give|tell|show|send|share) me (the |a |an )?(final |full |complete |whole |exact |correct |numerical )?(answer|solution|answers|solutions|working|result|value)|(just|only) (the )?(answer|solution|number|final)|solve (it|this|these|the (whole|entire|full|question|problem))|do (it|this|my (homework|assignment)) for me|what('?s| is) the (final |correct |exact )?answer|what('?s| is) the (final|correct|exact) (value|result)|(final |exact |correct )?(answer|value|number|result) only|just the (final )?(value|number|result)|full solution|complete solution|step[- ]by[- ]step solution|answer key|fill in the blanks?)\b/i,
   verify:
     /\b(is (it|this|that|my answer) (right|correct)|am i (right|correct)|(check|verify|confirm) (my |this |the )?(answer|result|final)|is the answer|did i get it right|right answer\?|correct answer\?|just confirm|right or wrong|yes or no)\b|\bis (the|my) (root|answer|value|result|work|pressure|temperature|heat|output)\b[^?]{0,40}?(\d+\.\d+|\d{2,})|\bis\b[^?]{0,30}?(\d+\.\d+|\d{2,})[^?]{0,20}?\b(right|correct|wrong)\b/i,
   examStyle:
     /(\bQ\.?\s?\d|\bquestion\s?\d|\(\s?\d+\s?marks?\s?\)|\b\d+\s?marks\b|\b(calculate|determine|find|derive|evaluate|compute|show that|prove that)\b)/i,
   attempt:
     /\b(i (tried|got|think|did|calculated|used|applied|assumed|wrote|drew|took|substituted|found|started)|i'?m getting|i am getting|my (attempt|working|approach|steps?|reasoning|draft|code)|here'?s (what i|my)|so far i|first i)\b/i,
+  taskReference: /\b(problem|question|exercise|q)\s?\.?\s?\d+[a-z]?\b|\bpart\s?\(?[a-h]\)?(?![\w'])/i,
   concept: /\?|\b(what is|what are|why|how (does|do|is|can)|explain|difference between|meaning of|define|intuition)\b/i,
 } as const;
 
@@ -128,6 +131,7 @@ export function heuristicLabels(text: string): Labels {
     distress,
     topic: "",
     match: { assignmentId: null, similarity: 0 },
+    refersToTask: patterns.taskReference.test(t),
     source: "heuristic",
   };
 }
@@ -144,7 +148,7 @@ const forced: Intent[] = ["distress", "jailbreak", "deliverable_request", "answe
  * answer or the deliverable, and permission claims. It can also lower attempt
  * quality when the model was generous to a message with no work in it.
  */
-export function mergeLabels(model: Omit<Labels, "source"> | null, heuristic: Labels): Labels {
+export function mergeLabels(model: Omit<Labels, "source" | "refersToTask"> | null, heuristic: Labels): Labels {
   if (!model) return heuristic;
   const distress = distressRank[heuristic.distress] > distressRank[model.distress] ? heuristic.distress : model.distress;
   let intent = model.intent;
@@ -163,6 +167,7 @@ export function mergeLabels(model: Omit<Labels, "source"> | null, heuristic: Lab
     distress,
     attemptQuality: noWork ? Math.min(model.attemptQuality, heuristic.sharesWorking ? 0.5 : 0.2) : model.attemptQuality,
     claimsPermission: model.claimsPermission || heuristic.claimsPermission,
+    refersToTask: heuristic.refersToTask,
     topic: model.topic.trim().slice(0, 80),
     source: "model",
   };
