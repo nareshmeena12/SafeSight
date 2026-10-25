@@ -4,6 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { Check, ChevronDown, Copy, Mail } from "lucide-react";
 import type { InferUITools, UIMessage } from "ai";
+import { CheckBadge } from "@/components/numbers/check-badge";
+import type { CheckResult } from "@/lib/numbers/numbers";
 import { RelianceBadge } from "@/components/product/reliance-badge";
 import { CountBarChart, RelianceLineChart } from "@/components/teacher/charts";
 import { flagTypeLabels, SeverityBadge } from "@/components/teacher/flag-meta";
@@ -23,6 +25,7 @@ const toolLabels: Record<keyof LensTools, string> = {
   get_topic_struggles: "Ranking topics",
   list_flags: "Checking flags",
   get_integrity_report: "Reading Trace summaries",
+  get_answer_checks: "Checking answers",
   draft_message: "Drafting an email",
   generate_quiz: "Writing a quiz",
 };
@@ -184,6 +187,42 @@ function Reports({ o }: { o: Output<"get_integrity_report"> }) {
   );
 }
 
+function AnswerChecks({ o }: { o: Output<"get_answer_checks"> }) {
+  if (hasError(o) || !("rows" in o) || !o.rows) return null;
+  return (
+    <Card title={`Per-student numbers · ${o.assignment}`}>
+      <p className="mb-3 text-small text-muted-foreground">
+        <span className="font-mono text-mono">{o.answered}</span>/<span className="font-mono text-mono">{o.students}</span> answered ·{" "}
+        <span className="font-mono text-mono">{o.matching}</span> match within {o.tolerancePct}%
+      </p>
+      <div className="overflow-x-auto">
+        <table className="w-full text-small">
+          <thead>
+            <tr className="border-b text-left text-muted-foreground">
+              <th className="py-2 pr-3 font-normal">Student</th>
+              <th className="py-2 pr-3 text-right font-normal">Expected</th>
+              <th className="py-2 pr-3 font-normal">Given</th>
+              <th className="py-2 font-normal">Check</th>
+            </tr>
+          </thead>
+          <tbody>
+            {o.rows.map((r) => (
+              <tr key={r.student} className="border-b last:border-0">
+                <td className="py-2 pr-3">{r.student}</td>
+                <td className="py-2 pr-3 text-right font-mono">{r.expected ?? "—"}</td>
+                <td className="py-2 pr-3 font-mono">{r.given ?? "—"}</td>
+                <td className="py-2">
+                  <CheckBadge result={r.check === "no answer" ? null : (r.check as CheckResult)} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
+}
+
 function Draft({ o }: { o: Output<"draft_message"> }) {
   if (hasError(o)) return null;
   const text = `Subject: ${o.subject}\n\n${o.body}`;
@@ -284,6 +323,8 @@ export function ToolView({ part }: { part: Part }) {
       return <Student o={tool.output} />;
     case "tool-get_integrity_report":
       return <Reports o={tool.output} />;
+    case "tool-get_answer_checks":
+      return <AnswerChecks o={tool.output} />;
     case "tool-draft_message":
       return <Draft o={tool.output} />;
     case "tool-generate_quiz":

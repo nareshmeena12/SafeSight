@@ -28,6 +28,8 @@ import type { Plan, TurnInput } from "@/lib/sage/engine";
 import { decideFlags } from "@/lib/sage/flags";
 import { sageTurnStream, type TurnOutcome } from "@/lib/sage/turn-stream";
 import { citationsSchema, sageRequestSchema, type SageUIMessage } from "@/lib/sage/types";
+import { readCourseNumberSets } from "@/lib/numbers/data";
+import { withStudentNumbers } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
 import { refreshCurrentWeek } from "@/lib/teacher/refresh";
 
@@ -99,7 +101,7 @@ export async function POST(req: Request) {
     const conversationId = existing?.conversationId ?? askedConversation ?? crypto.randomUUID();
     const userMessageId = existing?.messageId ?? crypto.randomUUID();
 
-    const [owns, candidates, home, past, activity, openFlags, hasMaterials, ladder] = await Promise.all([
+    const [owns, allCandidates, ownHome, past, activity, openFlags, hasMaterials, ladder, numberSets] = await Promise.all([
       isNew || existing
         ? true
         : ownsConversation(supabase, { conversationId, studentId: user.id, assignmentId: assignmentId ?? null, courseId: course.id }),
@@ -110,7 +112,11 @@ export async function POST(req: Request) {
       recentOpenFlags(user.id, course.id),
       courseHasMaterials(course.id),
       readLadderForCourse(user.id, course.id),
+      readCourseNumberSets(course.id),
     ]);
+    // S18: Sage works with this student's own numbers and protects their own answer.
+    const candidates = withStudentNumbers(allCandidates, numberSets, user.id);
+    const home = ownHome ? withStudentNumbers([ownHome], numberSets, user.id)[0] : null;
     if (!owns) return reply(403, "This chat belongs to another assignment. Please reload the page.");
 
     // Save the conversation and the student's message in the background.

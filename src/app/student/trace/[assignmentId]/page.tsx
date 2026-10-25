@@ -6,11 +6,14 @@ import { ArrowLeft, Info } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { ModeBadge } from "@/components/product/mode-badge";
+import { StudentNumbers } from "@/components/numbers/student-numbers";
 import { EvidenceSummary } from "@/components/trace/evidence-summary";
 import { TraceReplay } from "@/components/trace/replay";
 import { TraceEditor } from "@/components/trace/trace-editor";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { studentNumbersView } from "@/lib/numbers/data";
+import { fillInstructions } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
 import { getOrStartDraft, getReplay } from "@/lib/trace/queries";
 import { submissionIdSchema } from "@/lib/trace/schemas";
@@ -43,6 +46,9 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
   const draft = await getOrStartDraft(supabase, user.id, id.data);
   if (!draft) notFound();
   const { assignment, submission } = draft;
+  // S18: per-student numbers, if the teacher set them up for this assignment.
+  const numbers = await studentNumbersView(supabase, user.id, assignment.id, submission.submitted_at);
+  const instructions = numbers ? fillInstructions(assignment.instructions, numbers, numbers.values) : assignment.instructions;
 
   const header = (
     <PageHeader
@@ -79,6 +85,7 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
             </time>
             . This is what your teacher sees.
           </p>
+          {numbers ? <StudentNumbers view={numbers} /> : null}
           <EvidenceSummary
             report={report}
             pending="Trace is preparing a short summary of how this was written. Check back in a minute."
@@ -109,10 +116,10 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
     <>
       {header}
       <div className="grid gap-4">
-        {assignment.instructions ? (
+        {instructions ? (
           <details className="rounded-lg border bg-surface p-4 sm:px-6" open>
             <summary className="min-h-11 cursor-pointer content-center text-label">Instructions</summary>
-            <p className="mt-2 whitespace-pre-line text-muted-foreground">{assignment.instructions}</p>
+            <p className="mt-2 whitespace-pre-line text-muted-foreground">{instructions}</p>
           </details>
         ) : null}
         <p className="flex items-start gap-2 rounded-lg bg-primary-soft p-4 text-small text-foreground sm:px-6">
@@ -123,6 +130,7 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
             too.
           </span>
         </p>
+        {numbers ? <StudentNumbers view={numbers} /> : null}
         <TraceEditor submissionId={submission.id} initialContent={submission.content} />
       </div>
     </>

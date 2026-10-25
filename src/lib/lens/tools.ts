@@ -1,6 +1,8 @@
 import "server-only";
 import { tool } from "ai";
 import { z } from "zod";
+import { getClassNumbers } from "@/lib/numbers/data";
+import { formatNumber } from "@/lib/numbers/numbers";
 import { daysAgo } from "@/lib/teacher/dates";
 import {
   courseScope,
@@ -171,6 +173,54 @@ export function createLensTools(db: Db, teacherId: string, defaultCourseId: stri
             report: s.report,
           }));
         return { student: d.student.name, reports };
+      },
+    }),
+
+    get_answer_checks: tool({
+      description:
+        "For assignments with per-student numbers: each student's own values, expected answer, the answer they gave and whether it matches within the tolerance. Without an assignment, lists the assignments that have per-student numbers.",
+      inputSchema: z.object({
+        course_id: courseId,
+        assignment: z.string().trim().max(200).optional().describe("Part of the assignment title."),
+      }),
+      execute: async ({ course_id, assignment }) => {
+        const courses = await courseScope(db, teacherId, scope(course_id));
+        if (!courses) return notFound;
+        if (courses.length === 0) return { assignments: [] };
+        // RLS: number sets are teacher-only, so this lists only the teacher's own.
+        let query = db
+          .from("assignments")
+          .select("id, title, course_id, numbers:assignment_number_sets!inner(assignment_id)")
+          .in(
+            "course_id",
+            courses.map((c) => c.id),
+          );
+        if (assignment) query = query.ilike("title", `%${assignment.replace(/[%_\\]/g, "")}%`);
+        const { data, error } = await query.order("created_at", { ascending: false }).limit(20);
+        if (error) return { error: "Couldn't read assignments just now." };
+        const list = data.map((a) => ({ id: a.id, title: a.title, course: courses.find((c) => c.id === a.course_id)?.code ?? "" }));
+        if (!assignment || list.length === 0) return { assignments: list };
+        if (list.length > 1) return { error: "More than one assignment matches. Ask which one.", candidates: list.map((a) => a.title) };
+
+        const result = await getClassNumbers(db, teacherId, list[0].id);
+        if (!result?.set) return { assignments: list };
+        const { set, rows } = result;
+        return {
+          assignment: list[0].title,
+          tolerancePct: set.tolerancePct,
+          answer: [set.answerLabel, set.answerUnit && `(${set.answerUnit})`].filter(Boolean).join(" ") || "Answer",
+          students: rows.length,
+          answered: rows.filter((r) => r.answer).length,
+          matching: rows.filter((r) => r.result === "within").length,
+          notMatching: rows.filter((r) => r.result === "outside").length,
+          rows: rows.slice(0, 60).map((r) => ({
+            student: r.name,
+            values: Object.fromEntries(set.variables.map((v) => [v.name, r.values[v.name]])),
+            expected: r.expected === null ? null : formatNumber(r.expected),
+            given: r.answer?.text ?? null,
+            check: r.result ?? ("no answer" as const),
+          })),
+        };
       },
     }),
 

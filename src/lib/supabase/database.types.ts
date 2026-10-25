@@ -67,6 +67,47 @@ export type Database = {
           },
         ]
       }
+      assignment_number_sets: {
+        Row: {
+          answer_label: string
+          answer_unit: string
+          assignment_id: string
+          created_at: string
+          formula: string
+          tolerance_pct: number
+          updated_at: string
+          variables: Json
+        }
+        Insert: {
+          answer_label?: string
+          answer_unit?: string
+          assignment_id: string
+          created_at?: string
+          formula: string
+          tolerance_pct?: number
+          updated_at?: string
+          variables: Json
+        }
+        Update: {
+          answer_label?: string
+          answer_unit?: string
+          assignment_id?: string
+          created_at?: string
+          formula?: string
+          tolerance_pct?: number
+          updated_at?: string
+          variables?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_number_sets_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       assignment_teacher_notes: {
         Row: {
           answer_key: string
@@ -778,6 +819,48 @@ export type Database = {
           },
         ]
       }
+      numeric_answers: {
+        Row: {
+          answer_text: string
+          answer_value: number | null
+          assignment_id: string
+          created_at: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          answer_text: string
+          answer_value?: number | null
+          assignment_id: string
+          created_at?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          answer_text?: string
+          answer_value?: number | null
+          assignment_id?: string
+          created_at?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "numeric_answers_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "numeric_answers_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       pilot_requests: {
         Row: {
           created_at: string
@@ -981,6 +1064,45 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      viva_questions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          questions: Json
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          questions: Json
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          questions?: Json
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "viva_questions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "viva_questions_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
         ]

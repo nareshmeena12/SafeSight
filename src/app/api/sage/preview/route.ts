@@ -18,6 +18,8 @@ import {
 } from "@/lib/sage/preview";
 import { sageTurnStream, type TurnOutcome } from "@/lib/sage/turn-stream";
 import { sageRequestSchema, type SageUIMessage } from "@/lib/sage/types";
+import { readCourseNumberSets } from "@/lib/numbers/data";
+import { withStudentNumbers } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
 
 /** Same budget as /api/sage: the preview runs the same pipeline. */
@@ -66,13 +68,17 @@ export async function POST(req: Request) {
     const { course } = chat;
     const target: PreviewTarget = { teacherId: user.id, courseId: course.id, assignmentId: chat.assignment?.id ?? null };
 
-    const [preview, sentLastHour, candidates, home, hasMaterials] = await Promise.all([
+    const [preview, sentLastHour, allCandidates, ownHome, hasMaterials, numberSets] = await Promise.all([
       readPreview(target),
       previewMessagesLastHour(user.id),
       activeAssignments(course.id),
       chat.assignment ? assignmentWithSecrets(chat.assignment) : null,
       courseHasMaterials(course.id),
+      readCourseNumberSets(course.id),
     ]);
+    // S18: the teacher previews with numbers seeded from their own id, like one more student.
+    const candidates = withStudentNumbers(allCandidates, numberSets, user.id);
+    const home = ownHome ? withStudentNumbers([ownHome], numberSets, user.id)[0] : null;
 
     const answered = answeredReply(preview, message.id);
     if (answered.reply) return replayStored(answered.reply);
