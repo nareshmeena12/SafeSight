@@ -1,6 +1,6 @@
 import "server-only";
-import { streamText, type ModelMessage } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { streamText, type LanguageModelUsage, type ModelMessage } from "ai";
+import { aiProviderOptions, chatModel } from "@/lib/ai/provider";
 import { classifyMessage } from "./classify";
 import { codeNamesIn, deterministicGuard, lastSafeBoundary, riskyWithoutModelCheck, type GuardContext } from "./guard";
 import { modelGuard } from "./guard-model";
@@ -41,7 +41,11 @@ export type TurnInput = {
   jailbreaks: number;
   /** Skip the classifier model (Exam-mode chats): keyword labels only, matched to the home assignment. */
   labelsOnly?: boolean;
+  /** Tokens used by each model call (the route logs them to ai_usage). */
+  onUsage?: UsageHook;
 };
+
+export type UsageHook = (feature: "sage_classify" | "sage_reply" | "sage_guard", usage: LanguageModelUsage | undefined) => void;
 
 export type Plan = {
   labels: Labels;
@@ -95,6 +99,7 @@ export async function planTurn(input: TurnInput, signal?: AbortSignal): Promise<
           home: input.home,
           candidates: input.candidates,
           signal,
+          onUsage: input.onUsage && ((u) => input.onUsage!("sage_classify", u)),
         });
   const classifyMs = Math.round(performance.now() - started);
 
@@ -187,7 +192,7 @@ export async function writeReply(
 
   stage?.("writing");
   if (policy.guard === "light") {
-    const light = await streamLight(plan, messages, { signal, emit, timings });
+    const light = await streamLight(plan, messages, { signal, emit, timings, onUsage: input.onUsage });
     if (light.ok) return finish(light.text, "pass");
     rejected.push(light.reason);
     if (light.emitted) {
@@ -216,9 +221,9 @@ export async function writeReply(
             care: input.care,
             rejected: rejected.at(-1),
           });
-    const draft = await draftText(system, messages, signal, timings, rejected.length ? 0.2 : 0.4);
+    const draft = await draftText(system, messages, signal, timings, rejected.length ? 0.2 : 0.4, input.onUsage);
     stage?.("checking");
-    const verdict = await check(draft, plan, input.text, signal, timings);
+    const verdict = await check(draft, plan, input.text, signal, timings, input.onUsage);
     if (verdict.ok) {
       emit(draft);
       return finish(draft, rejected.length ? "regenerated" : "pass");
@@ -237,6 +242,7 @@ async function draftText(
   signal: AbortSignal | undefined,
   timings: Reply["timings"],
   temperature: number,
+  onUsage?: UsageHook,
 ) {
   const started = performance.now();
   let error: unknown = null;
@@ -247,6 +253,7 @@ async function draftText(
     temperature,
     maxOutputTokens: 900,
     maxRetries: 0,
+    providerOptions: aiProviderOptions(),
     abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(DRAFT_TIMEOUT_MS)]) : AbortSignal.timeout(DRAFT_TIMEOUT_MS),
     onError: ({ error: e }) => {
       error = e;
@@ -254,6 +261,7 @@ async function draftText(
   });
   const text = (await result.text).trim();
   timings.draftMs += Math.round(performance.now() - started);
+  if (onUsage) void result.usage.then((u) => onUsage("sage_reply", u), () => {});
   if (!text) throw error ?? new Error("The model returned an empty reply.");
   return text;
 }
@@ -264,11 +272,18 @@ async function check(
   studentMessage: string,
   signal: AbortSignal | undefined,
   timings: Reply["timings"],
+  onUsage?: UsageHook,
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   const fast = deterministicGuard(draft, plan.guard);
   if (!fast.ok) return { ok: false, reason: `${fast.category}: ${fast.reason}` };
   const started = performance.now();
-  const verdict = await modelGuard({ draft, policy: plan.policy, studentMessage, signal });
+  const verdict = await modelGuard({
+    draft,
+    policy: plan.policy,
+    studentMessage,
+    signal,
+    onUsage: onUsage && ((u) => onUsage("sage_guard", u)),
+  });
   timings.guardMs += Math.round(performance.now() - started);
   if (!verdict) {
     // The guard model is unavailable: only clearly low-risk drafts go out.
@@ -283,7 +298,12 @@ async function check(
 async function streamLight(
   plan: Plan,
   messages: ModelMessage[],
-  { signal, emit, timings }: { signal?: AbortSignal; emit: (t: string) => void; timings: Reply["timings"] },
+  {
+    signal,
+    emit,
+    timings,
+    onUsage,
+  }: { signal?: AbortSignal; emit: (t: string) => void; timings: Reply["timings"]; onUsage?: UsageHook },
 ): Promise<{ ok: true; text: string } | { ok: false; reason: string; emitted: boolean; text: string }> {
   const started = performance.now();
   const local = new AbortController();
@@ -295,6 +315,7 @@ async function streamLight(
     temperature: 0.4,
     maxOutputTokens: 1200,
     maxRetries: 0,
+    providerOptions: aiProviderOptions(),
     abortSignal: AbortSignal.any([
       local.signal,
       AbortSignal.timeout(DRAFT_TIMEOUT_MS),
@@ -322,6 +343,7 @@ async function streamLight(
     }
   } finally {
     timings.draftMs += Math.round(performance.now() - started);
+    if (onUsage) void result.usage.then((u) => onUsage("sage_reply", u), () => {});
   }
   if (!full.trim()) throw error ?? new Error("The model returned an empty reply.");
   const verdict = deterministicGuard(full, plan.guard);

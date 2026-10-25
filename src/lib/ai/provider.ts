@@ -18,6 +18,9 @@ import { fallbackMiddleware, type FallbackState } from "./fallback";
  *   EMBEDDING_MODEL                         1024-dimension model, e.g. BAAI/bge-m3
  *   EMBEDDING_BASE_URL, EMBEDDING_API_KEY   optional; default to AI_BASE_URL / AI_API_KEY
  *   AI_STRUCTURED_OUTPUTS=true              send json_schema instead of json_object
+ *   AI_EXTRA_BODY                           optional JSON merged into every chat request body, e.g.
+ *                                           {"thinking":{"type":"disabled"}} for a reasoning model
+ *                                           (see aiProviderOptions)
  */
 
 const optional = z
@@ -140,4 +143,27 @@ export function embeddingModel() {
   return createOpenAICompatible({ name: "safesight-embeddings", baseURL, apiKey }).embeddingModel(
     env.EMBEDDING_MODEL,
   );
+}
+
+let extraBody: Record<string, never> | null | undefined;
+
+/**
+ * providerOptions for a chat call: AI_EXTRA_BODY (JSON) goes into the request
+ * body. A reasoning model can otherwise spend the whole output budget
+ * thinking, so short structured calls (labels, the guard) come back empty.
+ */
+export function aiProviderOptions(): { safesight: Record<string, never> } | undefined {
+  if (extraBody === undefined) {
+    extraBody = null;
+    const raw = process.env.AI_EXTRA_BODY?.trim();
+    if (raw) {
+      try {
+        const parsed = z.record(z.string(), z.unknown()).safeParse(JSON.parse(raw));
+        if (parsed.success) extraBody = parsed.data as Record<string, never>;
+      } catch {
+        console.warn("AI_EXTRA_BODY is not valid JSON; ignoring it.");
+      }
+    }
+  }
+  return extraBody ? { safesight: extraBody } : undefined;
 }

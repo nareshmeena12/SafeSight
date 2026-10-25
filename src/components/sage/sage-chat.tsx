@@ -4,6 +4,10 @@ import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import { ArrowUp, RotateCcw, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { ExplainBackCard } from "@/components/learning/explain-back-card";
+import { PracticeButton } from "@/components/learning/practice-button";
+import { RecapCard, type RecapView } from "@/components/learning/recap-card";
+import { RefresherOffer } from "@/components/learning/refresher-offer";
 import { LogoMark } from "@/components/logo";
 import { FadeUp } from "@/components/motion/fade-up";
 import { ModeBadge, type AiMode } from "@/components/product/mode-badge";
@@ -17,6 +21,8 @@ import { HintLadder } from "./hint-ladder";
 import { Markdown } from "./markdown";
 
 const MAX_CHARS = 4000;
+/** A chat with no new message for this long gets a recap ("What you learned"). */
+const IDLE_RECAP_MS = 10 * 60 * 1000;
 
 type Starters = Record<AiMode | "explore", string[]>;
 const starters: Starters = {
@@ -103,6 +109,53 @@ export function SageChat({
 
   const hintLevel =
     messages.findLast((m) => m.role === "assistant" && m.metadata?.hintLevel)?.metadata?.hintLevel ?? null;
+  // "Practice this" sits under the latest free explanation only.
+  const practiceId = messages.findLast((m) => m.role === "assistant" && m.metadata?.practice)?.id ?? null;
+  const exploreCourseId = target.kind === "explore" ? target.courseId : null;
+
+  // Session recap: when the chat goes idle, on New chat, and when the student leaves.
+  const [recap, setRecap] = useState<RecapView | null>(null);
+  const studentMessages = messages.filter((m) => m.role === "user").length;
+  const recapState = useRef({ conversationId, studentMessages, sentAt: 0 });
+  useEffect(() => {
+    recapState.current.conversationId = conversationId;
+    recapState.current.studentMessages = studentMessages;
+  }, [conversationId, studentMessages]);
+  const recapsOn = mode !== "exam" && available;
+
+  function sendRecap(reason: "new_chat" | "idle" | "leave", beacon = false) {
+    const s = recapState.current;
+    if (!recapsOn || !s.conversationId || s.studentMessages - s.sentAt < 2) return null;
+    recapState.current.sentAt = s.studentMessages;
+    const body = JSON.stringify({ conversationId: s.conversationId, reason });
+    if (beacon && navigator.sendBeacon?.("/api/learning/recap", new Blob([body], { type: "application/json" }))) return null;
+    return fetch("/api/learning/recap", { method: "POST", headers: { "content-type": "application/json" }, body, keepalive: true })
+      .then((r) => (r.ok ? (r.json() as Promise<{ recap: RecapView | null }>) : null))
+      .catch(() => null);
+  }
+
+  useEffect(() => {
+    if (busy || !recapsOn || !conversationId) return;
+    const timer = setTimeout(() => {
+      void sendRecap("idle")?.then((r) => {
+        if (r?.recap) setRecap(r.recap);
+      });
+    }, IDLE_RECAP_MS);
+    return () => clearTimeout(timer);
+    // sendRecap reads the latest state from a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [busy, conversationId, studentMessages, recapsOn]);
+
+  useEffect(() => {
+    const leave = () => void sendRecap("leave", true);
+    window.addEventListener("pagehide", leave);
+    return () => {
+      window.removeEventListener("pagehide", leave);
+      // Leaving the chat inside the app (no pagehide).
+      leave();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const endRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -120,6 +173,9 @@ export function SageChat({
   }
 
   function newChat() {
+    void sendRecap("new_chat");
+    recapState.current.sentAt = 0;
+    setRecap(null);
     stop();
     setConversationId(null);
     setMessages([]);
@@ -205,6 +261,16 @@ export function SageChat({
               key={m.id}
               message={m}
               thinking={busy && i === messages.length - 1 && waiting ? stageText[stage ?? "reading"] : null}
+              tools={
+                busy && i === messages.length - 1 ? null : (
+                  <LearningTools
+                    message={m}
+                    courseId={m.metadata?.courseId ?? exploreCourseId}
+                    conversationId={conversationId}
+                    showPractice={m.id === practiceId}
+                  />
+                )
+              }
             />
           ),
         )}
@@ -212,6 +278,13 @@ export function SageChat({
         {waiting && status === "submitted" ? (
           <SageBubble>
             <Thinking label={stageText[stage ?? "reading"]} />
+          </SageBubble>
+        ) : null}
+
+        {recap ? (
+          <SageBubble>
+            <p className="mb-3 text-small text-muted-foreground">Here&apos;s a quick recap of this chat — it&apos;s saved in My learning.</p>
+            <RecapCard recap={recap} />
           </SageBubble>
         ) : null}
 
@@ -319,7 +392,35 @@ function Thinking({ label }: { label: string }) {
   );
 }
 
-function SageMessage({ message, thinking }: { message: SageUIMessage; thinking: string | null }) {
+/** Practice this / Explain it back / a refresher offer, as decided by the server for this reply. */
+function LearningTools({
+  message,
+  courseId,
+  conversationId,
+  showPractice,
+}: {
+  message: SageUIMessage;
+  courseId: string | null;
+  conversationId: string | null;
+  showPractice: boolean;
+}) {
+  const meta = message.metadata;
+  if (!courseId || !meta) return null;
+  return (
+    <>
+      {meta.refresher ? <RefresherOffer courseId={courseId} topic={meta.refresher.topic} /> : null}
+      {meta.explainBack ? <ExplainBackCard courseId={courseId} conversationId={conversationId} topic={meta.explainBack.topic} /> : null}
+      {showPractice && meta.practice ? (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1">
+          <PracticeButton courseId={courseId} topic={meta.practice.topic} source="explore" size="sm" />
+          <span className="text-small text-muted-foreground">3 new problems on {meta.practice.topic}, easy to hard</span>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function SageMessage({ message, thinking, tools }: { message: SageUIMessage; thinking: string | null; tools?: React.ReactNode }) {
   const text = message.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
   const care = message.parts.find((p) => p.type === "data-care");
   const rules = message.metadata?.rules;
@@ -338,6 +439,7 @@ function SageMessage({ message, thinking }: { message: SageUIMessage; thinking: 
         </p>
       ) : null}
       <CitationChips citations={message.metadata?.citations ?? []} />
+      {text ? tools : null}
     </SageBubble>
   );
 }

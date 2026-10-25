@@ -17,6 +17,14 @@ export type SageMetadata = {
   citations?: Citation[];
   /** In Explore, the assignment whose rules applied to this reply. */
   rules?: { title: string; mode: "learn" | "assist" | "exam" } | null;
+  /** The chat's course (for the learning tools under a reply). */
+  courseId?: string;
+  /** "Practice this" on the idea Sage just explained (Explore). */
+  practice?: { topic: string } | null;
+  /** After Sage checked a full attempt: explain the idea back in your own words. */
+  explainBack?: { topic: string } | null;
+  /** The student keeps struggling on this topic: a 5-minute refresher on a basic skill. */
+  refresher?: { topic: string } | null;
 };
 
 /** Progress shown while Sage prepares a reply (transient: not kept in the message). */

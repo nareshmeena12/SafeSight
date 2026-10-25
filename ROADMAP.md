@@ -67,7 +67,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - My learning shows mastery per topic and a review list of weak topics. Teacher student-detail shows mastery as a summary, never chat text.
 - Only touch Sage's tool layer, My learning and new tables.
 
-- [ ] S17 done
+- [x] S17 done
 
 ### S18 — Teacher integrity tools
 - **Viva questions:** on a submission replay with a large paste or other Trace evidence, a "Suggest viva questions" button asks Lens for 3 short, specific questions about the student's own submission, plus what a good answer would show. Neutral wording. Teacher can copy or mark "discussed".

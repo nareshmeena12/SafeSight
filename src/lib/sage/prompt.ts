@@ -1,3 +1,4 @@
+import { EXPLAIN_BACK_ATTEMPT } from "@/lib/learning/offers";
 import { hintSteps } from "./ladder";
 import type { Labels } from "./labels";
 import type { SageAssignment } from "./match";
@@ -149,6 +150,9 @@ function aboutMessage(labels: Labels, care: CareData, policy: Policy): string {
   }
   if (labels.intent === "answer_seeking" || labels.intent === "deliverable_request") {
     notes.push("The student is asking for the answer or the finished work. Acknowledge that they want to get it done, don't give it, and invite them into the next step.");
+  }
+  if (policy.kind === "check_work" && labels.attemptQuality >= EXPLAIN_BACK_ATTEMPT) {
+    notes.push("This is a complete attempt. If every step is right, say so clearly, then invite them to explain the key idea back in their own words in the box under your reply (one sentence; don't ask them to type it into the chat).");
   }
   if (labels.intent === "off_topic") {
     notes.push("The message is off-topic for the course. Reply briefly and kindly, then steer back to their learning.");

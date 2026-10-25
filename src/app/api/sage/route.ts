@@ -2,6 +2,10 @@ import { after } from "next/server";
 import { createUIMessageStream, createUIMessageStreamResponse, type UIMessageStreamWriter } from "ai";
 import { getCurrentUser } from "@/lib/auth/dal";
 import { aiStatus } from "@/lib/ai/provider";
+import { readLearningContext, recordOffer, type LearningContext } from "@/lib/learning/data";
+import { logMistakeFromTurn } from "@/lib/learning/mistakes";
+import { decideOffers, NO_OFFERS } from "@/lib/learning/offers";
+import { logAiUsage } from "@/lib/learning/usage";
 import { searchCourseMaterial } from "@/lib/materials/search";
 import { careData, careReply } from "@/lib/sage/care";
 import {
@@ -99,7 +103,7 @@ export async function POST(req: Request) {
     const conversationId = existing?.conversationId ?? askedConversation ?? crypto.randomUUID();
     const userMessageId = existing?.messageId ?? crypto.randomUUID();
 
-    const [owns, candidates, home, past, activity, openFlags, hasMaterials, ladder] = await Promise.all([
+    const [owns, candidates, home, past, activity, openFlags, hasMaterials, ladder, learning] = await Promise.all([
       isNew || existing
         ? true
         : ownsConversation(supabase, { conversationId, studentId: user.id, assignmentId: assignmentId ?? null, courseId: course.id }),
@@ -110,6 +114,13 @@ export async function POST(req: Request) {
       recentOpenFlags(user.id, course.id),
       courseHasMaterials(course.id),
       readLadderForCourse(user.id, course.id),
+      // The prerequisite check's inputs; Sage still answers if this read fails.
+      examChat
+        ? null
+        : readLearningContext(user.id, course.id).catch((e): LearningContext | null => {
+            console.error("sage learning context:", e);
+            return null;
+          }),
     ]);
     if (!owns) return reply(403, "This chat belongs to another assignment. Please reload the page.");
 
@@ -134,6 +145,7 @@ export async function POST(req: Request) {
       care,
       jailbreaks: activity.jailbreaks,
       labelsOnly: examChat,
+      onUsage: (feature, usage) => after(() => logAiUsage(user.id, feature, usage)),
     };
     const replyId = crypto.randomUUID();
     const context = home ? home.title : `Ask Sage (${course.code || course.name})`;
@@ -186,6 +198,10 @@ export async function POST(req: Request) {
         await saved.catch(() => {});
         const citations: Citation[] = (result?.cited ?? []).map((p) => ({ materialId: p.materialId, title: p.title, page: p.page }));
         const g = plan.policy.governing;
+        // Practice / Explain it back / a prerequisite refresher, decided in code (never for a fallback reply).
+        const offers = result && result.guard !== "safe_hint" && !examChat
+          ? decideOffers({ policy: plan.policy, labels: plan.labels, explore: !home, context: learning })
+          : NO_OFFERS;
         writer.write({
           type: "finish",
           messageMetadata: {
@@ -193,6 +209,8 @@ export async function POST(req: Request) {
             hintLevel: plan.policy.step,
             citations,
             rules: g && g.id !== home?.id ? { title: g.title, mode: g.mode } : null,
+            courseId: course.id,
+            ...offers,
           },
         });
 
@@ -213,6 +231,15 @@ export async function POST(req: Request) {
           }),
         );
         after(() => saveReply(plan, text, result, ttft, citations, latency));
+        if (offers.refresher) after(() => recordOffer(user.id, course.id, offers.refresher!.topic));
+        // The mistake log: name the error pattern in working Sage just checked.
+        if (plan.policy.kind === "check_work" && result?.guard !== "safe_hint" && text.trim()) {
+          after(() =>
+            logMistakeFromTurn({ studentId: user.id, courseId: course.id, working: message.text, reply: text, topic: plan.labels.topic }).catch(
+              (e) => console.error("sage mistake log:", e),
+            ),
+          );
+        }
         done();
       },
       onError: (error) => {

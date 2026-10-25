@@ -1,6 +1,6 @@
 import "server-only";
-import { generateText, Output, type ModelMessage } from "ai";
-import { chatModel } from "@/lib/ai/provider";
+import { generateText, Output, type LanguageModelUsage, type ModelMessage } from "ai";
+import { aiProviderOptions, chatModel } from "@/lib/ai/provider";
 import {
   classifierJsonShape,
   classifierOutputSchema,
@@ -25,6 +25,7 @@ export async function classifyMessage({
   home,
   candidates,
   signal,
+  onUsage,
 }: {
   text: string;
   /** Recent conversation before this message. */
@@ -34,6 +35,8 @@ export async function classifyMessage({
   /** The student's active assignments in this course (including home). */
   candidates: SageAssignment[];
   signal?: AbortSignal;
+  /** Tokens used, for ai_usage. */
+  onUsage?: (usage: LanguageModelUsage | undefined) => void;
 }): Promise<Labels> {
   const heuristic = heuristicLabels(text);
   const refs = candidateRefs(candidates);
@@ -52,17 +55,19 @@ export async function classifyMessage({
           )
           .join("\n")
       : "(none)";
-    const { output } = await generateText({
+    const { output, usage } = await generateText({
       model: chatModel(),
       system: classifierPrompt(classifierJsonShape),
       prompt: `ACTIVE ASSIGNMENTS:\n${list}\n\nChat: ${home ? `assignment chat for ${refs.find((r) => r.assignment.id === home.id)?.ref ?? "?"}` : "Explore (not tied to an assignment)"}\n\nRecent conversation:\n${context || "(none)"}\n\nLatest student message:\n"""\n${text.slice(0, 4000)}\n"""`,
       output: Output.object({ schema: classifierOutputSchema, name: "labels" }),
       temperature: 0,
       maxOutputTokens: 300,
+      providerOptions: aiProviderOptions(),
       maxRetries: 0,
       abortSignal: signal ? AbortSignal.any([signal, AbortSignal.timeout(CLASSIFY_TIMEOUT_MS)]) : AbortSignal.timeout(CLASSIFY_TIMEOUT_MS),
     });
     model = output;
+    onUsage?.(usage);
   } catch (error) {
     console.warn("classify_message fell back to heuristic labels:", error instanceof Error ? error.message : error);
   }
