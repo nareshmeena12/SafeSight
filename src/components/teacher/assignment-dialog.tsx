@@ -170,21 +170,30 @@ function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mod
 export function AssignmentDialog({
   courseId,
   assignment,
+  draft,
+  onSaved,
   trigger,
 }: {
   courseId: string;
   assignment?: AssignmentValues;
+  /** A new assignment pre-filled from a suggestion (S22 course setup). */
+  draft?: { title: string; instructions: string; aiMode: Mode };
+  onSaved?: () => void;
   trigger: React.ReactNode;
 }) {
+  const start = assignment ?? draft;
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>(assignment?.aiMode ?? "learn");
+  const [mode, setMode] = useState<Mode>(start?.aiMode ?? "learn");
   // Controlled so "Check AI resilience" reads the current text and can apply a rewrite.
-  const [title, setTitle] = useState(assignment?.title ?? "");
-  const [instructions, setInstructions] = useState(assignment?.instructions ?? "");
+  const [title, setTitle] = useState(start?.title ?? "");
+  const [instructions, setInstructions] = useState(start?.instructions ?? "");
   const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
     const result = await saveAssignment(prev, formData);
     // Close after a successful save (creating a course navigates away instead).
-    if (result.status === "success") setOpen(false);
+    if (result.status === "success") {
+      setOpen(false);
+      onSaved?.();
+    }
     return result;
   }, initial);
 
@@ -194,9 +203,9 @@ export function AssignmentDialog({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) {
-          setMode(assignment?.aiMode ?? "learn");
-          setTitle(assignment?.title ?? "");
-          setInstructions(assignment?.instructions ?? "");
+          setMode(start?.aiMode ?? "learn");
+          setTitle(start?.title ?? "");
+          setInstructions(start?.instructions ?? "");
         }
       }}
     >

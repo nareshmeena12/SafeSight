@@ -2,13 +2,27 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { CalendarCheck, ChevronLeft, ClipboardList, FileText, HandHelping, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
+import {
+  CalendarCheck,
+  ChevronLeft,
+  ClipboardList,
+  FileText,
+  HandHelping,
+  ListTree,
+  MessagesSquare,
+  Pencil,
+  Plus,
+  UserPlus,
+  Users,
+  Variable,
+} from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { CourseTas } from "@/components/doubts/course-tas";
 import { ExamInfoDialog } from "@/components/exam/exam-info-dialog";
 import { EmptyState } from "@/components/product/empty-state";
 import { ModeBadge } from "@/components/product/mode-badge";
+import { SetupChecklist } from "@/components/setup/setup-checklist";
 import { AssignmentDialog } from "@/components/teacher/assignment-dialog";
 import { CourseDialog } from "@/components/teacher/course-dialog";
 import { DeleteAssignment } from "@/components/teacher/delete-assignment";
@@ -18,6 +32,8 @@ import { requireRole } from "@/lib/auth/dal";
 import { courseTas } from "@/lib/doubts/data";
 import { syllabusTopicsSchema } from "@/lib/exam/schemas";
 import { syllabusText } from "@/lib/exam/syllabus";
+import { setupDone, setupSteps } from "@/lib/setup/checklist";
+import { setupProgress } from "@/lib/setup/server";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatShortDate } from "@/lib/teacher/dates";
 import { getCourseDetail } from "@/lib/teacher/queries";
@@ -38,14 +54,18 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const { courseId } = await params;
   if (!z.uuid().safeParse(courseId).success) notFound();
   const db = await createClient();
-  const [detail, { data: examInfo }, tas] = await Promise.all([
+  const [detail, { data: examInfo }, tas, progress] = await Promise.all([
     getCourseDetail(db, user.id, courseId),
     db.from("course_exam_info").select("topics, pattern, exam_date").eq("course_id", courseId).maybeSingle(),
     courseTas(db, courseId),
+    setupProgress(db, courseId),
   ]);
   if (!detail) notFound();
   const { course, assignments, roster } = detail;
   const syllabus = syllabusTopicsSchema.safeParse(examInfo?.topics ?? []).data ?? [];
+  // S22: the guided setup checklist until every step is done.
+  const steps = setupSteps(course.id, progress);
+  const setupComplete = setupDone(steps) === steps.length;
 
   const newAssignment = (
     <AssignmentDialog
@@ -111,6 +131,7 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
 
       <div className="grid gap-6 lg:grid-cols-12 lg:gap-8">
         <div className="grid content-start gap-6 lg:col-span-8">
+          {setupComplete ? null : <SetupChecklist steps={steps} />}
           <section aria-labelledby="join-title" className="rounded-lg border bg-surface p-6">
             <h2 id="join-title" className="text-title">
               Join code
@@ -119,6 +140,20 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               Students enter this code in SafeSight to join {course.name}.
             </p>
             <JoinCode courseId={course.id} code={course.joinCode} />
+            <div className="mt-4 flex flex-wrap gap-2 border-t pt-4">
+              <Button asChild variant="outline">
+                <Link href={`/teacher/courses/${course.id}/students`}>
+                  <UserPlus aria-hidden="true" />
+                  Import class list
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link href={`/teacher/courses/${course.id}/setup`}>
+                  <ListTree aria-hidden="true" />
+                  Syllabus and topics
+                </Link>
+              </Button>
+            </div>
           </section>
 
           <section aria-labelledby="exam-title" className="rounded-lg border bg-surface p-6">

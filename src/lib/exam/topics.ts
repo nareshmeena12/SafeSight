@@ -1,5 +1,4 @@
 import "server-only";
-import type { SupabaseClient } from "@supabase/supabase-js";
 import { aiStatus } from "@/lib/ai/provider";
 import { generateJson } from "@/lib/learning/ai";
 import { topicLabel } from "@/lib/learning/topics";
@@ -138,16 +137,20 @@ export async function notesForTopics(courseId: string, titles: string[], student
   return out;
 }
 
-/**
- * S22's course topic map (course_topics, built from the syllabus by the
- * teacher), when that table exists. Built alongside S22, so it is read
- * untyped and a missing table just means "no topic map".
- */
-async function topicMap(courseId: string): Promise<string[]> {
-  const untyped = createAdminClient() as unknown as SupabaseClient;
-  const { data, error } = await untyped.from("course_topics").select("title, position").eq("course_id", courseId).order("position").limit(60);
-  if (error || !Array.isArray(data)) return [];
-  return data.map((r: { title?: unknown }) => (typeof r.title === "string" ? r.title.trim() : "")).filter(Boolean);
+/** S22's course topic map (course_units + course_topics, saved by the teacher), in unit order. */
+async function topicMap(courseId: string): Promise<{ title: string; unit: string }[]> {
+  const { data, error } = await createAdminClient()
+    .from("course_units")
+    .select("title, position, topics:course_topics(title, position)")
+    .eq("course_id", courseId)
+    .order("position");
+  if (error || !data) return [];
+  return data
+    .flatMap((u) =>
+      [...u.topics].sort((a, b) => a.position - b.position).map((t) => ({ title: t.title.trim(), unit: u.title })),
+    )
+    .filter((t) => t.title)
+    .slice(0, 60);
 }
 
 /** The plan's base topics and what they came from. */
@@ -161,7 +164,7 @@ export async function courseTopics(course: Course, studentId: string, info: Exam
   }
   const mapped = await topicMap(course.id).catch(() => []);
   if (mapped.length) {
-    return { base: mapped.map((title): BaseTopic => ({ title, source: "syllabus" })), fromSyllabus: true, fromNotes: false };
+    return { base: mapped.map(({ title, unit }): BaseTopic => ({ title, unit, source: "syllabus" })), fromSyllabus: true, fromNotes: false };
   }
   const fromNotes = await noteTopics(course, studentId).catch((error) => {
     console.error("note topics:", error);

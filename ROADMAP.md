@@ -107,7 +107,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - Bulk roster import by CSV (name, email, roll number) that sends invites, plus the existing join code.
 - A guided setup checklist on a new course: syllabus → notes → first assignment → invite students.
 
-- [ ] S22 done
+- [x] S22 done (2026-10-26)
 
 ---
 

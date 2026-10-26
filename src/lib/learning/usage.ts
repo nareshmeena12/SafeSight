@@ -26,7 +26,10 @@ export type AiFeature =
   | "mock_generate"
   | "mock_grade"
   // S21 "Ask your teacher" summary (its limit is in lib/doubts).
-  | "doubt_summary";
+  | "doubt_summary"
+  // S22 course setup (limits in their routes).
+  | "syllabus_extract"
+  | "assignment_suggest";
 
 /** Calls per hour per student for each learning tool. */
 export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {
