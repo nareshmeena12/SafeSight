@@ -5,7 +5,7 @@
  * topic "strong". Pure, so the numbers can be tested and explained.
  */
 
-export type MasterySource = "practice" | "review" | "refresher" | "explain_back";
+export type MasterySource = "practice" | "review" | "refresher" | "explain_back" | "mock";
 
 /** How far one new result moves the blend. */
 export const MASTERY_WEIGHTS: Record<MasterySource, number> = {
@@ -13,6 +13,8 @@ export const MASTERY_WEIGHTS: Record<MasterySource, number> = {
   review: 0.4,
   refresher: 0.3,
   explain_back: 0.3,
+  // S20: a topic's share of a timed mock test.
+  mock: 0.4,
 };
 
 export type Mastery = { mastery: number; evidence: number };
