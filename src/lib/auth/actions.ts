@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { redirectAfterLogin, roleSchema } from "./roles";
-import { joinPendingCourse } from "./join";
+import { claimTeacherInvites, joinPendingCourse } from "./join";
 import {
   fieldErrorsFrom,
   loginSchema,
@@ -55,9 +55,11 @@ export async function login(
     };
   }
 
+  // An admin invited this email as a teacher (S23).
+  const current = await claimTeacherInvites(supabase, role.data);
   // Courses whose teacher invited this email from a class list (S22).
-  if (role.data === "student") await joinPendingCourse(supabase);
-  redirect(redirectAfterLogin(role.data, parsed.data.next));
+  if (current === "student") await joinPendingCourse(supabase);
+  redirect(redirectAfterLogin(current, parsed.data.next));
 }
 
 export async function signup(
@@ -103,8 +105,9 @@ export async function signup(
   // joined when the link is opened (app/auth/confirm).
   if (!data.session) return { status: "check-email", email };
 
+  const current = await claimTeacherInvites(supabase, role);
   await joinPendingCourse(supabase);
-  redirect(redirectAfterLogin(role));
+  redirect(redirectAfterLogin(current));
 }
 
 /** "Email me a sign-in link" and "Forgot password?" on the log-in page. */

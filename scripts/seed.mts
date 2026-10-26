@@ -207,6 +207,13 @@ async function upsert(table: string, rows: object | object[], onConflict?: strin
 // ------------------------------------------------------------------ run
 
 await upsert("institutions", institution);
+// S23: departments. Kavita and both her courses are in Mechanical; no AI
+// policy is seeded, so the demo behaves as before until an admin sets one.
+const departments = [
+  { id: "00000000-0000-4000-8000-000000000401", institution_id: institution.id, name: "Mechanical Engineering", code: "ME" },
+  { id: "00000000-0000-4000-8000-000000000402", institution_id: institution.id, name: "Civil Engineering", code: "CE" },
+];
+await upsert("departments", departments);
 
 const teacherId = await ensureUser(teacher);
 await ensureUser(admin);
@@ -222,8 +229,13 @@ await upsert(
     join_code: c.join_code,
     teacher_id: teacherId,
     institution_id: institution.id,
+    department_id: departments[0].id,
   })),
 );
+{
+  const { error } = await supabase.from("profiles").update({ department_id: departments[0].id }).eq("id", teacherId);
+  if (error) throw error;
+}
 
 await upsert(
   "enrollments",
@@ -256,6 +268,7 @@ await upsert(
 console.log(`Institution  ${institution.name}, ${institution.city}`);
 console.log(`Teacher      ${teacher.fullName} <${teacher.email}>`);
 console.log(`Admin        ${admin.fullName} <${admin.email}>`);
+console.log(`Departments  ${departments.map((d) => d.name).join(", ")}`);
 for (const c of courses) console.log(`Course       ${c.code} ${c.name} (join code ${c.join_code}, ${c.students} students)`);
 console.log(`Assignments  ${assignments.length}`);
 console.log(`Students     ${students.length}`);

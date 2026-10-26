@@ -13,6 +13,7 @@ import { SuggestionsPanel } from "@/components/setup/suggestions-panel";
 import { SyllabusInput } from "@/components/setup/syllabus-input";
 import { TopicMapSection } from "@/components/setup/topic-map-section";
 import { Badge } from "@/components/ui/badge";
+import { coursePolicy } from "@/lib/admin/queries";
 import { aiStatus } from "@/lib/ai/provider";
 import { requireRole } from "@/lib/auth/dal";
 import { setupSteps } from "@/lib/setup/checklist";
@@ -43,11 +44,12 @@ async function SetupContent({ params }: Pick<PageProps<"/teacher/courses/[course
   const course = await teacherCourse(db, user.id, courseId);
   if (!course) notFound();
 
-  const [map, syllabus, progress, { data: materials }] = await Promise.all([
+  const [map, syllabus, progress, { data: materials }, policy] = await Promise.all([
     readTopicMap(db, course.id),
     readSyllabusRow(db, course.id),
     setupProgress(db, course.id),
     db.from("materials").select("id, title, status, page_count").eq("course_id", course.id).order("created_at", { ascending: false }),
+    coursePolicy(db, course.id),
   ]);
   const ai = aiStatus().chat;
   const draft =
@@ -82,7 +84,7 @@ async function SetupContent({ params }: Pick<PageProps<"/teacher/courses/[course
             draftFrom={syllabus?.source === "pdf" && syllabus.fileName ? `“${syllabus.fileName}”` : "the syllabus you pasted"}
             draftKey={syllabus?.extractedAt ?? "none"}
           />
-          <SuggestionsPanel courseId={course.id} suggestions={syllabus?.suggestions ?? []} hasMap={map.units.length > 0} aiReady={ai} />
+          <SuggestionsPanel courseId={course.id} suggestions={syllabus?.suggestions ?? []} hasMap={map.units.length > 0} aiReady={ai} policy={policy} />
         </div>
         <div className="grid min-w-0 grid-cols-1 content-start gap-6 lg:col-span-4">
           <SetupChecklist steps={setupSteps(course.id, progress)} compact />
