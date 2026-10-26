@@ -7,11 +7,13 @@ import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { StudentNumbers } from "@/components/numbers/student-numbers";
+import { StudentFeedback } from "@/components/feedback/student-feedback";
 import { EvidenceSummary } from "@/components/trace/evidence-summary";
 import { TraceReplay } from "@/components/trace/replay";
 import { TraceEditor } from "@/components/trace/trace-editor";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { readFeedback } from "@/lib/feedback/feedback";
 import { studentNumbersView } from "@/lib/numbers/data";
 import { fillInstructions } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
@@ -72,7 +74,8 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
   );
 
   if (submission.submitted_at) {
-    const replay = await getReplay(supabase, submission.id);
+    // S19: feedback appears only once the teacher approves it (RLS).
+    const [replay, feedback] = await Promise.all([getReplay(supabase, submission.id), readFeedback(supabase, submission.id)]);
     const report = replay?.submission.report ?? null;
     return (
       <>
@@ -85,6 +88,7 @@ async function TraceWorkspace({ params }: Pick<PageProps<"/student/trace/[assign
             </time>
             . This is what your teacher sees.
           </p>
+          {feedback ? <StudentFeedback feedback={feedback} /> : null}
           {numbers ? <StudentNumbers view={numbers} /> : null}
           <EvidenceSummary
             report={report}

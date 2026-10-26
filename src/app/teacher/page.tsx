@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Library, Lightbulb } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { BriefCard } from "@/components/brief/brief-card";
 import { LensBox } from "@/components/lens/lens-box";
 import { EmptyState } from "@/components/product/empty-state";
 import { StatCard } from "@/components/product/stat-card";
@@ -13,6 +14,7 @@ import { RefreshMetricsButton } from "@/components/teacher/refresh-metrics";
 import { TopicList } from "@/components/teacher/topic-list";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { latestBriefs } from "@/lib/brief/brief";
 import { relianceBand } from "@/lib/reliance";
 import { createClient } from "@/lib/supabase/server";
 import { daysAgo, formatShortDate } from "@/lib/teacher/dates";
@@ -77,7 +79,11 @@ async function TeacherHomeContent({ searchParams }: Pick<PageProps<"/teacher">, 
     );
   }
 
-  const topics = await getTopicStruggles(db, { courseId, from: daysAgo(now, 28), limit: 5 });
+  const briefCourses = courseId ? overview.scope.filter((c) => c.id === courseId) : overview.scope;
+  const [topics, briefs] = await Promise.all([
+    getTopicStruggles(db, { courseId, from: daysAgo(now, 28), limit: 5 }),
+    latestBriefs(db, briefCourses.map((c) => c.id)),
+  ]);
   const trend = overview.trend.map((p) => ({ label: formatShortDate(p.week), value: p.avgReliance }));
   const volume = overview.trend.map((p) => ({ label: formatShortDate(p.week), value: p.messages }));
   const hasTrend = overview.trend.some((p) => p.avgReliance !== null);
@@ -126,6 +132,8 @@ async function TeacherHomeContent({ searchParams }: Pick<PageProps<"/teacher">, 
             />
           </Link>
         </section>
+
+        <BriefCard courses={briefCourses} briefs={briefs} />
 
         <LensBox courseId={courseId} />
 

@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { FeedbackDrafts } from "@/components/feedback/feedback-drafts";
 import { VivaQuestions } from "@/components/lens/viva-questions";
 import { CheckBadge } from "@/components/numbers/check-badge";
 import { ModeBadge } from "@/components/product/mode-badge";
@@ -13,6 +14,8 @@ import { PrepareReportButton } from "@/components/trace/prepare-report-button";
 import { TraceReplay } from "@/components/trace/replay";
 import { aiStatus } from "@/lib/ai/provider";
 import { requireRole } from "@/lib/auth/dal";
+import { readFeedback, rubricForSubmission } from "@/lib/feedback/feedback";
+import { DEFAULT_RUBRIC } from "@/lib/feedback/rubric";
 import { readVivaQuestions } from "@/lib/lens/viva";
 import { vivaEvidence } from "@/lib/lens/viva-schema";
 import { checkStudentAnswer, getStudentNumbers } from "@/lib/numbers/data";
@@ -55,9 +58,12 @@ async function Replay({ params }: Pick<PageProps<"/teacher/submissions/[submissi
 
   // S18: viva questions and, for per-student numbers, the auto-check. The replay
   // being visible (RLS) proves this is the teacher's course.
-  const [viva, numbers] = await Promise.all([
+  // S19: feedback drafts follow the assignment's rubric.
+  const [viva, numbers, feedback, rubric] = await Promise.all([
     readVivaQuestions(db, submission.id),
     submission.assignment ? getStudentNumbers(db, submission.student_id, submission.assignment.id) : null,
+    readFeedback(db, submission.id),
+    rubricForSubmission(db, submission.id),
   ]);
   const evidence = vivaEvidence({
     pasteRatio: submission.report?.paste_ratio ?? null,
@@ -145,6 +151,16 @@ async function Replay({ params }: Pick<PageProps<"/teacher/submissions/[submissi
             </p>
           </section>
         ) : null}
+
+        <FeedbackDrafts
+          submissionId={submission.id}
+          studentName={submission.student?.full_name || "the student"}
+          initial={feedback}
+          rubric={rubric ?? DEFAULT_RUBRIC}
+          generalCriteria={!rubric}
+          configured={aiStatus().chat}
+          canEdit={user.role === "teacher"}
+        />
 
         <VivaQuestions
           submissionId={submission.id}

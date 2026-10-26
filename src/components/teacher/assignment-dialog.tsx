@@ -54,6 +54,7 @@ export type AssignmentValues = {
   aiMode: Mode;
   teacherNotes: string;
   answerKey: string;
+  rubric: string;
   maxHintLevel: number;
   workedExamples: boolean;
   dueAt: string | null;
@@ -272,6 +273,22 @@ export function AssignmentDialog({
               answers don&apos;t slip out.
             </p>
             {state.fieldErrors?.answerKey ? <p className="text-sm text-destructive">{state.fieldErrors.answerKey}</p> : null}
+          </div>
+          <div className="grid gap-2">
+            <Label htmlFor="rubric">Rubric</Label>
+            <Textarea
+              id="rubric"
+              name="rubric"
+              rows={4}
+              defaultValue={assignment?.rubric}
+              placeholder={"One criterion per line, e.g.\nCorrect method (10): picks the right process and equations\nWorking shown (5): each step follows from the last"}
+              aria-describedby="rubric-hint"
+              aria-invalid={state.fieldErrors?.rubric ? true : undefined}
+            />
+            <p id="rubric-hint" className="text-sm text-muted-foreground">
+              Optional. Draft feedback on submitted work follows it, criterion by criterion. Students can see it.
+            </p>
+            {state.fieldErrors?.rubric ? <p className="text-sm text-destructive">{state.fieldErrors.rubric}</p> : null}
           </div>
           <SageLimits assignment={assignment} disabled={mode === "exam"} />
           <Field

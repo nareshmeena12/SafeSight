@@ -65,3 +65,5 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 ## Wave B (ROADMAP.md)
 
 - [x] **S17 — Student learning tools.** Practice this (3 new problems on a concept, graded with feedback, never linked to graded work), Explain it back, session recaps with flashcards, mistake log with "Review before exam", prerequisite refreshers, mastery per topic on My learning and as a summary on the teacher's student page.
+
+- [x] **S19 — Teacher insight tools.** Pre-lecture brief per course (top 3 misconceptions with anonymised quotes, share of class, 5-minute explanations, 5-question quiz to print or run live with a code), rubric-based feedback drafts the teacher approves before the student sees them, and a Monday digest (email via Resend/SMTP, in-app otherwise).

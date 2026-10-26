@@ -146,6 +146,7 @@ export type Database = {
           id: string
           instructions: string
           max_hint_level: number
+          rubric: string
           title: string
           worked_examples: boolean
         }
@@ -157,6 +158,7 @@ export type Database = {
           id?: string
           instructions?: string
           max_hint_level?: number
+          rubric?: string
           title: string
           worked_examples?: boolean
         }
@@ -168,6 +170,7 @@ export type Database = {
           id?: string
           instructions?: string
           max_hint_level?: number
+          rubric?: string
           title?: string
           worked_examples?: boolean
         }
@@ -177,6 +180,106 @@ export type Database = {
             columns: ["course_id"]
             isOneToOne: false
             referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brief_quiz_responses: {
+        Row: {
+          choice: number
+          created_at: string
+          question_index: number
+          session_id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          choice: number
+          created_at?: string
+          question_index: number
+          session_id: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          choice?: number
+          created_at?: string
+          question_index?: number
+          session_id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brief_quiz_responses_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "brief_quiz_sessions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brief_quiz_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      brief_quiz_sessions: {
+        Row: {
+          brief_id: string
+          closed_at: string | null
+          code: string
+          course_id: string
+          created_at: string
+          created_by: string | null
+          expires_at: string
+          id: string
+          questions: Json
+        }
+        Insert: {
+          brief_id: string
+          closed_at?: string | null
+          code: string
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          questions: Json
+        }
+        Update: {
+          brief_id?: string
+          closed_at?: string | null
+          code?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          expires_at?: string
+          id?: string
+          questions?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brief_quiz_sessions_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "lecture_briefs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brief_quiz_sessions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brief_quiz_sessions_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -368,6 +471,64 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feedback_drafts: {
+        Row: {
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          created_by: string | null
+          criteria: Json
+          overall: string
+          status: string
+          submission_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria: Json
+          overall?: string
+          status?: string
+          submission_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          created_by?: string | null
+          criteria?: Json
+          overall?: string
+          status?: string
+          submission_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feedback_drafts_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_drafts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feedback_drafts_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: true
+            referencedRelation: "submissions"
             referencedColumns: ["id"]
           },
         ]
@@ -719,6 +880,66 @@ export type Database = {
         ]
       }
 
+      lecture_briefs: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          misconceptions: Json
+          period_end: string
+          period_start: string
+          quiz: Json
+          source: string
+          stats: Json
+          updated_at: string
+          week: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          misconceptions: Json
+          period_end: string
+          period_start: string
+          quiz: Json
+          source: string
+          stats?: Json
+          updated_at?: string
+          week: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          misconceptions?: Json
+          period_end?: string
+          period_start?: string
+          quiz?: Json
+          source?: string
+          stats?: Json
+          updated_at?: string
+          week?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lecture_briefs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lecture_briefs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       learning_offers: {
         Row: {
           course_id: string
@@ -1440,6 +1661,73 @@ export type Database = {
           {
             foreignKeyName: "submissions_student_id_fkey"
             columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_digest_prefs: {
+        Row: {
+          teacher_id: string
+          updated_at: string
+          weekly_email: boolean
+        }
+        Insert: {
+          teacher_id: string
+          updated_at?: string
+          weekly_email?: boolean
+        }
+        Update: {
+          teacher_id?: string
+          updated_at?: string
+          weekly_email?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_digest_prefs_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teacher_digests: {
+        Row: {
+          content: Json
+          created_at: string
+          email_status: string
+          emailed_at: string | null
+          error: string | null
+          id: string
+          teacher_id: string
+          week: string
+        }
+        Insert: {
+          content: Json
+          created_at?: string
+          email_status: string
+          emailed_at?: string | null
+          error?: string | null
+          id?: string
+          teacher_id: string
+          week: string
+        }
+        Update: {
+          content?: Json
+          created_at?: string
+          email_status?: string
+          emailed_at?: string | null
+          error?: string | null
+          id?: string
+          teacher_id?: string
+          week?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_digests_teacher_id_fkey"
+            columns: ["teacher_id"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]

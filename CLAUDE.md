@@ -48,7 +48,8 @@ src/
     student/sage/           S16: "Ask Sage" Explore chat (course picker, ?course=); not tied to an assignment
     student/sage/[assignmentId]  Sage chat page (S4)
     teacher/                teacher app; admins land here too until v2
-      page.tsx              overview: stat cards, Lens box, weekly trend, top topics (?course=)
+      page.tsx              overview: stat cards, "Before your next class" (S19), Lens box, weekly trend, top topics (?course=)
+      brief/                S19: pre-lecture brief per course (?course=); quiz/[sessionId] live results; digest/ weekly digest + email switch
       courses/, courses/[courseId]   courses, join code, assignments with AI mode picker (+ S18 "Check AI resilience"), roster
       courses/[courseId]/assignments/[assignmentId]/numbers  S18: per-student numbers (variables, formula, class values + auto-check)
       students/, students/[studentId] sortable table (?sort=&dir=&course=), student detail
@@ -65,6 +66,10 @@ src/
     api/teacher/resilience  S18: POST "Check AI resilience" (score, reasons, 3 rewrites) for the assignment form's text
     api/learning/           S17: practice (POST create), practice/[setId]/items/[itemId] (POST grade), explain-back, recap (also sendBeacon)
     api/cron/weekly-metrics nightly refresh_weekly_metrics (vercel.json cron, CRON_SECRET)
+    api/cron/weekly-insights S19: Monday 07:00 IST — briefs for active courses, then each teacher's digest (CRON_SECRET)
+    api/brief/              S19: POST prepare a brief; quiz POST start a live run; quiz/[sessionId] GET counts / PATCH close
+    api/feedback/route.ts   S19: POST Lens drafts feedback per rubric criterion; PUT save / approve / take back
+    student/quiz/           S19: join a class quiz by code; [sessionId] answer on a phone, answers after the teacher closes it (/quiz redirects here)
     student/trace/          S9: "Your writing" list + [assignmentId] Trace editor (or the submitted view with replay)
     teacher/submissions/    S9: submitted Trace work + [submissionId] replay with the evidence summary
     api/trace/[submissionId]/  S9: batch (autosave every 5s), submit (+ Trace agent via after()), report (teacher re-run)
@@ -83,6 +88,8 @@ src/
     lens/                   lens-chat (useChat), tool-views (charts/tables/drafts/quiz from tool results), lens-box, markdown, suggestions, viva-questions (S18)
     learning/               S17: practice-button, practice-runner, explain-back-card, refresher-offer, recap-card, flashcards, mastery (badge + bar)
     numbers/                S18: number-set-form (teacher), student-numbers ("Your numbers" + answer box), check-badge
+    brief/                  S19: brief-card (overview), misconception-card, quiz-panel (print/copy/run live), live-quiz (Recharts bars, polls), student-quiz, join-quiz-form, digest-preview, weekly-email-toggle
+    feedback/               S19: feedback-drafts (teacher editor on the replay page), student-feedback (approved only)
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
     trace/                  S9: trace-editor (Tiptap + recorder), replay (scrubber), paste-mark, evidence-summary, trace.css
@@ -109,6 +116,11 @@ src/
                             resilience-schema.ts (pure) + resilience.ts (S18 AI resilience check)
     lens/                   model.ts (provider from env), tools.ts (8 read-only tools, S18 adds get_answer_checks), prompt.ts, rate-limit.ts,
                             viva-schema.ts (pure, tested) + viva.ts (S18 viva questions)
+    brief/                  S19. Pure, tested: anonymise (scrub names/contacts/roll numbers), schema (message selection, prompts, assembly), quiz-schema.
+                            Server-only: brief (generate/read), quiz (live sessions), actions (join, answer, digest email switch)
+    feedback/               S19: rubric.ts (pure, tested: parseRubric, schemas, prompt, checks) + feedback.ts (draft/save/read)
+    digest/                 S19: content.ts (pure, tested: text + HTML email), digest.ts (build per teacher), weekly.ts (the Monday job)
+    email/send.ts           S19: Resend or SMTP from env, one retry; emailConfigured()
     numbers/                S18: expr.ts (safe formula parser), numbers.ts (seeded values, answer check, Sage lines; pure, tested), data.ts, actions.ts
     learning/               S17. Pure, tested: topics (keys, relatedTopics), mastery (blend, bands, review list), struggle (prerequisite check),
                             offers (what goes under a Sage reply), checks (practice/recap/feedback never touch graded work), shuffle, schemas, prompts.
@@ -142,6 +154,7 @@ tests/db/notes-search.test.ts  S12: keyword ranking weighs rare words
 tests/db/learning-rls.test.ts  S17: RLS for practice_*, explain_backs, sage_recaps, mistake_patterns, topic_mastery, learning_offers
 tests/db/ai-usage-preview-rls.test.ts  S16: RLS for ai_usage and sage_preview_chats
 tests/db/integrity-tools-rls.test.ts   S18: RLS for assignment_number_sets, numeric_answers, viva_questions
+tests/db/insight-tools-rls.test.ts     S19: RLS for lecture_briefs, brief_quiz_*, feedback_drafts, teacher_digests, teacher_digest_prefs
 ```
 
 Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `demo:data`, `demo:reset`, `demo:notes`, `mock:ai`, `eval:sage` (alias `sage:eval`), `lab:simulate`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
@@ -210,9 +223,20 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S16 follow-up from ROADMAP.md (2026-10-25): teacher "Preview Sage" (course + assignment pages, excluded from all metrics), `ai_usage` token log for every chat/embedding call, per-user limits on Trace re-runs and notes ingest. Migration `20261107090000_ai_usage_sage_preview.sql` applied on hosted (2026-10-25, after the project was restored)
 - [x] S18 Teacher integrity tools (2026-10-25, ROADMAP.md): viva questions on the replay page, "Check AI resilience" in the assignment form, per-student numbers (seeded values, auto-check, Sage uses the student's own values). Migration `20261108090000_teacher_integrity_tools.sql` applied on hosted. Verified with local Supabase + `pnpm mock:ai`; **not yet tried with the real model** (viva and resilience prompts)
 - [x] S17 Student learning tools (2026-10-25): Practice this (3 new problems, graded with feedback, never an assignment), Explain it back, session recaps + flashcards, mistake log + "Review before exam", prerequisite refreshers (lesson + 2 quick checks), mastery per topic on My learning and (summary only) on the teacher's student page; every call logged to `ai_usage` and limited per student. Migration `20261108170000_learning_tools.sql`. **Tested end to end against the real model** (DeepSeek, `AI_MODEL=deepseek-flash`) on local Supabase
+- [x] S19 Teacher insight tools (2026-10-26, ROADMAP.md): pre-lecture brief + live/printable quiz, rubric feedback drafts with teacher approval, Monday digest (email or in-app). Migration `20261109090000_teacher_insight_tools.sql` applied on hosted. Brief and feedback **tried against the real model** (DeepSeek `deepseek-flash`, local Supabase): brief ≈ 9 s, feedback ≈ 4 s; UI walked end to end with Playwright. Email not tried (no provider configured)
 - [x] S13–S15 Live Lab Mode (2026-10-16): `lab_sessions`/`lab_seats`/`lab_seat_tokens`/`lab_events`/`lab_reports` + `profiles.roll_number` (migration `20261105090000_live_lab.sql`, applied on hosted), Chrome extension, live seat grid over Realtime, per-seat evidence summaries + CSV, `pnpm lab:simulate`
 
 ## Handoff notes
+
+- **S19 (teacher insight tools, ROADMAP.md)** from `claude/youthful-maxwell-gw5k2x`. Touched: teacher overview (one card), new `/teacher/brief/*` pages, the replay page (feedback card), the student's submitted Trace view (approved feedback), the assignment form (rubric field), email code, new tables. Decisions made without asking:
+  - **Brief data and privacy.** Briefs read student messages to Sage in the course over the last 7 days with the **service role** (teachers still can't read message rows). Skipped: Exam-mode chats, `distress`, `jailbreak`, `off_topic`; preview chats never reach `messages`. Every message is scrubbed (`lib/brief/anonymise.ts`: roster + teacher name parts, emails, links, Indian mobiles, roll-number-like tokens; values with units like `300kPa` stay; long formulas may be hidden — privacy wins) **before** the model reads it, then cut to 240 chars. The model sees only refs (`M1… [S1…]`), at most 12 messages per student and 160 overall. **Numbers are never the model's**: it names refs per misconception and the code counts distinct students; share = students ÷ enrolled. **Quotes** are the scrubbed messages themselves (picked by ref, deduped by student and text), shown only when ≥ 2 students share the misconception. Brief and quiz text go through `usesBannedWords`; quiz options are shuffled on the server.
+  - **One brief per course per week** (`lecture_briefs`, unique `course_id, week` = IST Monday of generation; refreshing replaces it). Two `generateJson` calls (misconceptions 40 s, quiz 30 s; each one more try with stricter wording). Too little activity (< 6 messages or < 2 students) saves an **empty** brief so the page/digest say "not enough questions". Teacher-only RLS. On-demand: `POST /api/brief`, 10 calls/h per teacher (`lecture_brief` in `ai_usage`; the quiz call logs as `lecture_brief_quiz`).
+  - **Schedule**: `vercel.json` cron `30 1 * * 1` (Mon 07:00 IST, after the nightly metrics refresh) → `/api/cron/weekly-insights` (`maxDuration` 300): briefs for courses with student messages in the last 7 days (3 at a time; skips a course with a brief from the last 12 h; stops starting new ones ~90 s before the limit — fine for a pilot, needs a queue for many courses), then one digest per teacher. Tokens are logged under the course teacher. Re-running is safe. Hobby allows 2 crons; both are now used.
+  - **Live quiz**: `brief_quiz_sessions` (6-digit code, a **copy** of the questions, expires after 3 h, `closed_at`) and `brief_quiz_responses` (one per student per question, changeable while open). Students reach a session only through the server after an enrollment check (questions carry the answers, so no student policy); they read their own responses. **Teachers see counts per option only** (no teacher policy on responses; the results route tallies with the service role after RLS proves the session). Results poll every 3 s (no Realtime). Students answer one question per screen; answers + explanations appear after the teacher closes it. Short URL `/quiz` → `/student/quiz` (login first). "Print" opens a clean sheet in a new window (answers on a second page) instead of print CSS, so the app shell needs no change.
+  - **Feedback drafts**: `assignments.rubric` (text, optional, students may read it) — one criterion per line, `Name (10): description`, `Name — 5 marks`, `Name [2]` or just `Name` (max 8). No rubric → three general criteria and the card says so. `feedback_drafts` (one per submission: criteria jsonb, overall, `draft|approved`): course teacher reads; **the student reads only `approved`** (RLS). Lens gets the work without paste markers, plus the private answer key to judge correctness (output only reaches the student after the teacher edits/approves). Points are suggested only for criteria with a maximum and clamped. 30 drafts/h per teacher. "Draft again" never overwrites approved feedback; "Take back to draft" hides it again. Teachers can also "Write it yourself" (works without a model).
+  - **Digest**: `buildDigest` works with the teacher's client (in-app, live) or the service role (Monday job): per course this week's (or last week's) brief titles + students, open/high/new flags, the last 4 full weeks' average Reliance Score and students in the high band last week. Stored per teacher per week in `teacher_digests` with `email_status` (`sent|not_configured|opted_out|failed`); a teacher already `sent` this week is skipped. Email via **Resend** (`RESEND_API_KEY`) or **SMTP** (`SMTP_HOST…`, nodemailer), both need `EMAIL_FROM`; 15 s timeout + one retry. Without it, `/teacher/brief/digest` says "shown here only". `teacher_digest_prefs.weekly_email` (default on) is the only table a user writes under RLS.
+  - `pnpm mock:ai` answers the brief, quiz and feedback prompts. `database.types.ts` edited by hand.
+  - Not done: digest/brief entries in the sidebar nav (reached from the overview card and "Weekly digest" on the brief page); demo data for briefs (the Monday job or "Prepare this week's brief" creates them in ~10 s); a test-email button; Realtime for the live quiz; Lens tools over briefs.
 
 - **S18 (teacher integrity tools, ROADMAP.md)** from `claude/jolly-cerf-389pi1`, in parallel with S17/S19 (only assignment pages, the replay page, Lens, new tables, and the minimum on the student Trace/Sage pages and Sage routes). Decisions made without asking:
   - **Per-student numbers.** `assignment_number_sets` (one per assignment: variables `[{name,label,unit,min,max,decimals}]` ≤ 8, `formula`, `answer_label`, `answer_unit`, `tolerance_pct` default 1%) is **teacher-only** under RLS (the formula gives the method away); students' pages and Sage read it with the service role after RLS proved access. Values are **not stored**: `studentValues()` seeds FNV-1a(`assignment:student:name`) → mulberry32, rounded to the variable's decimals, so they're stable and need no backfill — but **editing a range changes every student's values** (the page says so). Formulas go through a small parser (`lib/numbers/expr.ts`, no `eval`): + − × ÷ ^, brackets, implicit multiplication, sqrt/abs/ln/log/exp/trig/min/max/pow, pi, e; validated (unknown names, finite at min/mid/max) in the browser and again in the server action. `{m}` placeholders in instructions are filled with the student's value on their Trace and Sage pages.
