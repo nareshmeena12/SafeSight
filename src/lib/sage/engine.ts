@@ -41,6 +41,8 @@ export type TurnInput = {
   jailbreaks: number;
   /** Skip the classifier model (Exam-mode chats): keyword labels only, matched to the home assignment. */
   labelsOnly?: boolean;
+  /** S21: the message is the student's own working, read from a photo they checked (numbered lines). */
+  fromPhoto?: boolean;
   /** Whose tokens these are (ai_usage): features are `${prefix}_classify`, `_reply`, `_guard`. */
   usage: { userId: string | null; prefix: "sage" | "sage_preview" | "eval" };
 };
@@ -88,7 +90,7 @@ export async function planTurn(input: TurnInput, signal?: AbortSignal): Promise<
         })
       : Promise.resolve([]);
 
-  const labels: Labels =
+  let labels: Labels =
     input.labelsOnly && input.home
       ? { ...heuristicLabels(input.text), match: { assignmentId: input.home.id, similarity: 1 } }
       : await classifyMessage({
@@ -100,6 +102,8 @@ export async function planTurn(input: TurnInput, signal?: AbortSignal): Promise<
           usage: { feature: `${input.usage.prefix}_classify`, userId: input.usage.userId },
         });
   const classifyMs = Math.round(performance.now() - started);
+  // A confirmed photo of working is the student's own steps, whatever the classifier thought.
+  if (input.fromPhoto) labels = { ...labels, sharesWorking: true };
 
   const matched = input.candidates.find((a) => a.id === labels.match.assignmentId);
   const policy = decidePolicy({
@@ -119,6 +123,7 @@ export async function planTurn(input: TurnInput, signal?: AbortSignal): Promise<
     studentFirstName: input.studentFirstName,
     passages,
     care: input.care,
+    fromPhoto: input.fromPhoto,
   });
 
   const all = dedupe([...(input.home ? [input.home] : []), ...input.candidates]);
@@ -217,6 +222,7 @@ export async function writeReply(
             studentFirstName: input.studentFirstName,
             passages: plan.passages,
             care: input.care,
+            fromPhoto: input.fromPhoto,
             rejected: rejected.at(-1),
           });
     const draft = await draftText(system, messages, signal, timings, rejected.length ? 0.2 : 0.4, replyUsage(input));

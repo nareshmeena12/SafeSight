@@ -100,7 +100,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - **Photo of working:** in Sage (assignment and Explore), the student can attach a photo of handwritten work. Use a vision-capable model from env (`AI_VISION_MODEL`, same base URL unless `AI_VISION_BASE_URL` is set) to transcribe the steps, show the transcription for the student to confirm, then Sage points to the first incorrect line using the normal policy engine (no full solutions). Images go to private Supabase Storage, are deleted after 30 days, and are only visible to the student and, if flagged or shared, their teacher.
 - **Ask a human:** "Still stuck? Ask your teacher" in any Sage chat creates a doubt with an auto-written summary (question, what the student tried, where they're stuck). Teachers and TAs get a doubts queue per course (answer, mark resolved, convert to a class announcement if many ask the same thing). Students are notified in-app (and by email if configured). Add a TA role that a teacher can grant per course with access only to that course's doubts and overview.
 
-- [ ] S21 done
+- [x] S21 done (2026-10-26)
 
 ### S22 — 10-minute course setup
 - Teacher uploads a syllabus PDF (or pastes text). SafeSight extracts course name, units, topics and course outcomes into an editable topic map, suggests draft assignments per unit with a recommended AI mode, and links uploaded notes to topics.

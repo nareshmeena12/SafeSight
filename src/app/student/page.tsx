@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { ArrowRight, BookOpen, NotebookPen } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { DoubtNotices } from "@/components/doubts/doubt-notices";
 import { FadeUp } from "@/components/motion/fade-up";
 import { EmptyState } from "@/components/product/empty-state";
 import { ModeBadge } from "@/components/product/mode-badge";
@@ -44,6 +45,8 @@ async function StudentHomeContent() {
         title={firstName ? `Hi ${firstName}, welcome back` : "Welcome back"}
         description="Let's work through your courses together."
       />
+      {/* S21: an answer from a teacher (or a TA invite) waiting to be read. */}
+      <DoubtNotices />
       {!courses?.length ? (
         <EmptyState
           icon={BookOpen}

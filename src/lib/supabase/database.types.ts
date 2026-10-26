@@ -15,6 +15,343 @@ export type Database = {
   }
   public: {
     Tables: {
+      course_announcements: {
+        Row: {
+          body: string
+          course_id: string
+          created_at: string
+          created_by: string | null
+          created_by_name: string
+          doubts: number
+          id: string
+          title: string
+        }
+        Insert: {
+          body: string
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          doubts?: number
+          id?: string
+          title: string
+        }
+        Update: {
+          body?: string
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          created_by_name?: string
+          doubts?: number
+          id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_announcements_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_announcements_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_tas: {
+        Row: {
+          added_by: string | null
+          course_id: string
+          created_at: string
+          email: string
+          full_name: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          course_id: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          course_id?: string
+          created_at?: string
+          email?: string
+          full_name?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_tas_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_tas_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_tas_added_by_fkey"
+            columns: ["added_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      doubts: {
+        Row: {
+          announcement_id: string | null
+          answer: string
+          answered_at: string | null
+          answered_by: string | null
+          answered_by_name: string
+          assignment_id: string | null
+          chat_shared: boolean
+          conversation_id: string | null
+          course_id: string
+          created_at: string
+          id: string
+          question: string
+          resolved_at: string | null
+          status: string
+          student_id: string
+          student_name: string
+          stuck_on: string
+          tried: string
+          updated_at: string
+        }
+        Insert: {
+          announcement_id?: string | null
+          answer?: string
+          answered_at?: string | null
+          answered_by?: string | null
+          answered_by_name?: string
+          assignment_id?: string | null
+          chat_shared?: boolean
+          conversation_id?: string | null
+          course_id: string
+          created_at?: string
+          id?: string
+          question: string
+          resolved_at?: string | null
+          status?: string
+          student_id: string
+          student_name?: string
+          stuck_on?: string
+          tried?: string
+          updated_at?: string
+        }
+        Update: {
+          announcement_id?: string | null
+          answer?: string
+          answered_at?: string | null
+          answered_by?: string | null
+          answered_by_name?: string
+          assignment_id?: string | null
+          chat_shared?: boolean
+          conversation_id?: string | null
+          course_id?: string
+          created_at?: string
+          id?: string
+          question?: string
+          resolved_at?: string | null
+          status?: string
+          student_id?: string
+          student_name?: string
+          stuck_on?: string
+          tried?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "doubts_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doubts_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doubts_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doubts_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doubts_announcement_fk"
+            columns: ["announcement_id"]
+            isOneToOne: false
+            referencedRelation: "course_announcements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "doubts_answered_by_fkey"
+            columns: ["answered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          kind: string
+          link: string
+          read_at: string | null
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind: string
+          link?: string
+          read_at?: string | null
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          kind?: string
+          link?: string
+          read_at?: string | null
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sage_photos: {
+        Row: {
+          assignment_id: string | null
+          conversation_id: string | null
+          course_id: string
+          created_at: string
+          deleted_at: string | null
+          id: string
+          lines: Json
+          message_id: string | null
+          mime_type: string
+          note: string
+          sent_at: string | null
+          size_bytes: number
+          status: string
+          storage_path: string | null
+          student_id: string
+        }
+        Insert: {
+          assignment_id?: string | null
+          conversation_id?: string | null
+          course_id: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          lines?: Json
+          message_id?: string | null
+          mime_type: string
+          note?: string
+          sent_at?: string | null
+          size_bytes: number
+          status?: string
+          storage_path?: string | null
+          student_id: string
+        }
+        Update: {
+          assignment_id?: string | null
+          conversation_id?: string | null
+          course_id?: string
+          created_at?: string
+          deleted_at?: string | null
+          id?: string
+          lines?: Json
+          message_id?: string | null
+          mime_type?: string
+          note?: string
+          sent_at?: string | null
+          size_bytes?: number
+          status?: string
+          storage_path?: string | null
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sage_photos_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_photos_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_photos_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_photos_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sage_photos_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_usage: {
         Row: {
           created_at: string
@@ -1932,6 +2269,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      find_user_by_email: {
+        Args: { p_email: string }
+        Returns: {
+          full_name: string
+          id: string
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       join_course: { Args: { p_join_code: string }; Returns: string }
       match_material_chunks: {
         Args: {

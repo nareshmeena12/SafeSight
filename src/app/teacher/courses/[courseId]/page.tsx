@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, ClipboardList, FileText, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
+import { ChevronLeft, ClipboardList, FileText, HandHelping, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { CourseTas } from "@/components/doubts/course-tas";
 import { EmptyState } from "@/components/product/empty-state";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { AssignmentDialog } from "@/components/teacher/assignment-dialog";
@@ -13,6 +14,7 @@ import { DeleteAssignment } from "@/components/teacher/delete-assignment";
 import { JoinCode } from "@/components/teacher/join-code";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { courseTas } from "@/lib/doubts/data";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime } from "@/lib/teacher/dates";
 import { getCourseDetail } from "@/lib/teacher/queries";
@@ -32,7 +34,8 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const user = await requireRole(["teacher", "admin"]);
   const { courseId } = await params;
   if (!z.uuid().safeParse(courseId).success) notFound();
-  const detail = await getCourseDetail(await createClient(), user.id, courseId);
+  const supabase = await createClient();
+  const [detail, tas] = await Promise.all([getCourseDetail(supabase, user.id, courseId), courseTas(supabase, courseId)]);
   if (!detail) notFound();
   const { course, assignments, roster } = detail;
 
@@ -71,6 +74,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               </Link>
             </Button>
             <Button asChild variant="outline">
+              {/* S21: questions students sent from Sage. */}
+              <Link href={`/teacher/doubts?course=${course.id}`}>
+                <HandHelping aria-hidden="true" />
+                Doubts
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
               {/* Chat with Sage as a student would; previews never count in any number. */}
               <Link href={`/teacher/courses/${course.id}/preview`}>
                 <MessagesSquare aria-hidden="true" />
@@ -102,6 +112,8 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
             </p>
             <JoinCode courseId={course.id} code={course.joinCode} />
           </section>
+
+          <CourseTas courseId={course.id} tas={tas} />
 
           <section aria-labelledby="assignments-title">
             <h2 id="assignments-title" className="mb-4 text-title">

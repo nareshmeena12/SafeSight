@@ -34,7 +34,7 @@ async function SageContent({ params }: { params: PageProps<"/student/sage/[assig
   const supabase = await createClient();
   const { data: assignment } = await supabase
     .from("assignments")
-    .select("id, title, instructions, ai_mode, due_at, courses!inner(name, code)")
+    .select("id, title, instructions, ai_mode, due_at, courses!inner(id, name, code)")
     .eq("id", assignmentId)
     .maybeSingle();
   if (!assignment) notFound();
@@ -88,11 +88,13 @@ async function SageContent({ params }: { params: PageProps<"/student/sage/[assig
         </div>
       ) : null}
       <SageChat
-        target={{ kind: "assignment", assignmentId: assignment.id, title: assignment.title, mode: assignment.ai_mode }}
+        target={{ kind: "assignment", assignmentId: assignment.id, title: assignment.title, mode: assignment.ai_mode, courseId: course.id }}
         studentFirstName={user.fullName.split(" ")[0] ?? ""}
         initialConversationId={conversation?.id ?? null}
         initialMessages={initialMessages}
         available={assignment.ai_mode === "exam" || aiStatus().chat}
+        photos={aiStatus().vision}
+        askTeacher
       />
     </div>
   );

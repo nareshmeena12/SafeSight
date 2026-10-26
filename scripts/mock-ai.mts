@@ -16,7 +16,7 @@
  * (JSON), Sage replies by hint-ladder step with a notes search tool call,
  * Lens tool calls (overview, topics, quiz), the Trace summary and the
  * learning tools (practice, grading, refreshers, explain it back, recaps,
- * the mistake log). The text is
+ * the mistake log), photos of working and "Ask your teacher" summaries (S21). The text is
  * canned; this is for checking plumbing and UI, not the prompts.
  */
 import { createServer, type ServerResponse } from "node:http";
@@ -329,6 +329,19 @@ createServer(async (req, res) => {
       const reply = prompt.match(/SAGE'S REPLY:\n"""\n([\s\S]*)\n"""/)?.[1] ?? "";
       const leaked = /68\.9|241\.2|def newton_raphson/.test(reply) || reply.split(/\n\n/).filter((p) => p.split(" ").length > 60).length >= 2;
       out = { leaked, refused: !leaked && reply.length < 60, reason: "mock judge" };
+    } else if (/PHOTO-TRANSCRIBE/.test(system)) {
+      // S21: a photo of working (the image itself is ignored).
+      out = {
+        readable: true,
+        lines: ["n = 1.3, P1 = 100 kPa, V1 = 0.1 m^3, V2 = 0.05 m^3", "P2 = P1 (V1/V2)^n = 100 * 2^1.3 = 246 kPa", "W = (P2 V2 - P1 V1) / (1 - n)", "W = (246*0.05 - 100*0.1) / (1 - 1.3) = 7.7 kJ"],
+        note: "",
+      };
+    } else if (/ASK-A-HUMAN/.test(system)) {
+      out = {
+        question: "How do I find the boundary work for a polytropic process?",
+        tried: "I used W = (P2V2 - P1V1)/(1 - n) and got a positive number.",
+        stuckOn: "I'm not sure whether the work should be negative for a compression.",
+      };
     } else if (/a short, friendly conversation \(a viva\)/.test(system)) {
       out = viva(prompt);
     } else if (/prepare the teacher for their next lecture/.test(system)) {

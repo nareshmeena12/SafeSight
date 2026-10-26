@@ -2,8 +2,9 @@
 
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { ArrowUp, RotateCcw, Square } from "lucide-react";
+import { ArrowUp, HandHelping, ImageOff, RotateCcw, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { AskTeacherDialog } from "@/components/doubts/ask-teacher-dialog";
 import { ExplainBackCard } from "@/components/learning/explain-back-card";
 import { PracticeButton } from "@/components/learning/practice-button";
 import { RecapCard, type RecapView } from "@/components/learning/recap-card";
@@ -13,12 +14,14 @@ import { FadeUp } from "@/components/motion/fade-up";
 import { ModeBadge, type AiMode } from "@/components/product/mode-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { photoMessageText } from "@/lib/photos/transcript";
 import type { SageStage, SageUIMessage } from "@/lib/sage/types";
 import { cn } from "@/lib/utils";
 import { CareCard } from "./care-card";
 import { CitationChips } from "./citation-chips";
 import { HintLadder } from "./hint-ladder";
 import { Markdown } from "./markdown";
+import { PHOTO_INPUT_ID, PhotoButton, PhotoReview, type PhotoReading } from "./photo-working";
 
 const MAX_CHARS = 4000;
 /** A chat with no new message for this long gets a recap ("What you learned"). */
@@ -40,7 +43,7 @@ const stageText: Record<SageStage, string> = {
 
 /** An assignment chat, or Explore ("Ask Sage") for a course. */
 export type SageChatTarget =
-  | { kind: "assignment"; assignmentId: string; title: string; mode: AiMode }
+  | { kind: "assignment"; assignmentId: string; title: string; mode: AiMode; courseId?: string }
   | { kind: "explore"; courseId: string; courseName: string };
 
 export function SageChat({
@@ -50,6 +53,8 @@ export function SageChat({
   initialMessages,
   available,
   preview = false,
+  photos = false,
+  askTeacher = false,
 }: {
   target: SageChatTarget;
   studentFirstName: string;
@@ -59,6 +64,10 @@ export function SageChat({
   available: boolean;
   /** A teacher's "Preview Sage": same replies, nothing counted (/api/sage/preview). */
   preview?: boolean;
+  /** S21: the vision model is set up, so students can send a photo of their working. */
+  photos?: boolean;
+  /** S21: "Still stuck? Ask your teacher". */
+  askTeacher?: boolean;
 }) {
   const mode: AiMode | "explore" = target.kind === "assignment" ? target.mode : "explore";
   const targetKey = target.kind === "assignment" ? target.assignmentId : target.courseId;
@@ -72,10 +81,13 @@ export function SageChat({
         prepareSendMessagesRequest: ({ messages, body }) => {
           const last = messages.findLast((m) => m.role === "user") ?? messages[messages.length - 1];
           const text = last.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+          // A photo travels on the message itself, so a Retry sends it again too.
+          const photoId = last.role === "user" ? (last.metadata?.photo?.id ?? null) : null;
           return {
             body: {
               ...(target.kind === "assignment" ? { assignmentId: target.assignmentId } : { courseId: target.courseId }),
               conversationId: (body as { conversationId?: string | null } | undefined)?.conversationId ?? null,
+              photoId,
               message: { id: last.id, text },
             },
           };
@@ -99,6 +111,11 @@ export function SageChat({
   });
 
   const [input, setInput] = useState("");
+  // S21: a photo of working being read, or waiting for the student to check it.
+  const [reading, setReading] = useState<PhotoReading | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  const [photoError, setPhotoError] = useState<string | null>(null);
+  const [askOpen, setAskOpen] = useState(false);
   const busy = status === "submitted" || status === "streaming";
   const disabled = !available || busy;
   // useChat's status changes on the next render; this blocks a second Enter in the same tick.
@@ -176,6 +193,33 @@ export function SageChat({
     setInput("");
   }
 
+  /** Sends the checked transcription as the student's message, carrying the photo id. */
+  function sendPhoto(lines: string[], question: string) {
+    if (!reading || disabled || sending.current) return;
+    sending.current = true;
+    clearError();
+    setStage("reading");
+    void sendMessage(
+      { text: photoMessageText(lines, question), metadata: { photo: { id: reading.photoId } } },
+      { body: { conversationId } },
+    );
+    URL.revokeObjectURL(reading.previewUrl);
+    setReading(null);
+  }
+
+  function dropPhoto() {
+    if (!reading) return;
+    // Not sent: the image is removed straight away.
+    void fetch(`/api/sage/photo/${reading.photoId}`, { method: "DELETE" }).catch(() => {});
+    URL.revokeObjectURL(reading.previewUrl);
+    setReading(null);
+  }
+
+  const photosOn = photos && !preview && available && mode !== "exam";
+  const askOn = askTeacher && !preview && mode !== "exam";
+  const courseId = target.kind === "explore" ? target.courseId : (target.courseId ?? null);
+  const studentTurns = messages.filter((m) => m.role === "user").length;
+
   const targetQuery =
     target.kind === "assignment" ? `assignmentId=${target.assignmentId}` : `courseId=${target.courseId}`;
 
@@ -220,12 +264,20 @@ export function SageChat({
             </p>
           )}
         </div>
-        {messages.length ? (
-          <Button variant="ghost" onClick={() => void newChat()} className="self-start sm:self-auto">
-            <RotateCcw aria-hidden="true" />
-            New chat
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap gap-1 self-start sm:shrink-0 sm:self-auto">
+          {askOn && courseId ? (
+            <Button variant="ghost" onClick={() => setAskOpen(true)}>
+              <HandHelping aria-hidden="true" />
+              Ask your teacher
+            </Button>
+          ) : null}
+          {messages.length ? (
+            <Button variant="ghost" onClick={() => void newChat()}>
+              <RotateCcw aria-hidden="true" />
+              New chat
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       <div className="flex flex-col gap-4 pb-4" role="log" aria-label="Chat with Sage" aria-live="polite" aria-busy={busy}>
@@ -297,6 +349,15 @@ export function SageChat({
           </SageBubble>
         ) : null}
 
+        {askOn && courseId && !busy && studentTurns >= 3 && !error ? (
+          <p className="flex flex-wrap items-center gap-x-2 pl-11 text-small text-muted-foreground">
+            Still stuck?
+            <Button variant="link" className="h-auto min-h-11 p-0" onClick={() => setAskOpen(true)}>
+              Ask your teacher
+            </Button>
+          </p>
+        ) : null}
+
         {error ? (
           <div role="alert" className="flex flex-col gap-3 rounded-md border bg-surface p-4 text-small sm:flex-row sm:items-center sm:justify-between">
             <p>{friendlyError(error)}</p>
@@ -316,10 +377,48 @@ export function SageChat({
           send(input);
         }}
       >
+        {reading ? (
+          <PhotoReview
+            key={reading.photoId}
+            reading={reading}
+            sending={busy}
+            onSend={sendPhoto}
+            onCancel={dropPhoto}
+            onRetake={() => {
+              dropPhoto();
+              document.getElementById(PHOTO_INPUT_ID)?.click();
+            }}
+          />
+        ) : null}
+        {photoBusy ? (
+          <p role="status" className="mb-2 text-small text-muted-foreground">
+            Reading your photo… this takes a few seconds.
+          </p>
+        ) : photoError ? (
+          <p role="alert" className="mb-2 flex items-start gap-2 text-small text-muted-foreground">
+            <ImageOff className="mt-0.5 size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+            {photoError}
+          </p>
+        ) : null}
         <label htmlFor="sage-input" className="sr-only">
           Message Sage
         </label>
         <div className="flex items-end gap-2">
+          {photosOn ? (
+            <PhotoButton
+              target={target.kind === "assignment" ? { assignmentId: target.assignmentId } : { courseId: target.courseId }}
+              disabled={busy || Boolean(reading)}
+              onBusy={(b) => {
+                setPhotoBusy(b);
+                if (b) setPhotoError(null);
+              }}
+              onError={setPhotoError}
+              onReading={(r) => {
+                setPhotoError(null);
+                setReading(r);
+              }}
+            />
+          ) : null}
           <Textarea
             id="sage-input"
             value={input}
@@ -361,6 +460,7 @@ export function SageChat({
               ? "Preview: replies follow the same rules students get. Nothing here is flagged or counted in your class numbers."
               : "Your teacher sees a summary, not your chats — unless a message is flagged or you share it."}
           </span>
+          {photosOn && !input && !reading ? <span className="hidden shrink-0 sm:inline">Stuck on paper? Add a photo of your working.</span> : null}
           {input.length > MAX_CHARS - 500 ? (
             <span className="shrink-0 font-mono">
               {input.length}/{MAX_CHARS}
@@ -368,6 +468,15 @@ export function SageChat({
           ) : null}
         </p>
       </form>
+      {askOn && courseId ? (
+        <AskTeacherDialog
+          open={askOpen}
+          onOpenChange={setAskOpen}
+          courseId={courseId}
+          assignmentId={target.kind === "assignment" ? target.assignmentId : null}
+          conversationId={conversationId}
+        />
+      ) : null}
     </div>
   );
 }
@@ -459,9 +568,28 @@ function SageMessage({ message, thinking, tools }: { message: SageUIMessage; thi
 
 function StudentBubble({ message }: { message: SageUIMessage }) {
   const text = message.parts.map((p) => (p.type === "text" ? p.text : "")).join("");
+  const photo = message.metadata?.photo;
   return (
     <FadeUp className="ml-auto max-w-[85%] sm:max-w-[36rem]">
       <span className="sr-only">You said:</span>
+      {photo ? (
+        photo.removed ? (
+          <p className="mb-1 flex items-center justify-end gap-1.5 text-small text-muted-foreground">
+            <ImageOff className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            Photo removed after 30 days
+          </p>
+        ) : (
+          <a href={`/api/sage/photo/${photo.id}`} target="_blank" rel="noreferrer" className="mb-1 ml-auto block w-fit">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a private, signed image */}
+            <img
+              src={`/api/sage/photo/${photo.id}`}
+              alt="Photo of your working"
+              loading="lazy"
+              className="h-28 max-w-full rounded-md border object-cover"
+            />
+          </a>
+        )
+      ) : null}
       <p className={cn("rounded-lg rounded-tr-sm bg-primary-soft px-4 py-3 whitespace-pre-wrap break-words")}>{text}</p>
     </FadeUp>
   );
