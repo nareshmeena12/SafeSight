@@ -276,8 +276,9 @@ export function SignupForm({
         </button>
       </div>
       <p className="legal">
-        By continuing you agree to our <Link href="/privacy">privacy policy</Link>. Student data is
-        never used to train AI models.
+        By continuing you agree to our <Link href="/privacy">privacy policy</Link>. Questions to Sage
+        are anonymised and used for class summaries; brief quotes appear only in courses with at least
+        5 students. Student data is never used to train AI models.
       </p>
       <p className="auth-switch">
         Already have an account?

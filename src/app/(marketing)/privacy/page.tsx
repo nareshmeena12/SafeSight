@@ -34,7 +34,7 @@ export default function PrivacyPage() {
             stores, who can see it and what we never do, in plain words.
           </p>
           <p className="page-meta rise" style={{ animationDelay: "220ms" }}>
-            Last updated 16 October 2026
+            Last updated 26 October 2026
           </p>
         </div>
       </header>
@@ -58,6 +58,7 @@ export default function PrivacyPage() {
               <ul>
                 <li>Teachers see summaries and scores by default, not your chats.</li>
                 <li>Students can see all of their own data, including everything a teacher can see about them.</li>
+                <li>Questions students ask Sage are anonymised and used to write class summaries for their teacher. Short quotes appear only in courses with at least 5 students.</li>
                 <li>Student work and conversations are never used to train any AI model.</li>
                 <li>Live Lab Mode records activity only during an announced exam session on a college lab PC, and stops when the session ends.</li>
                 <li>SafeSight never labels anyone as dishonest. It shows neutral evidence, and teachers decide.</li>
@@ -78,6 +79,16 @@ export default function PrivacyPage() {
                 to. Each message also gets a short label (for example &ldquo;concept
                 question&rdquo;) and the hint step Sage used, so the class dashboard can show
                 patterns.
+              </p>
+              <h3>Class summaries</h3>
+              <p>
+                Once a week, the questions students in a course asked Sage are used to write a
+                short summary for the teacher of what the class found hard. Names, email
+                addresses, phone numbers and roll numbers are removed before the AI reads the
+                questions, and the summary counts students instead of naming them. It may
+                include a brief anonymised quote, but only in courses with at least 5 students
+                and only when two or more students asked something similar, so no one stands
+                out. Chats in Exam mode and messages about wellbeing are never used.
               </p>
               <h3>Writing in Trace</h3>
               <p>
@@ -125,7 +136,8 @@ export default function PrivacyPage() {
                     <th scope="row">Their teacher</th>
                     <td>
                       For their own courses only: usage summaries, Reliance Scores, topics the
-                      class asks about, flags and Trace evidence summaries. The full text of a
+                      class asks about, anonymised class summaries, flags and Trace evidence
+                      summaries. The full text of a
                       chat opens only for a flagged item, or when the student chooses to share
                       it.
                     </td>

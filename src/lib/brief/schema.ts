@@ -19,6 +19,13 @@ export const BRIEF_MAX_PER_STUDENT = 12;
 export const BRIEF_MESSAGE_CHARS = 280;
 /** Quotes appear only when this many students share the misconception, so no one stands out. */
 export const QUOTE_MIN_STUDENTS = 2;
+/** …and only in courses with at least this many enrolled students (small classes are too easy to tell apart). */
+export const QUOTE_MIN_ENROLLED = 5;
+
+/** Whether a course is large enough for the brief to show anonymised quotes. */
+export function quotesAllowed(enrolled: number): boolean {
+  return enrolled >= QUOTE_MIN_ENROLLED;
+}
 export const MAX_QUOTES = 2;
 
 /** One student message the brief may read (already scrubbed). */
@@ -179,11 +186,12 @@ ${misconceptions.map((m, i) => `${i + 1}. ${m.title}: ${m.summary}`).join("\n")}
 /**
  * Turns the model's answer into stored misconceptions: refs it didn't read are
  * dropped, students are counted from the refs, quotes come from the messages
- * themselves (different students, only when the misconception is shared), and
- * the most widely shared misconception comes first. Null if nothing usable is
+ * themselves (different students, only when the misconception is shared and
+ * the course has at least QUOTE_MIN_ENROLLED students), and the most widely
+ * shared misconception comes first. Null if nothing usable is
  * left or the wording breaks the voice rules.
  */
-export function assembleMisconceptions(output: BriefOutput, messages: RefMessage[]): Misconception[] | null {
+export function assembleMisconceptions(output: BriefOutput, messages: RefMessage[], enrolled: number): Misconception[] | null {
   const byRef = new Map(messages.map((m) => [m.ref.toUpperCase(), m]));
   const result: Misconception[] = [];
   for (const m of output.misconceptions) {
@@ -191,7 +199,7 @@ export function assembleMisconceptions(output: BriefOutput, messages: RefMessage
     if (refs.length === 0) continue;
     const students = new Set(refs.map((r) => r.studentId)).size;
     const quotes: string[] = [];
-    if (students >= QUOTE_MIN_STUDENTS) {
+    if (students >= QUOTE_MIN_STUDENTS && quotesAllowed(enrolled)) {
       const seen = new Set<string>();
       const candidates = [...m.quoteRefs.map((r) => byRef.get(r.toUpperCase())).filter((x) => x !== undefined), ...refs];
       for (const c of candidates) {

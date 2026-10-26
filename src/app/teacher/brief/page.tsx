@@ -157,8 +157,8 @@ async function BriefContent({ searchParams }: Pick<PageProps<"/teacher/brief">, 
         <div className="grid gap-2">
           {meta}
           <p className="text-small text-muted-foreground">
-            Quotes are anonymised and shown only when two or more students share a misconception. Names and roll numbers are
-            removed before Lens reads anything.
+            Quotes are anonymised and shown only in courses with five or more students, when two or more of them share a
+            misconception. Names and roll numbers are removed before Lens reads anything.
           </p>
         </div>
 

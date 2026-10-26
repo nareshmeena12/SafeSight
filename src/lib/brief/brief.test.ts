@@ -75,6 +75,7 @@ describe("assembleMisconceptions", () => {
         ],
       },
       messages,
+      30,
     )!;
     expect(out.map((m) => [m.title, m.students])).toEqual([
       ["Shared", 3],
@@ -91,17 +92,24 @@ describe("assembleMisconceptions", () => {
     const out = assembleMisconceptions(
       { misconceptions: [{ title: "Shared", summary: "Several students think so.", refs: ["M1", "M2", "M3"], quoteRefs: ["M1", "M2"], explanation: "Explain the idea in five minutes." }] },
       same,
+      30,
     )!;
     expect(out[0].quotes).toHaveLength(2);
     expect(new Set(out[0].quotes).size).toBe(2);
   });
 
+  it("shows no quotes in courses with fewer than five students", () => {
+    const shared = { misconceptions: [{ title: "Shared", summary: "Several students think so.", refs: ["M2", "M3", "M5"], quoteRefs: ["M2", "M3"], explanation: "Explain the idea in five minutes." }] };
+    expect(assembleMisconceptions(shared, messages, 4)![0].quotes).toEqual([]);
+    expect(assembleMisconceptions(shared, messages, 5)![0].quotes).toHaveLength(2);
+  });
+
   it("drops misconceptions with no real refs and rejects banned wording", () => {
     expect(
-      assembleMisconceptions({ misconceptions: [{ title: "Ghost", summary: "Nobody said this.", refs: ["M42"], quoteRefs: [], explanation: "Explain the idea in five minutes." }] }, messages),
+      assembleMisconceptions({ misconceptions: [{ title: "Ghost", summary: "Nobody said this.", refs: ["M42"], quoteRefs: [], explanation: "Explain the idea in five minutes." }] }, messages, 30),
     ).toBeNull();
     expect(
-      assembleMisconceptions({ misconceptions: [{ title: "Students cheating", summary: "They copy answers.", refs: ["M1"], quoteRefs: [], explanation: "Explain the idea in five minutes." }] }, messages),
+      assembleMisconceptions({ misconceptions: [{ title: "Students cheating", summary: "They copy answers.", refs: ["M1"], quoteRefs: [], explanation: "Explain the idea in five minutes." }] }, messages, 30),
     ).toBeNull();
   });
 });

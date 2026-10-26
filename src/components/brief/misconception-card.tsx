@@ -1,8 +1,10 @@
 import { Quote } from "lucide-react";
-import { shareLabel, type Misconception } from "@/lib/brief/schema";
+import { quotesAllowed, shareLabel, type Misconception } from "@/lib/brief/schema";
 
 /** One misconception: share of the class, what students seem to think, their words, and a 5-minute explanation. */
 export function MisconceptionCard({ m, index, enrolled }: { m: Misconception; index: number; enrolled: number }) {
+  // Briefs saved before the class-size rule may still hold quotes; hide them in small courses.
+  const quotes = quotesAllowed(enrolled) ? m.quotes : [];
   const pct = enrolled > 0 ? Math.round((Math.min(m.students, enrolled) / enrolled) * 100) : 0;
   return (
     <article aria-labelledby={`misconception-${index}`} className="grid gap-4 rounded-lg border bg-surface p-4 sm:p-6">
@@ -24,10 +26,10 @@ export function MisconceptionCard({ m, index, enrolled }: { m: Misconception; in
         </div>
       </div>
 
-      {m.quotes.length > 0 ? (
+      {quotes.length > 0 ? (
         <div className="grid gap-2">
           <p className="text-label text-muted-foreground">In their words (anonymised)</p>
-          {m.quotes.map((q, i) => (
+          {quotes.map((q, i) => (
             <blockquote key={i} className="flex gap-2 rounded-md border-l-2 border-border-strong bg-background px-3 py-2 text-small">
               <Quote className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" strokeWidth={1.5} aria-hidden="true" />
               <span className="min-w-0 break-words">{q}</span>
@@ -36,7 +38,8 @@ export function MisconceptionCard({ m, index, enrolled }: { m: Misconception; in
         </div>
       ) : (
         <p className="text-small text-muted-foreground">
-          No quotes: they&apos;re shown only when two or more students share a misconception, so no one stands out.
+          No quotes: they&apos;re shown only in courses with five or more students, when two or more of them share a
+          misconception, so no one stands out.
         </p>
       )}
 

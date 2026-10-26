@@ -225,10 +225,14 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - Rate limit Sage at ~60 messages per student per hour.
 - Commit `.env.example`, never `.env*` with real values.
 
+**Scheduled jobs**
+- Don't add a new Vercel cron (Hobby allows 2 and both are used). Run new scheduled jobs from an existing cron route (`/api/cron/weekly-metrics` nightly, `/api/cron/weekly-insights` Mondays) or with Supabase `pg_cron`.
+
 **Product voice**
 - Never use the words "cheating", "cheater", "catch", "spy" or "AI-generated" anywhere in UI, prompts or copy. Trace reports evidence; teachers decide.
 - Encouraging and plain: "Let's work through this together", not "Request denied".
 - Students can see all of their own data. Teachers see summaries by default.
+- Students' questions are anonymised before they feed class summaries (S19 briefs). Brief quotes show only in courses with ≥ 5 enrolled students (`QUOTE_MIN_ENROLLED`) and when ≥ 2 students share the point. Keep `/privacy` and the sign-up consent line in step with this.
 - Student data is never used to train models.
 - Demo and seed data use invented Indian names only (e.g. Riya Sharma, Arjun Mehta, Sneha Iyer).
 - Never invent statistics on the marketing site. Survey numbers stay as `[XX]%` placeholders until real results exist.
@@ -283,6 +287,7 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 
 ## Handoff notes
 
+- **Privacy follow-up** (2026-10-26, `claude/privacy-scheduled-jobs-0mp15r`): brief quotes now need a course of ≥ 5 enrolled students (`QUOTE_MIN_ENROLLED` / `quotesAllowed` in `lib/brief/schema.ts`), applied when the brief is assembled and again in `MisconceptionCard`, so briefs saved earlier in small courses hide their quotes too. `/privacy` (new "Class summaries" section, short version, who-sees-what table) and the sign-up consent line say questions are anonymised for class summaries and when quotes appear. New rule: no new Vercel crons (see Non-negotiable rules).
 - **S25 (sign-in and LMS integrations, ROADMAP.md)** from `claude/happy-carson-f0vza9`, in Wave D alongside S23/S24.
   - **Merged with S23/S24.** S23 built its own teacher invites (`teacher_invites` + `claim_teacher_invites`, with departments, on `/admin/teachers`) in parallel with S25's `staff_invites` + `apply_account_claims` (on `/teacher/institution`). Both stay (both migrations are applied on hosted). `finishSignIn` runs S23's claim first (it only claims for an account with no institution yet, which S25's domain rule may set), then S25's, and refreshes the session if either changed the role. Admins now land on `/admin`; `/teacher/institution` is still reached from `/teacher/integrations`. **Follow-up:** fold the S25 staff invites and the domain settings into S23's `/admin/teachers` (one invite list) and drop the duplicate page. Touched outside new files: the login/sign-up pages and forms (SSO buttons, `?role=&institution=` prefill), `lib/auth/actions.ts` and `/auth/confirm` (now call `finishSignIn`), `join-actions.ts` (domain message), S22's `invites.ts` (`importRosterRows` split out) and `roster.ts` (Moodle headers: firstname/lastname/idnumber/"ID number", and a Roles column drops non-students), the courses page (Import button), the course invite page (LMS card), `site.css` (`.sso`), `.env.example`. Decisions made without asking:
   - **Roles.** `profiles.role` stays the source of truth (all policies read it). Triggers keep `auth.users.raw_app_meta_data.role` equal to it **both ways**: profile change → app_metadata; a service-role write to app_metadata.role (`admin.updateUserById`) → profile. Auth rewrites a brand-new SSO user's app_metadata right after the sign-up trigger, so `apply_account_claims()` re-syncs on every sign-in. `handle_new_user` (replaced) accepts a self-chosen `teacher` only for email+password sign-ups (provider `email` and no `iss`/`provider_id` in the identity data); Google/Microsoft accounts start as **students**. It also reads the name from `full_name` or `name`.

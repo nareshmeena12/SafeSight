@@ -175,7 +175,7 @@ export async function generateBrief({
         signal,
       });
       if (!output) break;
-      misconceptions = assembleMisconceptions(output, selected) ?? [];
+      misconceptions = assembleMisconceptions(output, selected, enrolled) ?? [];
     }
     if (misconceptions.length === 0) return { status: "failed" };
 
