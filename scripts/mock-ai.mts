@@ -299,6 +299,56 @@ async function send(res: ServerResponse, body: Record<string, unknown>, reply: R
   void body;
 }
 
+/** S22: reads "UNIT I — Title: topic, topic" lines and "CO1: …" lines from the syllabus text. */
+function syllabusMap(prompt: string) {
+  const text = prompt.match(/"""\n([\s\S]*)\n"""/)?.[1] ?? prompt;
+  const units: { title: string; topics: string[] }[] = [];
+  const outcomes: { code: string; description: string }[] = [];
+  for (const line of text.split("\n").map((l) => l.trim())) {
+    const co = line.match(/^(CO\s*\d+)\s*[:.-]\s*(.+)$/i);
+    if (co) {
+      outcomes.push({ code: co[1], description: co[2] });
+      continue;
+    }
+    const unit = line.match(/^(?:unit|module)\s*[-–—:]?\s*[ivx\d]+\s*[-–—:.]?\s*(.*)$/i);
+    if (unit) {
+      const [title, rest = ""] = unit[1].split(/:\s*/, 2);
+      units.push({ title: title.trim(), topics: rest.split(/[,;]/).map((t) => t.trim()).filter(Boolean) });
+    } else if (units.length && line && !/^(text|reference|course outcomes?)/i.test(line)) {
+      units.at(-1)!.topics.push(...line.split(/[,;]/).map((t) => t.trim()).filter(Boolean));
+    }
+  }
+  const course = text.match(/^(?:course(?: title)?\s*[:-]\s*)?([A-Z]{2,4}\s?\d{3})\s*[-–—:]?\s*(.+)$/m);
+  return {
+    courseName: course?.[2]?.trim() ?? "Engineering Thermodynamics",
+    courseCode: course?.[1] ?? "ME201",
+    units: units.length
+      ? units
+      : [
+          { title: "Basic concepts", topics: ["Systems and properties", "Zeroth law", "Work and heat transfer"] },
+          { title: "First law", topics: ["First law for closed systems", "Polytropic processes", "Boundary work"] },
+          { title: "Second law and entropy", topics: ["Heat engines", "Carnot cycle", "Entropy change"] },
+        ],
+    outcomes,
+  };
+}
+
+/** S22: one suggestion per "Unit N: title" line of the prompt. */
+function setupSuggestions(prompt: string) {
+  const units = [...prompt.matchAll(/^Unit (\d+): (.+)$/gm)];
+  const modes = ["learn", "assist", "learn", "exam"] as const;
+  return {
+    suggestions: units.slice(0, 8).map((m, i) => ({
+      unit: Number(m[1]),
+      title: `${m[2]}: worked problems from your own lab`,
+      instructions: `Solve three problems on ${m[2].toLowerCase()}, using readings you take yourself in the lab. Show every step and explain in one line why each equation applies.`,
+      aiMode: modes[i % modes.length],
+      why: modes[i % modes.length] === "exam" ? "A short in-class test checks the unit without help" : "Students learn the method by working it out with hints",
+      outcomes: i === 0 ? ["CO1"] : [],
+    })),
+  };
+}
+
 createServer(async (req, res) => {
   let raw = "";
   for await (const c of req) raw += c;
@@ -337,6 +387,10 @@ createServer(async (req, res) => {
       out = lectureQuiz();
     } else if (/Draft feedback on one student's submitted work/.test(system)) {
       out = feedbackDraft(prompt);
+    } else if (/You read a college course syllabus/.test(system)) {
+      out = syllabusMap(prompt);
+    } else if (/Suggest assignments for the course's units/.test(system)) {
+      out = setupSuggestions(prompt);
     } else if (/Judge how easily a general AI chatbot/.test(system)) {
       out = resilience(prompt);
     } else if (/You write PRACTICE problems/.test(system)) {

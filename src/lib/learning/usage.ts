@@ -20,7 +20,10 @@ export type AiFeature =
   // S19 teacher insight tools (limits in their routes; the weekly job isn't limited).
   | "lecture_brief"
   | "lecture_brief_quiz"
-  | "feedback_draft";
+  | "feedback_draft"
+  // S22 course setup (limits in their routes).
+  | "syllabus_extract"
+  | "assignment_suggest";
 
 /** Calls per hour per student for each learning tool. */
 export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {

@@ -23,10 +23,23 @@ const roles = [
   { value: "teacher", label: "Teacher", detail: "Set up courses and see class insights", Icon: Presentation },
 ] as const;
 
-export function SignupForm({ defaultRole = "student" }: { defaultRole?: Role }) {
+/** `defaults` come from a class-list invite link (/signup?email=…&code=…). */
+export function SignupForm({
+  defaultRole = "student",
+  defaults,
+}: {
+  defaultRole?: Role;
+  defaults?: { email?: string; joinCode?: string };
+}) {
   const [state, action, pending] = useActionState(signup, initial);
   const [role, setRole] = useState<Role>(defaultRole);
-  const [form, setForm] = useState({ fullName: "", email: "", institution: "", joinCode: "", password: "" });
+  const [form, setForm] = useState({
+    fullName: "",
+    email: defaults?.email ?? "",
+    institution: "",
+    joinCode: defaults?.joinCode ?? "",
+    password: "",
+  });
   const [showPw, setShowPw] = useState(false);
   const [touched, setTouched] = useState<Partial<Record<Field, boolean>>>({});
   const [attempted, setAttempted] = useState(false);

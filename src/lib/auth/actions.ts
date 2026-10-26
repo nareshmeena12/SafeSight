@@ -55,6 +55,8 @@ export async function login(
     };
   }
 
+  // Courses whose teacher invited this email from a class list (S22).
+  if (role.data === "student") await joinPendingCourse(supabase);
   redirect(redirectAfterLogin(role.data, parsed.data.next));
 }
 

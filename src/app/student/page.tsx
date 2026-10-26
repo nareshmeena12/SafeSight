@@ -49,6 +49,11 @@ async function StudentHomeContent() {
           icon={BookOpen}
           title="No courses yet"
           description="Your courses will appear here once you join one with your teacher's class code."
+          action={
+            <Button asChild>
+              <Link href="/student/join">Join a course</Link>
+            </Button>
+          }
         />
       ) : (
         <div className="grid gap-6 lg:grid-cols-2">
