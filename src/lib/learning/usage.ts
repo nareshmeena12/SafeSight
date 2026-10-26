@@ -29,7 +29,9 @@ export type AiFeature =
   | "doubt_summary"
   // S22 course setup (limits in their routes).
   | "syllabus_extract"
-  | "assignment_suggest";
+  | "assignment_suggest"
+  // S24 accreditation: "Suggest a mapping" (limit in its route).
+  | "co_po_suggest";
 
 /** Calls per hour per student for each learning tool. */
 export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {

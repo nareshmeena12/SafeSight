@@ -126,7 +126,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - Export per course and per department as PDF and Excel in a clean, standard table layout. Mark the report "Draft — verify against your university's format".
 - Keep the calculation transparent: show how every number was computed.
 
-- [ ] S24 done
+- [x] S24 done (2026-10-26)
 
 ### S25 — Sign-in and LMS integrations
 - Google and Microsoft sign-in via Supabase Auth, keeping roles from `app_metadata`. New SSO users land as students unless invited as teachers. Restrict sign-up to allowed email domains per institution.
