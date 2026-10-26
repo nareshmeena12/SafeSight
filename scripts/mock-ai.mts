@@ -16,7 +16,8 @@
  * (JSON), Sage replies by hint-ladder step with a notes search tool call,
  * Lens tool calls (overview, topics, quiz), the Trace summary and the
  * learning tools (practice, grading, refreshers, explain it back, recaps,
- * the mistake log), photos of working and "Ask your teacher" summaries (S21). The text is
+ * the mistake log), exam prep (topics from notes, mock tests, marking), photos of working and
+ * "Ask your teacher" summaries (S21). The text is
  * canned; this is for checking plumbing and UI, not the prompts.
  */
 import { createServer, type ServerResponse } from "node:http";
@@ -107,6 +108,59 @@ const learning = {
       { front: "Which way does heat flow on its own?", back: "From hot to cold." },
       { front: "Entropy change of a reservoir?", back: "ΔS = Q/T, with Q negative when it gives heat away." },
     ],
+  },
+};
+
+/** S20 exam prep: topics from the notes, mock test questions and their marking. */
+const exam = {
+  topics: (prompt: string) => {
+    const refs = [...prompt.matchAll(/^(P\d+) \[/gm)].map((m) => m[1]);
+    const names = ["First law for closed systems", "Boundary work", "Polytropic processes", "Entropy change", "Second law and heat engines", "Carnot cycle"];
+    return { topics: names.map((title, i) => ({ title, ref: refs[Math.min(refs.length - 1, Math.floor((i * refs.length) / names.length))] ?? "P1" })) };
+  },
+  topicsOf: (prompt: string) => [...(prompt.match(/^TOPICS: (.*)$/m)?.[1] ?? '"Entropy change"').matchAll(/"([^"]+)"/g)].map((m) => m[1]),
+  count: (system: string, key: string) => Number(system.match(new RegExp(`"${key}": \\[[^\\n]*\\(exactly (\\d+)\\)`))?.[1] ?? 0),
+  conceptual(system: string, prompt: string) {
+    const topics = exam.topicsOf(prompt);
+    const t = (i: number) => topics[i % topics.length];
+    const bank = [
+      { question: "Two processes join the same two states. Which quantity is the same for both?", options: ["The change in internal energy", "The work done", "The heat added", "The area under the P–V curve"], explanation: "Internal energy is a property, so its change depends only on the end states." },
+      { question: "Why does the entropy of an isolated system never decrease?", options: ["Real processes generate entropy", "Heat always flows in", "Its volume is fixed", "Its temperature is constant"], explanation: "Irreversibilities generate entropy and nothing can carry it out of an isolated system." },
+      { question: "In a polytropic process with n = 1, which process is it for an ideal gas?", options: ["Isothermal", "Isobaric", "Isochoric", "Adiabatic"], explanation: "PV = constant at constant temperature for an ideal gas." },
+      { question: "Which change raises a Carnot engine's efficiency?", options: ["Lowering the cold reservoir temperature", "Raising the cold reservoir temperature", "Using a different working fluid", "Running it faster"], explanation: "η = 1 − T_L/T_H, so a colder sink helps." },
+      { question: "Boundary work on a P–V diagram is…", options: ["The area under the process curve", "The slope of the curve", "The change in pressure", "Always zero"], explanation: "W = ∫P dV, the area under the curve." },
+    ];
+    return {
+      choice: Array.from({ length: exam.count(system, "choice") }, (_, i) => ({ topic: t(i), ...bank[i % bank.length], answer: 0 })),
+      open: Array.from({ length: exam.count(system, "open") }, (_, i) => ({
+        topic: t(i + 1),
+        question: `In two or three sentences, explain why ${t(i + 1).toLowerCase()} matters when a gas is compressed in a piston–cylinder device${i ? " slowly" : ""}.`,
+        solution: "Because the work and heat crossing the boundary depend on the path, the process type sets how much energy is transferred, while property changes depend only on the end states.",
+        finalAnswer: "Path functions (work, heat) depend on the process; properties don't.",
+      })),
+    };
+  },
+  numeric(system: string, prompt: string) {
+    const topics = exam.topicsOf(prompt);
+    const bank = [
+      { question: "1.5 kg of water is heated from 300 K to 360 K (c = 4.18 kJ/kg·K). Find its entropy change.", solution: "ΔS = m c ln(T2/T1) = 1.5 × 4.18 × ln(360/300) = 1.143 kJ/K", finalAnswer: "1.14 kJ/K" },
+      { question: "Air (R = 0.287 kJ/kg·K), 0.8 kg, expands polytropically (n = 1.25) from 450 K to 380 K. Find the boundary work.", solution: "W = mR(T2 − T1)/(1 − n) = 0.8 × 0.287 × (380 − 450)/(−0.25) = 64.3 kJ", finalAnswer: "64.3 kJ" },
+      { question: "A Carnot engine runs between 900 K and 320 K and takes in 500 kJ. Find the work out.", solution: "η = 1 − 320/900 = 0.644; W = 0.644 × 500 = 322 kJ", finalAnswer: "322 kJ" },
+    ];
+    return { problems: Array.from({ length: exam.count(system, "problems") }, (_, i) => ({ topic: topics[(i + 2) % topics.length], ...bank[i % bank.length] })) };
+  },
+  grade(prompt: string) {
+    const blocks = prompt.split(/\n\n(?=Q\d+\n)/);
+    return {
+      results: blocks.map((b) => {
+        const ref = b.match(/^(Q\d+)/)?.[1] ?? "Q1";
+        const answer = b.match(/STUDENT'S ANSWER:\n"""\n([\s\S]*?)\n"""/)?.[1] ?? "";
+        const good = answer.length > 40;
+        return good
+          ? { ref, verdict: "partly", score: 0.6, feedback: "Good reasoning on the main idea. Say which quantity depends on the path and why.", mistake: "" }
+          : { ref, verdict: "not_yet", score: 0.1, feedback: "This needs the key idea: work and heat depend on the path.", mistake: "path vs state functions" };
+      }),
+    };
   },
 };
 
@@ -352,6 +406,14 @@ createServer(async (req, res) => {
       out = feedbackDraft(prompt);
     } else if (/Judge how easily a general AI chatbot/.test(system)) {
       out = resilience(prompt);
+    } else if (/list the TOPICS a student should revise/.test(system)) {
+      out = exam.topics(prompt);
+    } else if (/CONCEPTUAL multiple-choice/.test(system)) {
+      out = exam.conceptual(system, prompt);
+    } else if (/NUMERICAL problems/.test(system)) {
+      out = exam.numeric(system, prompt);
+    } else if (/answers to a MOCK TEST/.test(system)) {
+      out = exam.grade(prompt);
     } else if (/You write PRACTICE problems/.test(system)) {
       out = learning.practice();
     } else if (/MISSING BASIC SKILL/.test(system)) {
