@@ -1,5 +1,7 @@
 import {
+  BarChart3,
   BookOpen,
+  Building2,
   FileStack,
   FileText,
   Flag,
@@ -8,13 +10,15 @@ import {
   LayoutDashboard,
   Library,
   type LucideIcon,
+  Scale,
   MessagesSquare,
   NotebookPen,
   Sparkles,
+  UserRoundPlus,
   Users,
 } from "lucide-react";
 
-export type Area = "student" | "teacher";
+export type Area = "student" | "teacher" | "admin";
 
 export type NavItem = {
   label: string;
@@ -47,6 +51,18 @@ export const navigation: Record<Area, { label: string; items: NavItem[] }> = {
       { label: "Doubts", href: "/teacher/doubts", icon: HandHelping },
       { label: "Lens", href: "/teacher/lens", icon: MessagesSquare },
       { label: "Course notes", href: "/teacher/materials", icon: FileStack },
+    ],
+  },
+  // S23: the institution dashboard. Aggregates only.
+  admin: {
+    label: "Institution",
+    items: [
+      { label: "Overview", href: "/admin", icon: LayoutDashboard },
+      { label: "Departments", href: "/admin/departments", icon: Building2 },
+      { label: "AI policy", href: "/admin/policy", icon: Scale },
+      { label: "Courses", href: "/admin/courses", icon: Library },
+      { label: "Teachers", href: "/admin/teachers", icon: UserRoundPlus },
+      { label: "AI usage", href: "/admin/usage", icon: BarChart3 },
     ],
   },
 };

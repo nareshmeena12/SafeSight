@@ -23,20 +23,20 @@ const roles = [
   { value: "teacher", label: "Teacher", detail: "Set up courses and see class insights", Icon: Presentation },
 ] as const;
 
-/** `defaults` come from a class-list invite link (/signup?email=…&code=…). */
+/** `defaults` come from an invite link (/signup?email=…&code=… or …&role=teacher&institution=…). */
 export function SignupForm({
   defaultRole = "student",
   defaults,
 }: {
   defaultRole?: Role;
-  defaults?: { email?: string; joinCode?: string };
+  defaults?: { email?: string; joinCode?: string; institution?: string };
 }) {
   const [state, action, pending] = useActionState(signup, initial);
   const [role, setRole] = useState<Role>(defaultRole);
   const [form, setForm] = useState({
     fullName: "",
     email: defaults?.email ?? "",
-    institution: "",
+    institution: defaults?.institution ?? "",
     joinCode: defaults?.joinCode ?? "",
     password: "",
   });

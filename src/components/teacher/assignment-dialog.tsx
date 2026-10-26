@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { ResilienceCheck } from "@/components/teacher/resilience-check";
+import { assignmentDefaults, listModes, policySource, type CoursePolicy } from "@/lib/admin/policy";
 import { saveAssignment } from "@/lib/teacher/actions";
 import { toDateTimeLocal, type FormState } from "@/lib/teacher/schemas";
 import { cn } from "@/lib/utils";
@@ -68,10 +69,27 @@ const hintLevels = [
 ] as const;
 
 /** How far Sage may go, and whether it may work examples. Applies in Learn and Assist. */
-function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; disabled: boolean }) {
-  const [level, setLevel] = useState(String(assignment?.maxHintLevel ?? 4));
-  const [examples, setExamples] = useState(assignment?.workedExamples ?? true);
+function SageLimits({
+  assignment,
+  disabled,
+  policy,
+  errors,
+}: {
+  assignment?: AssignmentValues;
+  disabled: boolean;
+  /** S23: the college's AI policy; teachers can only be stricter unless it allows more. */
+  policy?: CoursePolicy | null;
+  errors?: { maxHintLevel?: string; workedExamples?: string };
+}) {
+  const defaults = assignmentDefaults(policy ?? null);
+  const [level, setLevel] = useState(String(assignment?.maxHintLevel ?? defaults.maxHintLevel));
+  const [examples, setExamples] = useState(assignment?.workedExamples ?? defaults.workedExamples);
   const hint = hintLevels.find((h) => h.value === level);
+  const binding = policy && !policy.teachersCanLoosen ? policy : null;
+  // A setting saved before the policy tightened stays selectable.
+  const levelAllowed = (value: string) =>
+    !binding || Number(value) <= binding.maxHintLevel || Number(value) === assignment?.maxHintLevel;
+  const examplesLocked = Boolean(binding && !binding.workedExamples && !assignment?.workedExamples && !examples);
   return (
     <>
       {disabled ? (
@@ -91,8 +109,9 @@ function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; d
             </SelectTrigger>
             <SelectContent>
               {hintLevels.map((h) => (
-                <SelectItem key={h.value} value={h.value}>
+                <SelectItem key={h.value} value={h.value} disabled={!levelAllowed(h.value)}>
                   {h.label}
+                  {levelAllowed(h.value) ? null : <span className="text-muted-foreground"> · not in policy</span>}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -100,6 +119,7 @@ function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; d
           <p id="maxHintLevel-hint" className="text-sm text-muted-foreground">
             {hint?.description} Students climb a step only after a real attempt. Checking their own working is always on.
           </p>
+          {errors?.maxHintLevel ? <p className="text-sm text-destructive">{errors.maxHintLevel}</p> : null}
         </div>
         <div className="flex items-start justify-between gap-4">
           <div className="grid gap-1">
@@ -107,14 +127,16 @@ function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; d
             <p id="workedExamples-hint" className="text-sm text-muted-foreground">
               A fully worked problem with a different scenario and unknown, at most one per hour. Essays get structure
               notes, never sample paragraphs.
+              {examplesLocked ? " Your college's AI policy keeps these off." : null}
             </p>
+            {errors?.workedExamples ? <p className="text-sm text-destructive">{errors.workedExamples}</p> : null}
           </div>
           <Switch
             id="workedExamples"
             name="workedExamples"
             checked={examples}
             onCheckedChange={setExamples}
-            disabled={disabled}
+            disabled={disabled || examplesLocked}
             aria-describedby="workedExamples-hint"
             className="mt-1"
           />
@@ -125,7 +147,18 @@ function SageLimits({ assignment, disabled }: { assignment?: AssignmentValues; d
 }
 
 /** The AI rule for an assignment, as three radio cards. */
-function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mode) => void; error?: string }) {
+function ModePicker({
+  value,
+  onChange,
+  error,
+  allowed,
+}: {
+  value: Mode;
+  onChange: (m: Mode) => void;
+  error?: string;
+  /** Modes the AI policy allows (all when undefined). */
+  allowed?: (m: Mode) => boolean;
+}) {
   return (
     <fieldset className="grid gap-2" aria-describedby={error ? "aiMode-error" : undefined}>
       <legend className="mb-2 text-label">How may Sage help?</legend>
@@ -133,12 +166,14 @@ function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mod
         {modeOptions.map((m) => {
           const Icon = m.icon;
           const checked = value === m.value;
+          const off = allowed ? !allowed(m.value) : false;
           return (
             <label
               key={m.value}
               className={cn(
-                "flex min-h-11 cursor-pointer flex-col gap-1 rounded-md border p-3 transition-colors duration-150 ease-out has-focus-visible:shadow-(--ss-focus-ring)",
-                checked ? "border-primary bg-primary-soft" : "hover:bg-hover",
+                "flex min-h-11 flex-col gap-1 rounded-md border p-3 transition-colors duration-150 ease-out has-focus-visible:shadow-(--ss-focus-ring)",
+                off ? "cursor-not-allowed opacity-60" : "cursor-pointer",
+                checked ? "border-primary bg-primary-soft" : off ? "" : "hover:bg-hover",
               )}
             >
               <input
@@ -146,6 +181,7 @@ function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mod
                 name="aiMode"
                 value={m.value}
                 checked={checked}
+                disabled={off}
                 onChange={() => onChange(m.value)}
                 className="sr-only"
               />
@@ -153,7 +189,9 @@ function ModePicker({ value, onChange, error }: { value: Mode; onChange: (m: Mod
                 <Icon className="size-4 text-primary" strokeWidth={1.5} aria-hidden="true" />
                 {m.label}
               </span>
-              <span className="text-small text-muted-foreground">{m.description}</span>
+              <span className="text-small text-muted-foreground">
+                {off ? "Not allowed by your college's AI policy." : m.description}
+              </span>
             </label>
           );
         })}
@@ -173,6 +211,7 @@ export function AssignmentDialog({
   draft,
   onSaved,
   trigger,
+  policy,
 }: {
   courseId: string;
   assignment?: AssignmentValues;
@@ -180,10 +219,16 @@ export function AssignmentDialog({
   draft?: { title: string; instructions: string; aiMode: Mode };
   onSaved?: () => void;
   trigger: React.ReactNode;
+  /** S23: the AI policy for this course (null = none set). New assignments start from it. */
+  policy?: CoursePolicy | null;
 }) {
   const start = assignment ?? draft;
+  const binding = policy && !policy.teachersCanLoosen ? policy : null;
+  // A mode saved before the policy tightened stays selectable.
+  const modeAllowed = (m: Mode) => !binding || binding.allowedModes.includes(m) || m === assignment?.aiMode;
+  const startMode: Mode = assignment?.aiMode ?? (draft && modeAllowed(draft.aiMode) ? draft.aiMode : assignmentDefaults(policy ?? null).aiMode);
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>(start?.aiMode ?? "learn");
+  const [mode, setMode] = useState<Mode>(startMode);
   // Controlled so "Check AI resilience" reads the current text and can apply a rewrite.
   const [title, setTitle] = useState(start?.title ?? "");
   const [instructions, setInstructions] = useState(start?.instructions ?? "");
@@ -203,7 +248,7 @@ export function AssignmentDialog({
       onOpenChange={(next) => {
         setOpen(next);
         if (next) {
-          setMode(start?.aiMode ?? "learn");
+          setMode(startMode);
           setTitle(start?.title ?? "");
           setInstructions(start?.instructions ?? "");
         }
@@ -228,7 +273,8 @@ export function AssignmentDialog({
             required
             error={state.fieldErrors?.title}
           />
-          <ModePicker value={mode} onChange={setMode} error={state.fieldErrors?.aiMode} />
+          <ModePicker value={mode} onChange={setMode} error={state.fieldErrors?.aiMode} allowed={modeAllowed} />
+          {policy ? <PolicyNote policy={policy} /> : null}
           <div className="grid gap-2">
             <Label htmlFor="instructions">Instructions</Label>
             <Textarea
@@ -299,7 +345,12 @@ export function AssignmentDialog({
             </p>
             {state.fieldErrors?.rubric ? <p className="text-sm text-destructive">{state.fieldErrors.rubric}</p> : null}
           </div>
-          <SageLimits assignment={assignment} disabled={mode === "exam"} />
+          <SageLimits
+            assignment={assignment}
+            disabled={mode === "exam"}
+            policy={policy}
+            errors={{ maxHintLevel: state.fieldErrors?.maxHintLevel, workedExamples: state.fieldErrors?.workedExamples }}
+          />
           <Field
             name="dueAt"
             label="Due"
@@ -316,5 +367,18 @@ export function AssignmentDialog({
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+/** One line on what the college's AI policy allows for this course. */
+function PolicyNote({ policy }: { policy: CoursePolicy }) {
+  const source = policySource(policy);
+  const rules = `${listModes(policy.allowedModes)}; hints up to step ${policy.maxHintLevel}; worked examples ${policy.workedExamples ? "on" : "off"}`;
+  return (
+    <p className="rounded-md border bg-surface px-3 py-2 text-small text-muted-foreground">
+      {policy.teachersCanLoosen
+        ? `${source} suggests ${rules}. New assignments start there; you may change them.`
+        : `${source}: ${rules}. You can be stricter than this.`}
+    </p>
   );
 }

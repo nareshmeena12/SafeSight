@@ -1,6 +1,6 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { joinPendingCourse } from "@/lib/auth/join";
+import { claimTeacherInvites, joinPendingCourse } from "@/lib/auth/join";
 import { redirectAfterLogin, roleSchema } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
@@ -32,10 +32,12 @@ export async function GET(request: NextRequest) {
     : { data: null };
   const role = roleSchema.safeParse(profile?.role);
   if (!role.success) return NextResponse.redirect(new URL("/login", origin));
-  // A class code typed at sign-up is joined once the email is confirmed.
-  if (role.data === "student") await joinPendingCourse(supabase);
+  // An admin's teacher invite (S23), then a class code typed at sign-up,
+  // once the email is confirmed.
+  const current = await claimTeacherInvites(supabase, role.data);
+  if (current === "student") await joinPendingCourse(supabase);
 
   return NextResponse.redirect(
-    new URL(redirectAfterLogin(role.data, searchParams.get("next")), origin),
+    new URL(redirectAfterLogin(current, searchParams.get("next")), origin),
   );
 }

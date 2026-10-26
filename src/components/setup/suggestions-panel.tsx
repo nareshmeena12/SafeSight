@@ -5,6 +5,7 @@ import { useState, useTransition } from "react";
 import { Check, Lightbulb, Plus, X } from "lucide-react";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { AssignmentDialog } from "@/components/teacher/assignment-dialog";
+import type { CoursePolicy } from "@/lib/admin/policy";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { markSuggestion } from "@/lib/setup/actions";
@@ -20,11 +21,14 @@ export function SuggestionsPanel({
   suggestions,
   hasMap,
   aiReady,
+  policy,
 }: {
   courseId: string;
   suggestions: Suggestion[];
   hasMap: boolean;
   aiReady: boolean;
+  /** S23: the course's AI policy, so a suggestion's mode can't break it. */
+  policy?: CoursePolicy | null;
 }) {
   const router = useRouter();
   const [working, setWorking] = useState(false);
@@ -109,6 +113,7 @@ export function SuggestionsPanel({
                 <AssignmentDialog
                   courseId={courseId}
                   draft={{ title: s.title, instructions: s.instructions, aiMode: s.aiMode }}
+                  policy={policy}
                   onSaved={() => mark(s.id, "used")}
                   trigger={
                     <Button size="sm">

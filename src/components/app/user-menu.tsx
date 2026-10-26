@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronDown, LogOut } from "lucide-react";
+import { Building2, ChevronDown, LayoutDashboard, LogOut } from "lucide-react";
+import Link from "next/link";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -60,6 +61,24 @@ export function UserMenu({
           </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
+        {user.role === "admin" ? (
+          // S23: admins have the institution dashboard and may also teach.
+          <>
+            <DropdownMenuItem asChild className="min-h-11">
+              <Link href="/admin">
+                <Building2 strokeWidth={1.5} aria-hidden="true" />
+                Institution
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild className="min-h-11">
+              <Link href="/teacher">
+                <LayoutDashboard strokeWidth={1.5} aria-hidden="true" />
+                Teaching
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        ) : null}
         {signOut ? (
           <form action={signOut}>
             <DropdownMenuItem asChild>
