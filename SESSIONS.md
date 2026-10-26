@@ -70,4 +70,8 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 - [x] **S19 — Teacher insight tools.** Pre-lecture brief per course (top 3 misconceptions with anonymised quotes, share of class, 5-minute explanations, 5-question quiz to print or run live with a code), rubric-based feedback drafts the teacher approves before the student sees them, and a Monday digest (email via Resend/SMTP, in-app otherwise).
 
+## Wave D (ROADMAP.md)
+
+- [x] **S23 — Institution dashboard and AI policy.** `/admin` for admins: adoption (weekly active students and teachers), Reliance Score trends and learning signals by department, AI usage by feature, courses and teachers, all as aggregates. Departments with an AI policy each (plus a college default): allowed modes, highest hint step, worked examples, Lab Mode; new assignments start from it and teachers can only be stricter unless the admin allows it (checked in the form, the server action and a database trigger). Admins invite teachers by email into a department.
+
 - [x] **S24 — Accreditation reports.** Programmes with POs/PSOs (NBA PO1–PO12 to start from), course outcomes, CO–PO matrix (levels 1–3, "Suggest a mapping"), assignments, imported test marks and students' own practice/mock tests mapped to COs, CO attainment with configurable thresholds and weights, PO attainment per course and per programme, every number explained, PDF and Excel exports marked "Draft — verify against your university's format".

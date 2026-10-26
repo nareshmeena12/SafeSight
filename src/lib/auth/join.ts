@@ -1,5 +1,6 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
+import { roleSchema, type Role } from "./roles";
 import { joinCodeSchema } from "./schemas";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
@@ -26,4 +27,19 @@ export async function joinPendingCourse(supabase: ServerClient) {
   const { error } = await supabase.rpc("join_course", { p_join_code: code.data });
   if (error) console.warn("join_course after sign-up failed:", error.message);
   await supabase.auth.updateUser({ data: { join_code: null } });
+}
+
+/**
+ * S23: an admin invited this email as a teacher (`teacher_invites`). Claims
+ * the invite for a confirmed email: the account becomes a teacher of that
+ * institution and department. Returns the role afterwards (the given role
+ * when nothing changed or the call failed). Never throws.
+ */
+export async function claimTeacherInvites(supabase: ServerClient, role: Role): Promise<Role> {
+  const { data, error } = await supabase.rpc("claim_teacher_invites");
+  if (error) {
+    console.warn("claim_teacher_invites failed:", error.message);
+    return role;
+  }
+  return roleSchema.safeParse(data).data ?? role;
 }

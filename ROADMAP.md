@@ -118,7 +118,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - **College AI policy:** admin sets defaults per department (allowed modes, max hint level, worked examples, Lab Mode allowed). New assignments inherit them; teachers can only be stricter, not looser, unless the admin allows it.
 - Admin can invite teachers and assign departments.
 
-- [ ] S23 done
+- [x] S23 done (2026-10-26)
 
 ### S24 — Accreditation reports (NAAC / NBA style)
 - Course outcomes (COs) per course (from S22 or entered manually) and program outcomes (POs) per department, with a CO–PO mapping matrix (levels 1–3).

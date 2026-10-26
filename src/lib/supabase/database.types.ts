@@ -112,6 +112,41 @@ export type Database = {
           },
         ]
       }
+      departments: {
+        Row: {
+          code: string
+          created_at: string
+          id: string
+          institution_id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          code?: string
+          created_at?: string
+          id?: string
+          institution_id: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          id?: string
+          institution_id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "departments_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       doubts: {
         Row: {
           announcement_id: string | null
@@ -348,6 +383,73 @@ export type Database = {
             columns: ["message_id"]
             isOneToOne: false
             referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_policies: {
+        Row: {
+          allowed_modes: Database["public"]["Enums"]["ai_mode"][]
+          created_at: string
+          default_mode: Database["public"]["Enums"]["ai_mode"]
+          department_id: string | null
+          id: string
+          institution_id: string
+          lab_mode_allowed: boolean
+          max_hint_level: number
+          teachers_can_loosen: boolean
+          updated_at: string
+          updated_by: string | null
+          worked_examples: boolean
+        }
+        Insert: {
+          allowed_modes?: Database["public"]["Enums"]["ai_mode"][]
+          created_at?: string
+          default_mode?: Database["public"]["Enums"]["ai_mode"]
+          department_id?: string | null
+          id?: string
+          institution_id: string
+          lab_mode_allowed?: boolean
+          max_hint_level?: number
+          teachers_can_loosen?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          worked_examples?: boolean
+        }
+        Update: {
+          allowed_modes?: Database["public"]["Enums"]["ai_mode"][]
+          created_at?: string
+          default_mode?: Database["public"]["Enums"]["ai_mode"]
+          department_id?: string | null
+          id?: string
+          institution_id?: string
+          lab_mode_allowed?: boolean
+          max_hint_level?: number
+          teachers_can_loosen?: boolean
+          updated_at?: string
+          updated_by?: string | null
+          worked_examples?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_policies_department_id_institution_id_fkey"
+            columns: ["department_id", "institution_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id", "institution_id"]
+          },
+          {
+            foreignKeyName: "ai_policies_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_policies_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
@@ -1326,6 +1428,7 @@ export type Database = {
         Row: {
           code: string
           created_at: string
+          department_id: string | null
           id: string
           institution_id: string | null
           join_code: string
@@ -1335,6 +1438,7 @@ export type Database = {
         Insert: {
           code?: string
           created_at?: string
+          department_id?: string | null
           id?: string
           institution_id?: string | null
           join_code?: string
@@ -1344,6 +1448,7 @@ export type Database = {
         Update: {
           code?: string
           created_at?: string
+          department_id?: string | null
           id?: string
           institution_id?: string | null
           join_code?: string
@@ -1351,6 +1456,13 @@ export type Database = {
           teacher_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "courses_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "courses_institution_id_fkey"
             columns: ["institution_id"]
@@ -2645,6 +2757,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          department_id: string | null
           full_name: string
           id: string
           institution_id: string | null
@@ -2653,6 +2766,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          department_id?: string | null
           full_name?: string
           id: string
           institution_id?: string | null
@@ -2661,6 +2775,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          department_id?: string | null
           full_name?: string
           id?: string
           institution_id?: string | null
@@ -2668,6 +2783,13 @@ export type Database = {
           roll_number?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "profiles_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "profiles_institution_id_fkey"
             columns: ["institution_id"]
@@ -2969,6 +3091,80 @@ export type Database = {
           },
         ]
       }
+      teacher_invites: {
+        Row: {
+          created_at: string
+          department_id: string | null
+          email: string
+          email_status: string
+          full_name: string
+          id: string
+          institution_id: string
+          invited_by: string | null
+          joined_at: string | null
+          status: string
+          teacher_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          department_id?: string | null
+          email: string
+          email_status?: string
+          full_name?: string
+          id?: string
+          institution_id: string
+          invited_by?: string | null
+          joined_at?: string | null
+          status?: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          department_id?: string | null
+          email?: string
+          email_status?: string
+          full_name?: string
+          id?: string
+          institution_id?: string
+          invited_by?: string | null
+          joined_at?: string | null
+          status?: string
+          teacher_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teacher_invites_department_id_institution_id_fkey"
+            columns: ["department_id", "institution_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id", "institution_id"]
+          },
+          {
+            foreignKeyName: "teacher_invites_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "teacher_invites_teacher_id_fkey"
+            columns: ["teacher_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       teacher_digest_prefs: {
         Row: {
           teacher_id: string
@@ -3234,7 +3430,99 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      admin_adoption: {
+        Args: { p_weeks?: number }
+        Returns: {
+          active_students: number
+          active_teachers: number
+          enrolled_students: number
+          sage_messages: number
+          week: string
+        }[]
+      }
+      admin_ai_usage: {
+        Args: { p_weeks?: number }
+        Returns: {
+          calls: number
+          failed: number
+          feature: string
+          input_tokens: number
+          output_tokens: number
+          user_role: string
+          week: string
+        }[]
+      }
+      admin_courses: {
+        Args: never
+        Returns: {
+          active_students_7d: number
+          assignments: number
+          avg_reliance: number | null
+          code: string
+          created_at: string
+          department_id: string | null
+          id: string
+          name: string
+          open_flags: number
+          outside_policy: number
+          students: number
+          teacher_id: string
+          teacher_name: string
+        }[]
+      }
+      admin_department_weekly: {
+        Args: { p_weeks?: number }
+        Returns: {
+          active_students: number
+          avg_mastery: number | null
+          avg_reliance: number | null
+          department_id: string | null
+          doubts: number
+          explain_backs: number
+          high_reliance_share: number | null
+          mock_tests: number
+          practice_sets: number
+          sage_messages: number
+          scored_students: number
+          students: number
+          week: string
+        }[]
+      }
+      admin_set_course_department: {
+        Args: { p_course_id: string; p_department_id: string | null }
+        Returns: boolean
+      }
+      admin_set_teacher_department: {
+        Args: { p_department_id: string | null; p_teacher_id: string }
+        Returns: boolean
+      }
+      admin_staff: {
+        Args: never
+        Returns: {
+          courses: number
+          department_id: string | null
+          email: string
+          full_name: string
+          id: string
+          last_active_at: string | null
+          role: Database["public"]["Enums"]["user_role"]
+        }[]
+      }
       claim_course_invites: { Args: never; Returns: number }
+      claim_teacher_invites: { Args: never; Returns: string | null }
+      course_ai_policy: {
+        Args: { p_course_id: string }
+        Returns: {
+          allowed_modes: Database["public"]["Enums"]["ai_mode"][]
+          default_mode: Database["public"]["Enums"]["ai_mode"]
+          department_name: string
+          lab_mode_allowed: boolean
+          max_hint_level: number
+          scope: string
+          teachers_can_loosen: boolean
+          worked_examples: boolean
+        }[]
+      }
       find_user_by_email: {
         Args: { p_email: string }
         Returns: {
