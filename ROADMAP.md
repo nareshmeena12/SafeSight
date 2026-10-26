@@ -94,7 +94,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - Topic checklist with mastery, and timed mock tests generated from the course notes (mix of conceptual and numeric), auto-graded with explanations afterwards. Mock tests are clearly separate from graded assignments.
 - "Exam in N days" card on student home. Teacher can optionally publish the official syllabus topics and exam pattern to improve the plan.
 
-- [ ] S20 done
+- [x] S20 done (2026-10-26)
 
 ### S21 — Photo of working and Ask a human
 - **Photo of working:** in Sage (assignment and Explore), the student can attach a photo of handwritten work. Use a vision-capable model from env (`AI_VISION_MODEL`, same base URL unless `AI_VISION_BASE_URL` is set) to transcribe the steps, show the transcription for the student to confirm, then Sage points to the first incorrect line using the normal policy engine (no full solutions). Images go to private Supabase Storage, are deleted after 30 days, and are only visible to the student and, if flagged or shared, their teacher.
