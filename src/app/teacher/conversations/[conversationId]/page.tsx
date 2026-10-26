@@ -31,8 +31,13 @@ async function ConversationContent({
   const { conversationId } = await params;
   if (!z.uuid().safeParse(conversationId).success) notFound();
   const db = await createClient();
-  const conv = await getConversation(db, user.id, conversationId);
+  const [conv, { data: photoRows }] = await Promise.all([
+    getConversation(db, user.id, conversationId),
+    // S21: photos of working sent in this chat (RLS: only when the chat is flagged or shared).
+    db.from("sage_photos").select("id, message_id, deleted_at").eq("conversation_id", conversationId),
+  ]);
   if (!conv) notFound();
+  const photos = new Map((photoRows ?? []).map((p) => [p.message_id, p]));
 
   return (
     <>
@@ -79,6 +84,21 @@ async function ConversationContent({
                   {m.role === "user" ? conv.student.name : "Sage"} · {formatDateTime(m.createdAt)}
                   {m.flagged ? <span className="ml-2 font-medium text-foreground">Flagged</span> : null}
                 </p>
+                {photos.get(m.id) ? (
+                  photos.get(m.id)!.deleted_at ? (
+                    <p className="mb-2 text-small text-muted-foreground">Photo of working (removed after 30 days)</p>
+                  ) : (
+                    <a href={`/api/sage/photo/${photos.get(m.id)!.id}`} target="_blank" rel="noreferrer" className="mb-2 block w-fit">
+                      {/* eslint-disable-next-line @next/next/no-img-element -- a private, signed image */}
+                      <img
+                        src={`/api/sage/photo/${photos.get(m.id)!.id}`}
+                        alt={`Photo of ${conv.student.name}'s working`}
+                        loading="lazy"
+                        className="h-32 max-w-full rounded-md border object-cover"
+                      />
+                    </a>
+                  )
+                ) : null}
                 <p className="whitespace-pre-wrap break-words">{m.content}</p>
               </div>
             </li>

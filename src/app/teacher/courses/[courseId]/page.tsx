@@ -2,9 +2,24 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, ClipboardList, FileText, ListTree, MessagesSquare, Pencil, Plus, UserPlus, Users, Variable } from "lucide-react";
+import {
+  CalendarCheck,
+  ChevronLeft,
+  ClipboardList,
+  FileText,
+  HandHelping,
+  ListTree,
+  MessagesSquare,
+  Pencil,
+  Plus,
+  UserPlus,
+  Users,
+  Variable,
+} from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { CourseTas } from "@/components/doubts/course-tas";
+import { ExamInfoDialog } from "@/components/exam/exam-info-dialog";
 import { EmptyState } from "@/components/product/empty-state";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { SetupChecklist } from "@/components/setup/setup-checklist";
@@ -14,10 +29,13 @@ import { DeleteAssignment } from "@/components/teacher/delete-assignment";
 import { JoinCode } from "@/components/teacher/join-code";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { courseTas } from "@/lib/doubts/data";
+import { syllabusTopicsSchema } from "@/lib/exam/schemas";
+import { syllabusText } from "@/lib/exam/syllabus";
 import { setupDone, setupSteps } from "@/lib/setup/checklist";
 import { setupProgress } from "@/lib/setup/server";
 import { createClient } from "@/lib/supabase/server";
-import { formatDateTime } from "@/lib/teacher/dates";
+import { formatDateTime, formatShortDate } from "@/lib/teacher/dates";
 import { getCourseDetail } from "@/lib/teacher/queries";
 import { z } from "zod";
 
@@ -36,9 +54,15 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const { courseId } = await params;
   if (!z.uuid().safeParse(courseId).success) notFound();
   const db = await createClient();
-  const [detail, progress] = await Promise.all([getCourseDetail(db, user.id, courseId), setupProgress(db, courseId)]);
+  const [detail, { data: examInfo }, tas, progress] = await Promise.all([
+    getCourseDetail(db, user.id, courseId),
+    db.from("course_exam_info").select("topics, pattern, exam_date").eq("course_id", courseId).maybeSingle(),
+    courseTas(db, courseId),
+    setupProgress(db, courseId),
+  ]);
   if (!detail) notFound();
   const { course, assignments, roster } = detail;
+  const syllabus = syllabusTopicsSchema.safeParse(examInfo?.topics ?? []).data ?? [];
   // S22: the guided setup checklist until every step is done.
   const steps = setupSteps(course.id, progress);
   const setupComplete = setupDone(steps) === steps.length;
@@ -75,6 +99,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               <Link href="/teacher/materials">
                 <FileText aria-hidden="true" />
                 Notes and PDFs
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              {/* S21: questions students sent from Sage. */}
+              <Link href={`/teacher/doubts?course=${course.id}`}>
+                <HandHelping aria-hidden="true" />
+                Doubts
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -124,6 +155,49 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               </Button>
             </div>
           </section>
+
+          <section aria-labelledby="exam-title" className="rounded-lg border bg-surface p-6">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 id="exam-title" className="text-title">
+                  Exam prep
+                </h2>
+                <p className="text-small text-muted-foreground">
+                  Students make their own revision plans and mock tests. Publish the syllabus and pattern to steer them.
+                </p>
+              </div>
+              <ExamInfoDialog
+                courseId={course.id}
+                topicsText={syllabusText(syllabus)}
+                pattern={examInfo?.pattern ?? ""}
+                examDate={examInfo?.exam_date ?? null}
+                trigger={
+                  <Button variant="outline">
+                    <CalendarCheck aria-hidden="true" />
+                    {examInfo ? "Edit syllabus and pattern" : "Add syllabus and pattern"}
+                  </Button>
+                }
+              />
+            </div>
+            <dl className="mt-4 grid gap-3 text-small sm:grid-cols-3">
+              <div>
+                <dt className="text-muted-foreground">Syllabus topics</dt>
+                <dd className="mt-0.5">
+                  {syllabus.length ? <span className="font-mono">{syllabus.length}</span> : "None yet — plans use your notes"}
+                </dd>
+              </div>
+              <div className="min-w-0">
+                <dt className="text-muted-foreground">Exam pattern</dt>
+                <dd className="mt-0.5 line-clamp-2">{examInfo?.pattern || "Not given"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Exam date</dt>
+                <dd className="mt-0.5">{examInfo?.exam_date ? formatShortDate(examInfo.exam_date) : "Not set"}</dd>
+              </div>
+            </dl>
+          </section>
+
+          <CourseTas courseId={course.id} tas={tas} />
 
           <section aria-labelledby="assignments-title">
             <h2 id="assignments-title" className="mb-4 text-title">

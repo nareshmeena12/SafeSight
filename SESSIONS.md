@@ -66,4 +66,6 @@ Target: S1–S12 before the cloud credit expires (~Nov 4, 2026). S13–S15 (Live
 
 - [x] **S17 — Student learning tools.** Practice this (3 new problems on a concept, graded with feedback, never linked to graded work), Explain it back, session recaps with flashcards, mistake log with "Review before exam", prerequisite refreshers, mastery per topic on My learning and as a summary on the teacher's student page.
 
+- [x] **S21 — Photo of working and Ask a human.** Students attach a photo of handwritten working in Sage; a vision model (`AI_VISION_MODEL`) transcribes it, the student checks it, and Sage points at the first wrong line through the normal policy engine (images private, deleted after 30 days). "Ask your teacher" turns a chat into a doubt (drafted summary the student edits); teachers and per-course TAs answer, resolve or answer the class with an announcement; students are told in-app and by email when configured.
+
 - [x] **S19 — Teacher insight tools.** Pre-lecture brief per course (top 3 misconceptions with anonymised quotes, share of class, 5-minute explanations, 5-question quiz to print or run live with a code), rubric-based feedback drafts the teacher approves before the student sees them, and a Monday digest (email via Resend/SMTP, in-app otherwise).

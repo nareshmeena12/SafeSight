@@ -47,6 +47,38 @@ describe("buildSagePrompt", () => {
   });
 });
 
+describe("photo of working (S21)", () => {
+  function photoPrompt(l: Partial<Labels>, home: typeof thermo | null = thermo) {
+    const lab = labels(l);
+    const policy = decidePolicy({ home, matched: null, labels: lab, ladderFor: () => null });
+    return buildSagePrompt({ policy, labels: lab, courseName: "Thermodynamics", courseCode: "ME201", home, studentFirstName: "Riya", passages: [], care, fromPhoto: true });
+  }
+
+  it("asks for the first wrong line by number, never the corrected working", () => {
+    const p = photoPrompt({ intent: "attempt", attemptQuality: 0.8, sharesWorking: true });
+    expect(p).toMatch(/CHECK WORK|Point to the FIRST step/);
+    expect(p).toMatch(/FIRST line that goes wrong/);
+    expect(p).toMatch(/never give the final answer/);
+    expect(p).toMatch(/\[\?\]/);
+  });
+
+  it("keeps the ladder in charge when the attempt isn't genuine", () => {
+    const p = photoPrompt({ intent: "attempt", attemptQuality: 0.2, sharesWorking: true });
+    expect(p).toMatch(/Ladder step for this reply/);
+    expect(p).not.toMatch(/FIRST line that goes wrong/);
+    expect(p).toMatch(/Refer to lines by number/);
+  });
+
+  it("says nothing about photos for a typed message", () => {
+    expect(prompt({ intent: "attempt", attemptQuality: 0.8, sharesWorking: true })).not.toMatch(/from a photo/);
+  });
+
+  it("doesn't let an Explore photo become a full solution", () => {
+    const p = photoPrompt({ intent: "attempt", attemptQuality: 0.8, sharesWorking: true }, null);
+    expect(p).toMatch(/never rewrite the corrected working/i);
+  });
+});
+
 describe("fixed replies", () => {
   it("are kind and never give anything away", () => {
     const replies = [

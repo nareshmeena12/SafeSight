@@ -106,6 +106,8 @@ async function AskSage({ searchParams }: { searchParams: PageProps<"/student/sag
         initialConversationId={conversation?.id ?? null}
         initialMessages={initialMessages}
         available={aiStatus().chat}
+        photos={aiStatus().vision}
+        askTeacher
       />
     </div>
   );

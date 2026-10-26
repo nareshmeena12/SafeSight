@@ -28,6 +28,13 @@ export async function loadChatMessages(
     .order("created_at", { ascending: true })
     .limit(200);
 
+  // S21: photos sent with the student's messages (their own, under RLS).
+  const userIds = (rows ?? []).filter((m) => m.role === "user").map((m) => m.id);
+  const { data: photoRows } = userIds.length
+    ? await supabase.from("sage_photos").select("id, message_id, deleted_at").in("message_id", userIds)
+    : { data: [] };
+  const photos = new Map((photoRows ?? []).map((p) => [p.message_id, { id: p.id, removed: Boolean(p.deleted_at) }]));
+
   const care = careData();
   return (rows ?? []).map((m, i, all) => {
     const prev = all[i - 1];
@@ -46,6 +53,7 @@ export async function loadChatMessages(
         { type: "text" as const, text: m.content },
       ],
       metadata: {
+        photo: photos.get(m.id) ?? null,
         hintLevel: m.hint_level,
         citations: citations.success ? citations.data : [],
         rules: matched,

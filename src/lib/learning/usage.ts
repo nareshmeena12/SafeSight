@@ -21,6 +21,12 @@ export type AiFeature =
   | "lecture_brief"
   | "lecture_brief_quiz"
   | "feedback_draft"
+  // S20 exam prep: topics read from the notes, mock tests and their grading.
+  | "exam_topics"
+  | "mock_generate"
+  | "mock_grade"
+  // S21 "Ask your teacher" summary (its limit is in lib/doubts).
+  | "doubt_summary"
   // S22 course setup (limits in their routes).
   | "syllabus_extract"
   | "assignment_suggest";
@@ -32,6 +38,9 @@ export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {
   practice_grade: 60,
   explain_back: 20,
   recap: 30,
+  exam_topics: 10,
+  mock_generate: 6,
+  mock_grade: 20,
 };
 
 /** Whether the student may make another call to this feature now (fails open). */

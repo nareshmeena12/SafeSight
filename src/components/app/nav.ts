@@ -3,6 +3,7 @@ import {
   FileStack,
   FileText,
   Flag,
+  HandHelping,
   House,
   LayoutDashboard,
   Library,
@@ -32,6 +33,7 @@ export const navigation: Record<Area, { label: string; items: NavItem[] }> = {
       { label: "Ask Sage", href: "/student/sage", icon: Sparkles },
       { label: "Writing", href: "/student/trace", icon: NotebookPen },
       { label: "My learning", href: "/student/learning", icon: BookOpen },
+      { label: "Doubts", href: "/student/doubts", icon: HandHelping },
     ],
   },
   teacher: {
@@ -42,6 +44,7 @@ export const navigation: Record<Area, { label: string; items: NavItem[] }> = {
       { label: "Students", href: "/teacher/students", icon: Users },
       { label: "Submissions", href: "/teacher/submissions", icon: FileText },
       { label: "Flags", href: "/teacher/flags", icon: Flag },
+      { label: "Doubts", href: "/teacher/doubts", icon: HandHelping },
       { label: "Lens", href: "/teacher/lens", icon: MessagesSquare },
       { label: "Course notes", href: "/teacher/materials", icon: FileStack },
     ],
