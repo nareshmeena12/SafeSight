@@ -6,6 +6,7 @@ import { ChevronLeft, Mail, MessagesSquare } from "lucide-react";
 import { z } from "zod";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { MasteryBadge } from "@/components/learning/mastery";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { StatCard } from "@/components/product/stat-card";
 import { RelianceLineChart } from "@/components/teacher/charts";
@@ -13,6 +14,7 @@ import { FlagList } from "@/components/teacher/flag-list";
 import { TopicList } from "@/components/teacher/topic-list";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { studentMasterySummary } from "@/lib/learning/queries";
 import { relianceBand } from "@/lib/reliance";
 import { createClient } from "@/lib/supabase/server";
 import { formatDateTime, formatRelative, formatShortDate } from "@/lib/teacher/dates";
@@ -54,7 +56,7 @@ async function StudentContent({ params }: Pick<PageProps<"/teacher/students/[stu
   const detail = await getStudentDetail(db, user.id, studentId);
   if (!detail) notFound();
   const { student, trend, topics, flags, submissions, sharedConversations } = detail;
-  const conversationFor = await conversationsForFlags(db, flags);
+  const [conversationFor, mastery] = await Promise.all([conversationsForFlags(db, flags), studentMasterySummary(db, studentId)]);
   const openFlags = flags.filter((f) => f.status === "open");
   const firstName = student.name.split(" ")[0];
   const lensHref = (q: string) => `/teacher/lens?${new URLSearchParams({ q }).toString()}`;
@@ -138,6 +140,30 @@ async function StudentContent({ params }: Pick<PageProps<"/teacher/students/[stu
             {topics.length > 0 ? <TopicList topics={topics} /> : <Quiet>No topics yet.</Quiet>}
           </Panel>
         </div>
+
+        <Panel
+          id="mastery"
+          title="Mastery by topic"
+          note={`From ${firstName}'s own practice, quick checks and explain-backs. A summary only — their answers stay private.`}
+        >
+          {mastery.length > 0 ? (
+            <ul className="grid gap-x-8 sm:grid-cols-2">
+              {mastery.map((m) => (
+                <li key={`${m.courseId}-${m.topic}`} className="flex items-center justify-between gap-3 border-b py-3">
+                  <span className="min-w-0">
+                    {m.topic}
+                    <span className="block text-small text-muted-foreground">
+                      <span className="font-mono">{m.evidence}</span> {m.evidence === 1 ? "check" : "checks"} · {formatShortDate(m.updatedAt)}
+                    </span>
+                  </span>
+                  <MasteryBadge mastery={m.mastery} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <Quiet>No practice yet. Mastery appears once {firstName} practises a topic with Sage.</Quiet>
+          )}
+        </Panel>
 
         <Panel id="flags" title="Flags">
           {flags.length > 0 ? (

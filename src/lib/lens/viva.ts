@@ -1,7 +1,6 @@
 import "server-only";
-import { generateText, Output } from "ai";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { chatModel } from "@/lib/ai/provider";
+import { generateJson } from "@/lib/learning/ai";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/database.types";
 import {
@@ -38,11 +37,12 @@ export async function suggestVivaQuestions(db: Db, submissionId: string, teacher
   if (!submission?.submitted_at) return null;
 
   const text = markedText(submission.content);
-  const model = chatModel({ feature: "lens_viva", userId: teacherId });
   let questions: VivaQuestion[] | null = null;
-  for (let attempt = 0; attempt < 2 && !questions; attempt++) {
-    const { output } = await generateText({
-      model,
+  // Streamed JSON (generateJson), so the provider's slow-start retry doesn't cut a long answer off.
+  for (let round = 0; round < 2 && !questions; round++) {
+    const output = await generateJson({
+      feature: "lens_viva",
+      userId: teacherId,
       system: VIVA_SYSTEM_PROMPT,
       prompt:
         vivaPrompt({
@@ -50,12 +50,14 @@ export async function suggestVivaQuestions(db: Db, submissionId: string, teacher
           instructions: submission.assignment?.instructions ?? "",
           summary: submission.report?.summary ?? null,
           text: text || "(The submission is empty.)",
-        }) + (attempt ? "\n\nKeep every word neutral and about understanding." : ""),
-      output: Output.object({ schema: vivaOutputSchema }),
+        }) + (round ? "\n\nKeep every word neutral and about understanding." : ""),
+      schema: vivaOutputSchema,
+      name: "viva_questions",
+      timeoutMs: 30_000,
+      maxOutputTokens: 2000,
       temperature: 0.4,
-      maxRetries: 0,
-      abortSignal: AbortSignal.timeout(30_000),
     });
+    if (!output) break;
     const clean = cleanViva(output);
     if (clean) questions = clean.questions.map((q) => ({ ...q, discussedAt: null }));
   }

@@ -23,7 +23,7 @@ export async function loadChatMessages(
 ): Promise<SageUIMessage[]> {
   const { data: rows } = await supabase
     .from("messages")
-    .select("id, role, content, intent, hint_level, citations, matched_assignment_id, match_score")
+    .select("id, role, content, intent, topic, hint_level, citations, matched_assignment_id, match_score")
     .eq("conversation_id", conversationId)
     .order("created_at", { ascending: true })
     .limit(200);
@@ -49,6 +49,11 @@ export async function loadChatMessages(
         hintLevel: m.hint_level,
         citations: citations.success ? citations.data : [],
         rules: matched,
+        // "Practice this" under a free explanation in Explore (the chip shows on the latest one).
+        practice:
+          !homeAssignmentId && !matched && asked?.topic && asked.intent === "concept_question" && m.hint_level === null
+            ? { topic: asked.topic }
+            : null,
       },
     };
   });

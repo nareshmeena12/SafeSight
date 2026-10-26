@@ -14,7 +14,9 @@
  *
  * It answers just enough like a real model to drive every flow: labels
  * (JSON), Sage replies by hint-ladder step with a notes search tool call,
- * Lens tool calls (overview, topics, quiz) and the Trace summary. The text is
+ * Lens tool calls (overview, topics, quiz), the Trace summary and the
+ * learning tools (practice, grading, refreshers, explain it back, recaps,
+ * the mistake log). The text is
  * canned; this is for checking plumbing and UI, not the prompts.
  */
 import { createServer, type ServerResponse } from "node:http";
@@ -72,6 +74,41 @@ function leakyDraft(system: string): string {
   }
   return "Sure! V1 = 0.459 m³, so W = P(V2 − V1) = 68.9 kJ. Then T2 = 600 K and Q = 241.2 kJ.";
 }
+
+/** Canned output for the learning tools (S17): practice, grading, refreshers, recaps. */
+const learning = {
+  practice: () => ({
+    problems: [
+      { difficulty: "warm_up", question: "A reservoir at 400 K gives 1200 J of heat to a system. Find the reservoir's entropy change.", solution: "ΔS = Q/T = −1200/400 = −3 J/K", finalAnswer: "−3 J/K" },
+      { difficulty: "standard", question: "2 kg of water is heated from 290 K to 350 K (c = 4.18 kJ/kg·K). Find ΔS.", solution: "ΔS = m c ln(T2/T1) = 2 × 4.18 × ln(350/290) = 1.572 kJ/K", finalAnswer: "1.57 kJ/K" },
+      { difficulty: "stretch", question: "1 kg of air is compressed isothermally at 310 K from 1 bar to 5 bar (R = 0.287 kJ/kg·K). Find ΔS and say why it is negative.", solution: "ΔS = −R ln(P2/P1) = −0.287 ln 5 = −0.462 kJ/K; heat leaves the gas.", finalAnswer: "−0.462 kJ/K" },
+    ],
+  }),
+  refresher: {
+    skill: "Properties of logarithms",
+    lesson: "Entropy changes use **logarithms** because $\\int dT/T = \\ln T$. Remember $\\ln(a/b) = \\ln a - \\ln b$, and $\\ln 1 = 0$. Tiny example: $\\ln(600/300) = \\ln 2 \\approx 0.693$. When a ratio is above 1 the log is positive, so heating raises entropy.",
+    checks: [
+      { question: "What is $\\int \\frac{1}{x}\\,dx$?", options: ["$\\ln|x| + C$", "$x^2/2 + C$", "$-1/x^2 + C$", "$e^x + C$"], answer: 0, explanation: "The integral of 1/x is the natural logarithm." },
+      { question: "Simplify $\\ln(T_2/T_1)$.", options: ["$\\ln T_2 - \\ln T_1$", "$\\ln T_2 + \\ln T_1$", "$\\ln(T_2 - T_1)$", "$T_2/T_1$"], answer: 0, explanation: "The log of a quotient is the difference of the logs." },
+    ],
+  },
+  grade: (prompt: string) => {
+    const answer = prompt.match(/STUDENT'S ANSWER:\n"""\n([\s\S]*)\n"""/)?.[1] ?? "";
+    const right = /−3|-3|1\.57|0\.46/.test(answer);
+    return right
+      ? { verdict: "correct", score: 1, feedback: "Spot on — right method and units.", mistake: "" }
+      : { verdict: "partly", score: 0.5, feedback: "Right idea. Check the sign: which way does the heat flow?", mistake: "sign of heat for a reservoir" };
+  },
+  recap: {
+    title: "Entropy and heat flow",
+    learned: ["You saw that entropy measures how spread out energy is.", "You worked out that heat flows from hot to cold on its own.", "You used ΔS = Q/T for a reservoir."],
+    flashcards: [
+      { front: "What does entropy measure?", back: "How spread out energy is — the number of ways to arrange it." },
+      { front: "Which way does heat flow on its own?", back: "From hot to cold." },
+      { front: "Entropy change of a reservoir?", back: "ΔS = Q/T, with Q negative when it gives heat away." },
+    ],
+  },
+};
 
 function sage(system: string): Reply {
   const level = Number(system.match(/Ladder step for this reply: (\d)/)?.[1] ?? 1);
@@ -244,6 +281,18 @@ createServer(async (req, res) => {
       out = viva(prompt);
     } else if (/Judge how easily a general AI chatbot/.test(system)) {
       out = resilience(prompt);
+    } else if (/You write PRACTICE problems/.test(system)) {
+      out = learning.practice();
+    } else if (/MISSING BASIC SKILL/.test(system)) {
+      out = learning.refresher;
+    } else if (/to a PRACTICE problem/.test(system)) {
+      out = learning.grade(prompt);
+    } else if (/explains the key idea back/.test(system)) {
+      out = { score: 0.7, feedback: "Good start — you named the main idea. Can you say *why* it holds?", gaps: ["why the formula works"] };
+    } else if (/Write a short recap/.test(system)) {
+      out = learning.recap;
+    } else if (/mistake log/.test(system)) {
+      out = { found: /first wrong step|look again/i.test(prompt), sameAs: null, pattern: "sign of boundary work", topic: "boundary work" };
     } else {
       out = trace(prompt);
     }
