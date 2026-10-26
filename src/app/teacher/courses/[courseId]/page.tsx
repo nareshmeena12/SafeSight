@@ -2,9 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { CalendarCheck, ChevronLeft, ClipboardList, FileText, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
+import { CalendarCheck, ChevronLeft, ClipboardList, FileText, HandHelping, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { CourseTas } from "@/components/doubts/course-tas";
 import { ExamInfoDialog } from "@/components/exam/exam-info-dialog";
 import { EmptyState } from "@/components/product/empty-state";
 import { ModeBadge } from "@/components/product/mode-badge";
@@ -14,6 +15,7 @@ import { DeleteAssignment } from "@/components/teacher/delete-assignment";
 import { JoinCode } from "@/components/teacher/join-code";
 import { Button } from "@/components/ui/button";
 import { requireRole } from "@/lib/auth/dal";
+import { courseTas } from "@/lib/doubts/data";
 import { syllabusTopicsSchema } from "@/lib/exam/schemas";
 import { syllabusText } from "@/lib/exam/syllabus";
 import { createClient } from "@/lib/supabase/server";
@@ -36,9 +38,10 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const { courseId } = await params;
   if (!z.uuid().safeParse(courseId).success) notFound();
   const db = await createClient();
-  const [detail, { data: examInfo }] = await Promise.all([
+  const [detail, { data: examInfo }, tas] = await Promise.all([
     getCourseDetail(db, user.id, courseId),
     db.from("course_exam_info").select("topics, pattern, exam_date").eq("course_id", courseId).maybeSingle(),
+    courseTas(db, courseId),
   ]);
   if (!detail) notFound();
   const { course, assignments, roster } = detail;
@@ -76,6 +79,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               <Link href="/teacher/materials">
                 <FileText aria-hidden="true" />
                 Notes and PDFs
+              </Link>
+            </Button>
+            <Button asChild variant="outline">
+              {/* S21: questions students sent from Sage. */}
+              <Link href={`/teacher/doubts?course=${course.id}`}>
+                <HandHelping aria-hidden="true" />
+                Doubts
               </Link>
             </Button>
             <Button asChild variant="outline">
@@ -151,6 +161,8 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
               </div>
             </dl>
           </section>
+
+          <CourseTas courseId={course.id} tas={tas} />
 
           <section aria-labelledby="assignments-title">
             <h2 id="assignments-title" className="mb-4 text-title">

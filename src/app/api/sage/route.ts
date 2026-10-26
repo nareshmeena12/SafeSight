@@ -32,6 +32,8 @@ import { decideFlags } from "@/lib/sage/flags";
 import { sageTurnStream, type TurnOutcome } from "@/lib/sage/turn-stream";
 import { citationsSchema, sageRequestSchema, type SageUIMessage } from "@/lib/sage/types";
 import { readCourseNumberSets } from "@/lib/numbers/data";
+import { attachPhoto, readSendablePhoto } from "@/lib/photos/data";
+import { isPhotoMessage } from "@/lib/photos/transcript";
 import { withStudentNumbers } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
 import { refreshCurrentWeek } from "@/lib/teacher/refresh";
@@ -67,7 +69,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return reply(400, parsed.error.issues[0]?.message ?? "That message didn't come through. Please try again.");
   }
-  const { assignmentId, courseId: askedCourseId, conversationId: askedConversation, message } = parsed.data;
+  const { assignmentId, courseId: askedCourseId, conversationId: askedConversation, message, photoId } = parsed.data;
   if (inFlight.has(message.id)) return reply(409, "Sage is still answering that message — it'll appear in a moment.");
   // Registered before any await, so a double-send can't slip past it.
   inFlight.add(message.id);
@@ -104,7 +106,7 @@ export async function POST(req: Request) {
     const conversationId = existing?.conversationId ?? askedConversation ?? crypto.randomUUID();
     const userMessageId = existing?.messageId ?? crypto.randomUUID();
 
-    const [owns, allCandidates, ownHome, past, activity, openFlags, hasMaterials, ladder, learning, numberSets] = await Promise.all([
+    const [owns, allCandidates, ownHome, past, activity, openFlags, hasMaterials, ladder, learning, numberSets, photo] = await Promise.all([
       isNew || existing
         ? true
         : ownsConversation(supabase, { conversationId, studentId: user.id, assignmentId: assignmentId ?? null, courseId: course.id }),
@@ -123,16 +125,23 @@ export async function POST(req: Request) {
             return null;
           }),
       readCourseNumberSets(course.id),
+      // S21: a photo of working the student confirmed (theirs, this course, not removed).
+      photoId && !examChat ? readSendablePhoto(user.id, photoId, course.id) : null,
     ]);
     // S18: Sage works with this student's own numbers and protects their own answer.
     const candidates = withStudentNumbers(allCandidates, numberSets, user.id);
     const home = ownHome ? withStudentNumbers([ownHome], numberSets, user.id)[0] : null;
     if (!owns) return reply(403, "This chat belongs to another assignment. Please reload the page.");
+    if (photoId && !photo) return reply(410, "That photo isn't available any more. Please take it again.");
+    const fromPhoto = Boolean(photo) && isPhotoMessage(message.text);
 
     // Save the conversation and the student's message in the background.
     const saved = (async () => {
       if (isNew) await createConversation({ id: conversationId, studentId: user.id, assignmentId: assignmentId ?? null, courseId: course.id });
       if (!existing) await logStudentMessage({ id: userMessageId, conversationId, content: message.text, clientId: message.id });
+      if (photo?.status === "transcribed") {
+        await attachPhoto({ photoId: photo.id, studentId: user.id, conversationId, messageId: userMessageId });
+      }
     })();
     saved.catch((e) => console.error("sage log:", e));
 
@@ -152,6 +161,7 @@ export async function POST(req: Request) {
       care,
       jailbreaks: activity.jailbreaks,
       labelsOnly: examChat,
+      fromPhoto,
       usage: { userId: user.id, prefix: "sage" },
     };
     const replyId = crypto.randomUUID();

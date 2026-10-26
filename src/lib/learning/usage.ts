@@ -24,7 +24,9 @@ export type AiFeature =
   // S20 exam prep: topics read from the notes, mock tests and their grading.
   | "exam_topics"
   | "mock_generate"
-  | "mock_grade";
+  | "mock_grade"
+  // S21 "Ask your teacher" summary (its limit is in lib/doubts).
+  | "doubt_summary";
 
 /** Calls per hour per student for each learning tool. */
 export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {

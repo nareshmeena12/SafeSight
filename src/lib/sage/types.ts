@@ -25,6 +25,8 @@ export type SageMetadata = {
   explainBack?: { topic: string } | null;
   /** The student keeps struggling on this topic: a 5-minute refresher on a basic skill. */
   refresher?: { topic: string } | null;
+  /** S21: a student message sent with a photo of their working (removed = deleted after 30 days). */
+  photo?: { id: string; removed?: boolean } | null;
 };
 
 /** Progress shown while Sage prepares a reply (transient: not kept in the message). */
@@ -46,6 +48,8 @@ export const sageRequestSchema = z
     assignmentId: z.uuid().nullish(),
     courseId: z.uuid().nullish(),
     conversationId: z.uuid().nullable(),
+    /** S21: the photo whose confirmed transcription this message is. */
+    photoId: z.uuid().nullish(),
     message: z.object({
       id: z.string().min(8).max(100),
       text: z.string().trim().min(1, "Type a message first.").max(4000, "That message is a bit long — try splitting it up."),

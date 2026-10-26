@@ -26,6 +26,9 @@ export type { UsageTag } from "./usage";
  *                                           reasoning models (e.g. "none" or "low" on DeepSeek V4).
  *                                           Hidden reasoning counts against max tokens, so without
  *                                           it short JSON calls can come back empty.
+ *   AI_VISION_MODEL                         S21: a vision-capable model that reads photos of
+ *                                           handwritten working. Unset = the photo button is off.
+ *   AI_VISION_BASE_URL, AI_VISION_API_KEY   optional; default to AI_BASE_URL / AI_API_KEY
  */
 
 const optional = z
@@ -45,6 +48,9 @@ const aiEnvSchema = z.object({
   AI_STRUCTURED_OUTPUTS: optional,
   AI_REASONING_EFFORT: optional,
   DEMO_MODE: optional,
+  AI_VISION_MODEL: optional,
+  AI_VISION_BASE_URL: optional.pipe(z.url().optional()),
+  AI_VISION_API_KEY: optional,
   AI_SLOW_MS: optional.pipe(z.coerce.number<string | undefined>().int().min(500).max(60_000).optional()),
 });
 
@@ -60,6 +66,9 @@ function aiEnv() {
     AI_STRUCTURED_OUTPUTS: process.env.AI_STRUCTURED_OUTPUTS,
     AI_REASONING_EFFORT: process.env.AI_REASONING_EFFORT,
     DEMO_MODE: process.env.DEMO_MODE,
+    AI_VISION_MODEL: process.env.AI_VISION_MODEL,
+    AI_VISION_BASE_URL: process.env.AI_VISION_BASE_URL,
+    AI_VISION_API_KEY: process.env.AI_VISION_API_KEY,
     AI_SLOW_MS: process.env.AI_SLOW_MS,
   });
 }
@@ -83,7 +92,32 @@ export function aiStatus() {
         (env.EMBEDDING_API_KEY ?? env.AI_API_KEY) &&
         env.EMBEDDING_MODEL,
     ),
+    /** S21: photos of working can be read. */
+    vision: visionModelConfig(env) !== null,
   };
+}
+
+function visionModelConfig(env: ReturnType<typeof aiEnv>) {
+  const baseURL = env.AI_VISION_BASE_URL ?? env.AI_BASE_URL;
+  const apiKey = env.AI_VISION_API_KEY ?? env.AI_API_KEY;
+  if (!baseURL || !apiKey || !env.AI_VISION_MODEL) return null;
+  return { baseURL, apiKey, model: env.AI_VISION_MODEL };
+}
+
+/**
+ * S21: the vision model that transcribes photos of handwritten working, or
+ * null when AI_VISION_MODEL isn't set. No fallback switch (a text-only
+ * fallback can't read images); the caller times out and retries. Tokens go
+ * to ai_usage under `usage`.
+ */
+export function visionModel(usage: UsageTag) {
+  const config = visionModelConfig(aiEnv());
+  if (!config) return null;
+  const provider = createOpenAICompatible({ name: "safesight-vision", baseURL: config.baseURL, apiKey: config.apiKey });
+  return wrapLanguageModel({
+    model: provider.chatModel(config.model),
+    middleware: [usageMiddleware({ tag: usage, modelId: config.model, record: recordUsage })],
+  });
 }
 
 const DEFAULT_SLOW_MS = 10_000;
