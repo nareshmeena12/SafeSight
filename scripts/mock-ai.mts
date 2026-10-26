@@ -387,6 +387,19 @@ function syllabusMap(prompt: string) {
   };
 }
 
+/** S24: maps every CO to PO1 (3) and PO2 (2), and the last CO to PO5 (1). */
+function coPoMapping(prompt: string) {
+  const cos = [...prompt.matchAll(/^(CO\d+):/gm)].map((m) => m[1]);
+  const pos = new Set([...prompt.matchAll(/^(PS?O\d+)\b/gm)].map((m) => m[1]));
+  const mappings: { co: string; po: string; level: number; why: string }[] = [];
+  cos.forEach((co, i) => {
+    if (pos.has("PO1")) mappings.push({ co, po: "PO1", level: 3, why: "Applies engineering fundamentals directly" });
+    if (pos.has("PO2")) mappings.push({ co, po: "PO2", level: 2, why: "Analyses problems from first principles" });
+    if (i === cos.length - 1 && pos.has("PO5")) mappings.push({ co, po: "PO5", level: 1, why: "Uses property tables and software" });
+  });
+  return { mappings };
+}
+
 /** S22: one suggestion per "Unit N: title" line of the prompt. */
 function setupSuggestions(prompt: string) {
   const units = [...prompt.matchAll(/^Unit (\d+): (.+)$/gm)];
@@ -456,6 +469,8 @@ createServer(async (req, res) => {
       out = feedbackDraft(prompt);
     } else if (/You read a college course syllabus/.test(system)) {
       out = syllabusMap(prompt);
+    } else if (/fill in the CO–PO mapping matrix/.test(system)) {
+      out = coPoMapping(prompt);
     } else if (/Suggest assignments for the course's units/.test(system)) {
       out = setupSuggestions(prompt);
     } else if (/Judge how easily a general AI chatbot/.test(system)) {

@@ -3,6 +3,7 @@
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
+import { policyProblemFromDbError } from "@/lib/admin/policy";
 import { requireRole } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import { fieldErrorsFrom, type FormState } from "@/lib/teacher/schemas";
@@ -56,6 +57,13 @@ export async function createLabSession(_prev: FormState, formData: FormData): Pr
       .select("id")
       .single();
     if (!error) redirect(`/teacher/lab/${data.id}`);
+    // S23: the department's AI policy may switch Lab Mode off.
+    if (policyProblemFromDbError(error) === "lab") {
+      return {
+        status: "error",
+        message: "Lab Mode is switched off for this course by your college's AI policy. Your admin can turn it on.",
+      };
+    }
     if (error.code !== "23505") {
       // 42501: RLS said no — the course isn't this teacher's.
       return { status: "error", message: error.code === "42501" ? "Choose one of your courses." : tryAgain };

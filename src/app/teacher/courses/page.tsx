@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, Download, Library, Plus } from "lucide-react";
+import { ArrowRight, Download, GraduationCap, Library, Plus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { EmptyState } from "@/components/product/empty-state";
@@ -50,7 +50,20 @@ async function CoursesContent() {
         eyebrow="Courses"
         title="Courses and assignments"
         description="Invite students with a join code and set how Sage may help on each assignment."
-        actions={courses.length > 0 ? newCourse : null}
+        actions={
+          courses.length > 0 ? (
+            <div className="flex flex-wrap gap-3">
+              <Button asChild variant="outline">
+                {/* S24: COs, POs and attainment reports across courses. */}
+                <Link href="/teacher/accreditation">
+                  <GraduationCap aria-hidden="true" />
+                  Accreditation
+                </Link>
+              </Button>
+              {newCourse}
+            </div>
+          ) : null
+        }
       />
       {courses.length === 0 ? (
         <EmptyState

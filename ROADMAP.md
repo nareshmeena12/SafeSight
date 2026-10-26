@@ -118,7 +118,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - **College AI policy:** admin sets defaults per department (allowed modes, max hint level, worked examples, Lab Mode allowed). New assignments inherit them; teachers can only be stricter, not looser, unless the admin allows it.
 - Admin can invite teachers and assign departments.
 
-- [ ] S23 done
+- [x] S23 done (2026-10-26)
 
 ### S24 — Accreditation reports (NAAC / NBA style)
 - Course outcomes (COs) per course (from S22 or entered manually) and program outcomes (POs) per department, with a CO–PO mapping matrix (levels 1–3).
@@ -126,7 +126,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - Export per course and per department as PDF and Excel in a clean, standard table layout. Mark the report "Draft — verify against your university's format".
 - Keep the calculation transparent: show how every number was computed.
 
-- [ ] S24 done
+- [x] S24 done (2026-10-26)
 
 ### S25 — Sign-in and LMS integrations
 - Google and Microsoft sign-in via Supabase Auth, keeping roles from `app_metadata`. New SSO users land as students unless invited as teachers. Restrict sign-up to allowed email domains per institution.

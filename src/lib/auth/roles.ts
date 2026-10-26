@@ -9,8 +9,10 @@ export const signupRoles = ["student", "teacher"] as const satisfies readonly Ro
 
 const areas = {
   "/student": ["student"],
-  // Admin analytics is v2; until then admins use the teacher app.
+  // Admins may also teach, so they keep the teacher app.
   "/teacher": ["teacher", "admin"],
+  // S23: the institution dashboard and AI policy.
+  "/admin": ["admin"],
 } as const satisfies Record<string, readonly Role[]>;
 
 type Area = keyof typeof areas;
@@ -23,7 +25,8 @@ function areaFor(pathname: string): Area | null {
 }
 
 /** Where a user lands after logging in. */
-export function homeForRole(role: Role): "/student" | "/teacher" {
+export function homeForRole(role: Role): "/student" | "/teacher" | "/admin" {
+  if (role === "admin") return "/admin";
   return role === "student" ? "/student" : "/teacher";
 }
 

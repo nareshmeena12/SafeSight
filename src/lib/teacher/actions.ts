@@ -2,6 +2,8 @@
 
 import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
+import { policyProblemFromDbError, policyProblems, policySource, problemMessage } from "@/lib/admin/policy";
+import { coursePolicy } from "@/lib/admin/queries";
 import { requireRole } from "@/lib/auth/dal";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -85,9 +87,45 @@ export async function saveAssignment(_prev: FormState, formData: FormData): Prom
     rubric,
   };
 
+  // S23: the department's AI policy. Teachers can only be stricter (the
+  // database checks this too); say which setting and why.
+  const [policy, previous] = await Promise.all([
+    coursePolicy(db, courseId),
+    assignmentId
+      ? db.from("assignments").select("ai_mode, max_hint_level, worked_examples").eq("id", assignmentId).maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+  const problems = policyProblems(
+    policy,
+    { aiMode, maxHintLevel, workedExamples },
+    previous.data
+      ? {
+          aiMode: previous.data.ai_mode,
+          maxHintLevel: previous.data.max_hint_level,
+          workedExamples: previous.data.worked_examples,
+        }
+      : undefined,
+  );
+  if (policy && problems.length) {
+    const source = policySource(policy);
+    const field = { mode: "aiMode", hint: "maxHintLevel", examples: "workedExamples" } as const;
+    return {
+      status: "error",
+      message: problemMessage(problems[0], policy, source),
+      fieldErrors: Object.fromEntries(problems.map((p) => [field[p], problemMessage(p, policy, source)])),
+    };
+  }
+
   const { data, error } = assignmentId
     ? await db.from("assignments").update(row).eq("id", assignmentId).eq("course_id", courseId).select("id")
     : await db.from("assignments").insert({ ...row, course_id: courseId }).select("id");
+  const policyError = policyProblemFromDbError(error);
+  if (policyError) {
+    return {
+      status: "error",
+      message: "Your college's AI policy changed while you were editing. Close this and open it again to see what's allowed.",
+    };
+  }
   if (error || data.length === 0) return { status: "error", message: tryAgain };
 
   // Notes for Sage are teacher-only, so they live in their own table.

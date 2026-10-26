@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   Pencil,
   Plus,
+  Target,
   UserPlus,
   Users,
   Variable,
@@ -28,6 +29,7 @@ import { CourseDialog } from "@/components/teacher/course-dialog";
 import { DeleteAssignment } from "@/components/teacher/delete-assignment";
 import { JoinCode } from "@/components/teacher/join-code";
 import { Button } from "@/components/ui/button";
+import { coursePolicy } from "@/lib/admin/queries";
 import { requireRole } from "@/lib/auth/dal";
 import { courseTas } from "@/lib/doubts/data";
 import { syllabusTopicsSchema } from "@/lib/exam/schemas";
@@ -54,11 +56,12 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const { courseId } = await params;
   if (!z.uuid().safeParse(courseId).success) notFound();
   const db = await createClient();
-  const [detail, { data: examInfo }, tas, progress] = await Promise.all([
+  const [detail, { data: examInfo }, tas, progress, policy] = await Promise.all([
     getCourseDetail(db, user.id, courseId),
     db.from("course_exam_info").select("topics, pattern, exam_date").eq("course_id", courseId).maybeSingle(),
     courseTas(db, courseId),
     setupProgress(db, courseId),
+    coursePolicy(db, courseId),
   ]);
   if (!detail) notFound();
   const { course, assignments, roster } = detail;
@@ -70,6 +73,7 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
   const newAssignment = (
     <AssignmentDialog
       courseId={course.id}
+      policy={policy}
       trigger={
         <Button>
           <Plus aria-hidden="true" />
@@ -151,6 +155,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                 <Link href={`/teacher/courses/${course.id}/setup`}>
                   <ListTree aria-hidden="true" />
                   Syllabus and topics
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                {/* S24: COs, CO–PO mapping and attainment reports. */}
+                <Link href={`/teacher/courses/${course.id}/outcomes`}>
+                  <Target aria-hidden="true" />
+                  Outcomes and attainment
                 </Link>
               </Button>
             </div>
@@ -248,6 +259,7 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                       <AssignmentDialog
                         courseId={course.id}
                         assignment={a}
+                        policy={policy}
                         trigger={
                           <Button variant="ghost" size="icon" aria-label={`Edit ${a.title}`}>
                             <Pencil aria-hidden="true" />
