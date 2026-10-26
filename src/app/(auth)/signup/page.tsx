@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { SignupForm } from "@/components/auth/signup-form";
+import { ssoProviders } from "@/lib/auth/sso";
+import type { SsoProvider } from "@/lib/auth/sso-shared";
 
 export const metadata: Metadata = { title: "Sign up" };
 
@@ -21,9 +23,11 @@ async function PrefilledSignup({ searchParams }: Pick<PageProps<"/signup">, "sea
   // S23: an admin's teacher invite links here with role=teacher and the institution.
   const teacher = one(params.role) === "teacher";
   const institution = one(params.institution)?.trim().slice(0, 200);
+  const enabled = await ssoProviders();
   return (
     <SignupForm
       defaultRole={teacher ? "teacher" : "student"}
+      sso={(Object.keys(enabled) as SsoProvider[]).filter((p) => enabled[p])}
       defaults={{
         email: email && /^[^\s@]+@[^\s@]+$/.test(email) ? email : undefined,
         joinCode: code && /^[A-Z0-9]{6}$/.test(code) ? code : undefined,

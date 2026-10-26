@@ -73,3 +73,27 @@ describe("parseRoster", () => {
     expect(normaliseRoll(" me 23 b001 ")).toBe("ME23B001");
   });
 });
+
+describe("parseRoster with LMS exports (S25)", () => {
+  it("reads Moodle's participants export and leaves out teachers", () => {
+    const csv = [
+      '"First name","Last name","ID number","Email address",Roles,Groups,"Last access to course"',
+      'Riya,Sharma,ME23B001,riya@college.edu.in,Student,"Group A","2 days"',
+      'Kavita,Sharma,,kavita@college.edu.in,"Teacher, Manager",,"1 hour"',
+      'Arjun,Mehta,ME23B002,arjun@college.edu.in,Student,,Never',
+    ].join("\n");
+    const { rows, errors, warnings } = parseRoster(csv);
+    expect(errors).toEqual([]);
+    expect(rows).toEqual([
+      { line: 2, name: "Riya Sharma", email: "riya@college.edu.in", rollNumber: "ME23B001" },
+      { line: 4, name: "Arjun Mehta", email: "arjun@college.edu.in", rollNumber: "ME23B002" },
+    ]);
+    expect(warnings).toHaveLength(1);
+    expect(warnings[0].message).toContain("not a student");
+  });
+
+  it("reads Moodle's upload-users format", () => {
+    const { rows } = parseRoster("username,firstname,lastname,email,idnumber\nriya23,Riya,Sharma,riya@college.edu.in,me23b001");
+    expect(rows).toEqual([{ line: 2, name: "Riya Sharma", email: "riya@college.edu.in", rollNumber: "ME23B001" }]);
+  });
+});

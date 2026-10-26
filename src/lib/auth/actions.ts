@@ -3,8 +3,9 @@
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { redirectAfterLogin, roleSchema } from "./roles";
-import { claimTeacherInvites, joinPendingCourse } from "./join";
+import { redirectAfterLogin } from "./roles";
+import { domainRuleForCode } from "./domain-rules";
+import { finishSignIn } from "./finish";
 import {
   fieldErrorsFrom,
   loginSchema,
@@ -39,13 +40,10 @@ export async function login(
     };
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", data.user.id)
-    .maybeSingle();
-  const role = roleSchema.safeParse(profile?.role);
-  if (!role.success) {
+  // Staff invites, the email domain's institution (S25) and courses whose
+  // teacher invited this email from a class list (S22).
+  const role = await finishSignIn(supabase);
+  if (!role) {
     await supabase.auth.signOut();
     return {
       status: "error",
@@ -55,11 +53,7 @@ export async function login(
     };
   }
 
-  // An admin invited this email as a teacher (S23).
-  const current = await claimTeacherInvites(supabase, role.data);
-  // Courses whose teacher invited this email from a class list (S22).
-  if (current === "student") await joinPendingCourse(supabase);
-  redirect(redirectAfterLogin(current, parsed.data.next));
+  redirect(redirectAfterLogin(role, parsed.data.next));
 }
 
 export async function signup(
@@ -71,6 +65,13 @@ export async function signup(
     return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
   }
   const { fullName, email, password, role, institution, joinCode } = parsed.data;
+
+  // A class whose institution only takes its own email domains (S25): say so
+  // before an account is made with an address that couldn't join it.
+  if (joinCode) {
+    const rule = await domainRuleForCode(joinCode, email);
+    if (rule) return { status: "error", email, fieldErrors: { email: rule } };
+  }
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -105,9 +106,7 @@ export async function signup(
   // joined when the link is opened (app/auth/confirm).
   if (!data.session) return { status: "check-email", email };
 
-  const current = await claimTeacherInvites(supabase, role);
-  await joinPendingCourse(supabase);
-  redirect(redirectAfterLogin(current));
+  redirect(redirectAfterLogin((await finishSignIn(supabase)) ?? role));
 }
 
 /** "Email me a sign-in link" and "Forgot password?" on the log-in page. */

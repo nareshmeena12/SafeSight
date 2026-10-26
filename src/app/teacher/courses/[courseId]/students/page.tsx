@@ -67,6 +67,17 @@ async function InviteContent({ params }: Pick<PageProps<"/teacher/courses/[cours
             <p className="mb-4 text-small text-muted-foreground">Students not on your list can join with this code.</p>
             <JoinCode courseId={course.id} code={course.joinCode} />
           </section>
+          <section aria-labelledby="lms-title" className="rounded-lg border bg-surface p-6">
+            <h2 id="lms-title" className="text-title">
+              From Google Classroom or Moodle
+            </h2>
+            <p className="mb-3 text-small text-muted-foreground">
+              Import the class list straight from your LMS. Moodle&apos;s participants CSV also works in the box on this page.
+            </p>
+            <Link href="/teacher/integrations" className="inline-flex min-h-11 items-center text-small font-medium text-primary underline-offset-4 hover:underline">
+              Import classes
+            </Link>
+          </section>
           <ShareInvite
             emailReady={emailReady}
             text={classInviteText({

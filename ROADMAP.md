@@ -133,7 +133,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - Google Classroom import (courses and rosters) behind `GOOGLE_CLASSROOM_ENABLED`; Moodle import via CSV export format plus, if `MOODLE_URL` and `MOODLE_TOKEN` are set, the Moodle web service API.
 - List every console step (Google Cloud OAuth client, Microsoft Entra app, redirect URLs) for me in the PR.
 
-- [ ] S25 done
+- [x] S25 done (2026-10-26)
 
 ---
 

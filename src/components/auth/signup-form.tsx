@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { signup } from "@/lib/auth/actions";
 import { passwordStrength, strengthLabels, type AuthFormState } from "@/lib/auth/schemas";
+import type { SsoProvider } from "@/lib/auth/sso-shared";
 import { CheckInbox, emailError, FieldError, FormMessage, PasswordInput } from "./field";
+import { SsoButtons } from "./sso-buttons";
 
 const initial: AuthFormState = { status: "idle" };
 
@@ -27,9 +29,12 @@ const roles = [
 export function SignupForm({
   defaultRole = "student",
   defaults,
+  sso = [],
 }: {
   defaultRole?: Role;
   defaults?: { email?: string; joinCode?: string; institution?: string };
+  /** S25: providers switched on in Supabase Auth. */
+  sso?: readonly SsoProvider[];
 }) {
   const [state, action, pending] = useActionState(signup, initial);
   const [role, setRole] = useState<Role>(defaultRole);
@@ -125,6 +130,19 @@ export function SignupForm({
           );
         })}
       </fieldset>
+
+      {/* SSO accounts start as students; teachers use it once their admin has invited them (S25). */}
+      <SsoButtons
+        providers={sso}
+        joinCode={role === "student" ? form.joinCode.trim() : undefined}
+        note={
+          role === "teacher"
+            ? "Google and Microsoft sign-in make teacher accounts once your college admin has invited your email. Otherwise create your account below."
+            : /^[A-Za-z0-9]{6}$/.test(form.joinCode.trim())
+              ? `You'll join class ${form.joinCode.trim().toUpperCase()} once you're signed in.`
+              : undefined
+        }
+      />
 
       <div className="fields">
         <div className={fieldClass("fullName")}>
