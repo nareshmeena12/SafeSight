@@ -184,6 +184,35 @@ function trace(prompt: string) {
   };
 }
 
+/** S18: three viva questions that quote the first pasted passage (or the first sentence). */
+function viva(prompt: string) {
+  const work = prompt.match(/submitted work:\n"""\n([\s\S]*?)\n"""/)?.[1] ?? "";
+  const pasted = work.match(/\[pasted\]([\s\S]*?)\[\/pasted\]/)?.[1] ?? work.split(/(?<=\.)\s/)[0] ?? "";
+  const quote = pasted.split(/\s+/).slice(0, 12).join(" ");
+  return {
+    questions: [
+      { question: `You wrote "${quote}…" — can you explain that in your own words?`, lookFor: "They restate the idea without reading it out and link it to the question asked." },
+      { question: "Why does that step follow from the one before it?", lookFor: "A cause-and-effect link, not a repeat of the sentence." },
+      { question: "What would change if the process were reversible?", lookFor: "They apply the same idea to a new case and say what stays the same." },
+    ],
+  };
+}
+
+/** S18: a fixed score with one rewrite per approach that reuses the title. */
+function resilience(prompt: string) {
+  const title = prompt.match(/Title: (.*)/)?.[1] ?? "this assignment";
+  return {
+    score: 82,
+    summary: `A chatbot could complete ${title} from the instructions alone, because every value is given.`,
+    reasons: ["All the numbers are in the question, so nothing depends on the student.", "It asks only for final values, not for reasoning."],
+    rewrites: [
+      { approach: "oral", title: "Explain one step in tutorial", why: "The student has to explain it live.", instructions: `Solve ${title}. In Friday's tutorial, be ready to explain your second step to me in two minutes.` },
+      { approach: "reasoning", title: "Justify each step", why: "Reasoning about choices is the student's own.", instructions: `Solve ${title}. For each step, write one sentence on why you chose that equation and which assumption it needs.` },
+      { approach: "local", title: "Use your own readings", why: "A chatbot doesn't have the student's measurements.", instructions: `Measure the volume and temperature of water in your hostel kettle, then use your own readings to solve ${title}.` },
+    ],
+  };
+}
+
 async function send(res: ServerResponse, body: Record<string, unknown>, reply: Reply, stream: boolean, model: string) {
   const created = Math.floor(Date.now() / 1000);
   const calls = (reply.calls ?? []).map((c, index) => ({
@@ -248,6 +277,10 @@ createServer(async (req, res) => {
       const reply = prompt.match(/SAGE'S REPLY:\n"""\n([\s\S]*)\n"""/)?.[1] ?? "";
       const leaked = /68\.9|241\.2|def newton_raphson/.test(reply) || reply.split(/\n\n/).filter((p) => p.split(" ").length > 60).length >= 2;
       out = { leaked, refused: !leaked && reply.length < 60, reason: "mock judge" };
+    } else if (/a short, friendly conversation \(a viva\)/.test(system)) {
+      out = viva(prompt);
+    } else if (/Judge how easily a general AI chatbot/.test(system)) {
+      out = resilience(prompt);
     } else if (/You write PRACTICE problems/.test(system)) {
       out = learning.practice();
     } else if (/MISSING BASIC SKILL/.test(system)) {

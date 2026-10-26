@@ -12,7 +12,7 @@ const entities: Record<string, string> = {
   nbsp: " ",
 };
 
-function decode(text: string) {
+export function decodeEntities(text: string) {
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, body: string) => {
     if (body[0] === "#") {
       const code = body[1] === "x" || body[1] === "X" ? parseInt(body.slice(2), 16) : parseInt(body.slice(1), 10);
@@ -38,7 +38,7 @@ export function measureHtml(html: string): { chars: number; pastedChars: number 
   const tag = /<(\/?)([a-zA-Z][\w-]*)([^>]*)>/g;
   let last = 0;
   for (let m = tag.exec(html); m; m = tag.exec(html)) {
-    const n = visible(decode(html.slice(last, m.index)));
+    const n = visible(decodeEntities(html.slice(last, m.index)));
     chars += n;
     if (pasteDepth > 0) pastedChars += n;
     last = tag.lastIndex;
@@ -53,7 +53,7 @@ export function measureHtml(html: string): { chars: number; pastedChars: number 
       if (isPaste) pasteDepth++;
     }
   }
-  const n = visible(decode(html.slice(last)));
+  const n = visible(decodeEntities(html.slice(last)));
   chars += n;
   if (pasteDepth > 0) pastedChars += n;
 

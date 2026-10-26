@@ -13,7 +13,10 @@ export type AiFeature =
   | "practice_grade"
   | "refresher_generate"
   | "explain_back"
-  | "recap";
+  | "recap"
+  // S18 teacher tools reuse generateJson (their limits are set by their routes).
+  | "ai_resilience"
+  | "lens_viva";
 
 /** Calls per hour per student for each learning tool. */
 export const LEARNING_LIMITS: Partial<Record<AiFeature, number>> = {

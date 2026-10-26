@@ -253,7 +253,7 @@ export function SageChat({
             {available && starters[mode].length ? (
               <div className="flex flex-wrap gap-2">
                 {starters[mode].map((s) => (
-                  <Button key={s} variant="secondary" size="sm" onClick={() => send(s)} className="h-auto min-h-11 py-2 whitespace-normal sm:min-h-9">
+                  <Button key={s} variant="secondary" size="sm" onClick={() => send(s)} className="h-auto min-h-11 max-w-full py-2 text-left whitespace-normal sm:min-h-9">
                     {s}
                   </Button>
                 ))}

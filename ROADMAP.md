@@ -75,7 +75,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - **Per-student numbers:** for numeric problems, the teacher marks variables with ranges (e.g. mass 0.2–0.8 kg) and a formula for the answer; each student gets their own deterministic values (seeded by student and assignment) and submissions are auto-checked with a tolerance. Sage uses the student's own values. Teacher sees each student's values and auto-check result.
 - Only touch assignment pages, the replay page, Lens tools and new tables.
 
-- [ ] S18 done
+- [x] S18 done (2026-10-25)
 
 ### S19 — Teacher insight tools
 - **Pre-lecture brief:** per course, a "Before your next class" card on the overview and a full page: top 3 misconceptions this week with anonymised example quotes (never names), share of class affected, a suggested 5-minute explanation, and a 5-question in-class quiz generated from them (printable and as a live code students join on their phones, results shown as a bar chart). Generate weekly on a schedule and on demand.

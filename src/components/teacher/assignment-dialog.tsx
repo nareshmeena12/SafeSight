@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { ResilienceCheck } from "@/components/teacher/resilience-check";
 import { saveAssignment } from "@/lib/teacher/actions";
 import { toDateTimeLocal, type FormState } from "@/lib/teacher/schemas";
 import { cn } from "@/lib/utils";
@@ -176,6 +177,9 @@ export function AssignmentDialog({
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>(assignment?.aiMode ?? "learn");
+  // Controlled so "Check AI resilience" reads the current text and can apply a rewrite.
+  const [title, setTitle] = useState(assignment?.title ?? "");
+  const [instructions, setInstructions] = useState(assignment?.instructions ?? "");
   const [state, action, pending] = useActionState(async (prev: FormState, formData: FormData) => {
     const result = await saveAssignment(prev, formData);
     // Close after a successful save (creating a course navigates away instead).
@@ -188,7 +192,11 @@ export function AssignmentDialog({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (next) setMode(assignment?.aiMode ?? "learn");
+        if (next) {
+          setMode(assignment?.aiMode ?? "learn");
+          setTitle(assignment?.title ?? "");
+          setInstructions(assignment?.instructions ?? "");
+        }
       }}
     >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
@@ -205,7 +213,8 @@ export function AssignmentDialog({
             name="title"
             label="Title"
             placeholder="Thermodynamics problem set 3"
-            defaultValue={assignment?.title}
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
             required
             error={state.fieldErrors?.title}
           />
@@ -216,7 +225,8 @@ export function AssignmentDialog({
               id="instructions"
               name="instructions"
               rows={4}
-              defaultValue={assignment?.instructions}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
               placeholder="What students should do, in your own words."
               aria-invalid={state.fieldErrors?.instructions ? true : undefined}
             />
@@ -224,6 +234,13 @@ export function AssignmentDialog({
               <p className="text-sm text-destructive">{state.fieldErrors.instructions}</p>
             ) : null}
           </div>
+          <ResilienceCheck
+            courseId={courseId}
+            title={title}
+            instructions={instructions}
+            aiMode={mode}
+            onApply={setInstructions}
+          />
           <div className="grid gap-2">
             <Label htmlFor="teacherNotes">Notes for Sage</Label>
             <Textarea

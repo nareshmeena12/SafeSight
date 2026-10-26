@@ -49,7 +49,8 @@ src/
     student/sage/[assignmentId]  Sage chat page (S4)
     teacher/                teacher app; admins land here too until v2
       page.tsx              overview: stat cards, Lens box, weekly trend, top topics (?course=)
-      courses/, courses/[courseId]   courses, join code, assignments with AI mode picker, roster
+      courses/, courses/[courseId]   courses, join code, assignments with AI mode picker (+ S18 "Check AI resilience"), roster
+      courses/[courseId]/assignments/[assignmentId]/numbers  S18: per-student numbers (variables, formula, class values + auto-check)
       students/, students/[studentId] sortable table (?sort=&dir=&course=), student detail
       flags/                flags with status/type filters, resolve/reopen
       conversations/[conversationId] a flagged or shared chat (RLS decides what text shows)
@@ -60,6 +61,8 @@ src/
     api/sage/route.ts       POST: one Sage turn — parallel reads, idempotent per message id, engine (lib/sage/engine.ts), background logging, latency log
     api/materials/          POST create+ingest; [materialId] POST re-read / DELETE; [materialId]/file GET → signed PDF URL #page=N
     api/lens/route.ts       Lens chat (teachers only; streamText + read-only tools)
+    api/lens/viva/route.ts  S18: POST Lens suggests 3 viva questions for a submission; PATCH marks one discussed
+    api/teacher/resilience  S18: POST "Check AI resilience" (score, reasons, 3 rewrites) for the assignment form's text
     api/learning/           S17: practice (POST create), practice/[setId]/items/[itemId] (POST grade), explain-back, recap (also sendBeacon)
     api/cron/weekly-metrics nightly refresh_weekly_metrics (vercel.json cron, CRON_SECRET)
     student/trace/          S9: "Your writing" list + [assignmentId] Trace editor (or the submitted view with replay)
@@ -77,8 +80,9 @@ src/
     sage/                   sage-chat (useChat client: Thinking…/Stop/Retry, assignment or Explore target), markdown (GFM + KaTeX + code), hint-ladder, citation-chips, care-card
     materials/              upload-form, material-actions
     teacher/                charts (Recharts), topic-list, course-filter, flag-list/flag-meta, course/assignment dialogs, join-code, refresh-metrics
-    lens/                   lens-chat (useChat), tool-views (charts/tables/drafts/quiz from tool results), lens-box, markdown, suggestions
+    lens/                   lens-chat (useChat), tool-views (charts/tables/drafts/quiz from tool results), lens-box, markdown, suggestions, viva-questions (S18)
     learning/               S17: practice-button, practice-runner, explain-back-card, refresher-offer, recap-card, flashcards, mastery (badge + bar)
+    numbers/                S18: number-set-form (teacher), student-numbers ("Your numbers" + answer box), check-badge
     motion/fade-up.tsx      Motion fade-up (respects reduced motion)
     logo.tsx                Logo (mark + wordmark) and LogoMark
     trace/                  S9: trace-editor (Tiptap + recorder), replay (scrubber), paste-mark, evidence-summary, trace.css
@@ -101,8 +105,11 @@ src/
                             Server-only: classify, guard-model (2nd model call), engine (one turn, shared by the route and the evals), data, ui-history,
                             turn-stream (the UI stream for one turn, shared by /api/sage and the preview), preview (preview chat storage)
     materials/              chunk (pure), constants, vector, ingest + search (server-only)
-    teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts, refresh.ts (S12: this week's metrics after a chat/submission)
-    lens/                   model.ts (provider from env), tools.ts (7 read-only tools), prompt.ts, rate-limit.ts
+    teacher/                queries.ts (read-only dashboard + Lens data), actions.ts (server actions), schemas.ts (zod), dates.ts (IST weeks), params.ts, refresh.ts (S12: this week's metrics after a chat/submission),
+                            resilience-schema.ts (pure) + resilience.ts (S18 AI resilience check)
+    lens/                   model.ts (provider from env), tools.ts (8 read-only tools, S18 adds get_answer_checks), prompt.ts, rate-limit.ts,
+                            viva-schema.ts (pure, tested) + viva.ts (S18 viva questions)
+    numbers/                S18: expr.ts (safe formula parser), numbers.ts (seeded values, answer check, Sage lines; pure, tested), data.ts, actions.ts
     learning/               S17. Pure, tested: topics (keys, relatedTopics), mastery (blend, bands, review list), struggle (prerequisite check),
                             offers (what goes under a Sage reply), checks (practice/recap/feedback never touch graded work), shuffle, schemas, prompts.
                             Server-only: ai (generateJson: streamed JSON + retry), usage (features + per-student limits), data, practice,
@@ -134,6 +141,7 @@ tests/db/lab-rls.test.ts    S13: RLS for lab_* tables and set_my_roll_number
 tests/db/notes-search.test.ts  S12: keyword ranking weighs rare words
 tests/db/learning-rls.test.ts  S17: RLS for practice_*, explain_backs, sage_recaps, mistake_patterns, topic_mastery, learning_offers
 tests/db/ai-usage-preview-rls.test.ts  S16: RLS for ai_usage and sage_preview_chats
+tests/db/integrity-tools-rls.test.ts   S18: RLS for assignment_number_sets, numeric_answers, viva_questions
 ```
 
 Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`, `tests/**/*.test.ts`), `seed`, `metrics`, `demo:data`, `demo:reset`, `demo:notes`, `mock:ai`, `eval:sage` (alias `sage:eval`), `lab:simulate`, `db:start`, `db:reset`, `db:types` (regenerate `database.types.ts` from local), `db:push:hosted`.
@@ -200,10 +208,23 @@ Scripts: `dev`, `build`, `lint`, `typecheck`, `test` (vitest, `src/**/*.test.ts`
 - [x] S16 Sage safety and speed (2026-10-16): classify → TypeScript policy engine → generate → output guard; ladder state per student per assignment; private answer key, max hint level and worked-examples switch per assignment; "Ask Sage" Explore chat; timeouts + one retry/fallback; Thinking…/Stop/Retry with idempotent message ids; TTFT + latency per reply; `pnpm eval:sage` (89 cases). Migrations `20261106090000_sage_policy.sql` + `…090100_sage_policy_functions.sql` applied on hosted
 - [x] **`pnpm eval:sage` against the real model** (2026-10-25, `deepseek-flash`, judge the same model): first run **1/69 leaks, 2/20 over-refusals (10%)**; after the fixes in the handoff note, two full runs in a row: **0/69 leaks, 0/20 over-refusals**, guard stepped in on 3 and 2 of 114 replies, time to first text p50 ≈ 3.7 s, p90 ≈ 5.0 s
 - [x] S16 follow-up from ROADMAP.md (2026-10-25): teacher "Preview Sage" (course + assignment pages, excluded from all metrics), `ai_usage` token log for every chat/embedding call, per-user limits on Trace re-runs and notes ingest. Migration `20261107090000_ai_usage_sage_preview.sql` applied on hosted (2026-10-25, after the project was restored)
+- [x] S18 Teacher integrity tools (2026-10-25, ROADMAP.md): viva questions on the replay page, "Check AI resilience" in the assignment form, per-student numbers (seeded values, auto-check, Sage uses the student's own values). Migration `20261108090000_teacher_integrity_tools.sql` applied on hosted. Verified with local Supabase + `pnpm mock:ai`; **not yet tried with the real model** (viva and resilience prompts)
 - [x] S17 Student learning tools (2026-10-25): Practice this (3 new problems, graded with feedback, never an assignment), Explain it back, session recaps + flashcards, mistake log + "Review before exam", prerequisite refreshers (lesson + 2 quick checks), mastery per topic on My learning and (summary only) on the teacher's student page; every call logged to `ai_usage` and limited per student. Migration `20261108170000_learning_tools.sql`. **Tested end to end against the real model** (DeepSeek, `AI_MODEL=deepseek-flash`) on local Supabase
 - [x] S13–S15 Live Lab Mode (2026-10-16): `lab_sessions`/`lab_seats`/`lab_seat_tokens`/`lab_events`/`lab_reports` + `profiles.roll_number` (migration `20261105090000_live_lab.sql`, applied on hosted), Chrome extension, live seat grid over Realtime, per-seat evidence summaries + CSV, `pnpm lab:simulate`
 
 ## Handoff notes
+
+- **S18 (teacher integrity tools, ROADMAP.md)** from `claude/jolly-cerf-389pi1`, in parallel with S17/S19 (only assignment pages, the replay page, Lens, new tables, and the minimum on the student Trace/Sage pages and Sage routes). Decisions made without asking:
+  - **Per-student numbers.** `assignment_number_sets` (one per assignment: variables `[{name,label,unit,min,max,decimals}]` ≤ 8, `formula`, `answer_label`, `answer_unit`, `tolerance_pct` default 1%) is **teacher-only** under RLS (the formula gives the method away); students' pages and Sage read it with the service role after RLS proved access. Values are **not stored**: `studentValues()` seeds FNV-1a(`assignment:student:name`) → mulberry32, rounded to the variable's decimals, so they're stable and need no backfill — but **editing a range changes every student's values** (the page says so). Formulas go through a small parser (`lib/numbers/expr.ts`, no `eval`): + − × ÷ ^, brackets, implicit multiplication, sqrt/abs/ln/log/exp/trig/min/max/pow, pi, e; validated (unknown names, finite at min/mid/max) in the browser and again in the server action. `{m}` placeholders in instructions are filled with the student's value on their Trace and Sage pages.
+  - **Answers**: `numeric_answers` (assignment, student, `answer_text`, parsed `answer_value`), server-written by `saveNumericAnswer` (student reads own, course teacher reads class). The box sits in a "Your numbers" card on the student's Trace page; editable until the Trace work is submitted. The **check is computed when read** (against the current formula), relative tolerance. The student sees the check only **after submitting**, so it can't be used to guess; the teacher sees it live on the numbers page, on the replay page ("Their numbers") and through Lens `get_answer_checks`.
+  - **Sage**: `/api/sage` and the preview load the course's number sets in the same parallel batch; `withStudentNumbers` appends the student's values to the assignment's instructions (visible text, so the guard allows them and Sage uses them) and the student's expected answer to the private answer key (so the deterministic + model guard protects it). Teachers' previews get values seeded from their own id. The Sage page shows "Your numbers" read-only.
+  - **AI resilience**: `POST /api/teacher/resilience` with the form's current title/instructions/mode (works before saving), course teacher only, structured JSON (score 0–100 = how easily a chatbot could do the whole thing, summary, 2–4 reasons, exactly one rewrite per approach: reasoning / local / oral), 30 s timeout + provider retry, a second try if the output repeats an approach or uses banned words; 30 checks/h per teacher from `ai_usage` (`ai_resilience`). "Use this version" replaces the instructions textarea (Undo available); the teacher still saves. **Nothing is stored.** The instructions and title textareas in `AssignmentDialog` are now controlled.
+  - **Viva questions**: `POST /api/lens/viva` (feature `lens_viva`, 20/h per teacher) sends Lens the assignment, the Trace summary and the submission as text with pasted passages wrapped in `[pasted]…[/pasted]` (`markedText`, max 8,000 chars); 3 questions + "a good answer shows"; banned-word check with one retry. Stored in `viva_questions` (one row per submission, regenerating replaces it; `discussedAt` per question via PATCH). **Teacher-only** (preparation, like teacher notes — a deliberate exception to "students see their own data"; revisit if that's wrong). The card is always on the replay page; when Trace evidence is notable (≥ 20% pasted, one paste ≥ 15% of the final length, or ≥ 1,500 chars at > 600 chars per active minute) its intro names the evidence and the button is primary.
+  - **Lens tool** `get_answer_checks` (read-only, RLS + course scope); `tool-views` renders a table with check badges.
+  - **After merging S17**: resilience and viva now call S17's `generateJson` (`lib/learning/ai.ts`, streamed `Output.object`) instead of `generateText`, because the provider's slow-start retry cancels a one-shot call that hasn't *finished* within `AI_SLOW_MS` (10 s), and three full rewrites can take longer. Their features were added to `AiFeature` in `lib/learning/usage.ts` (limits stay in their own routes).
+  - `pnpm mock:ai` answers the viva and resilience prompts. Also fixed: Sage's starter chips overflowed at 375px on a fresh chat (`max-w-full`).
+  - `decode` in `lib/trace/html.ts` is now exported as `decodeEntities`. `database.types.ts` edited by hand for the 3 tables.
+  - Not done: numbers in the demo data; a per-part (multi-answer) problem; storing resilience results; viva questions in Lens chat.
 
 - **S17 (student learning tools)** shipped from `claude/determined-galileo-2ni1wj`, built alongside S18/S19 (Wave B), so only Sage's tool layer, My learning, the teacher student page (one panel) and new files/tables were touched. Decisions made without asking:
   - **Tables** (`20261108170000_learning_tools.sql`): `practice_sets` (kind `practice|review|refresher`, topic + `topic_key`, refresher `skill`/`lesson`, review `targets` = mistake ids), `practice_items` (question, options for quick checks, the student's answer, score, verdict, feedback, and the worked `solution` **copied in only after answering**), `practice_item_keys` (solutions before answering: RLS on, **no policies**), `explain_backs`, `sage_recaps` (title, `learned` bullets, `flashcards`, the message span `from_at…to_at`), `mistake_patterns` (label + key, topic, count, `reviewed_at`), `topic_mastery` (0–1, evidence, last source), `learning_offers` (refresher offered, 3-day cooldown) and an `ai_usage` part written as `create table if not exists` — a no-op, because the S16 follow-up's `20261107090000_ai_usage_sage_preview.sql` creates the table first (S17's migration was renamed to `20261108170000` because that version was taken on hosted). Students read their own rows; **only `topic_mastery` is readable by the course teacher**; everything is written by the service role. Tested in `tests/db/learning-rls.test.ts`.

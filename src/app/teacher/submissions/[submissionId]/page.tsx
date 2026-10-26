@@ -5,12 +5,20 @@ import { Suspense } from "react";
 import { ArrowLeft } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
+import { VivaQuestions } from "@/components/lens/viva-questions";
+import { CheckBadge } from "@/components/numbers/check-badge";
 import { ModeBadge } from "@/components/product/mode-badge";
 import { EvidenceSummary } from "@/components/trace/evidence-summary";
 import { PrepareReportButton } from "@/components/trace/prepare-report-button";
 import { TraceReplay } from "@/components/trace/replay";
+import { aiStatus } from "@/lib/ai/provider";
 import { requireRole } from "@/lib/auth/dal";
+import { readVivaQuestions } from "@/lib/lens/viva";
+import { vivaEvidence } from "@/lib/lens/viva-schema";
+import { checkStudentAnswer, getStudentNumbers } from "@/lib/numbers/data";
+import { expectedAnswer, formatNumber } from "@/lib/numbers/numbers";
 import { createClient } from "@/lib/supabase/server";
+import { measureHtml } from "@/lib/trace/html";
 import { getReplay } from "@/lib/trace/queries";
 import { submissionIdSchema } from "@/lib/trace/schemas";
 import { TRACE_TIME_ZONE } from "@/lib/trace/summary";
@@ -39,10 +47,25 @@ async function Replay({ params }: Pick<PageProps<"/teacher/submissions/[submissi
   const id = submissionIdSchema.safeParse((await params).submissionId);
   if (!id.success) notFound();
 
-  const replay = await getReplay(await createClient(), id.data);
+  const db = await createClient();
+  const replay = await getReplay(db, id.data);
   // Drafts stay private to the student until they submit.
   if (!replay || !replay.submission.submitted_at) notFound();
   const { submission } = replay;
+
+  // S18: viva questions and, for per-student numbers, the auto-check. The replay
+  // being visible (RLS) proves this is the teacher's course.
+  const [viva, numbers] = await Promise.all([
+    readVivaQuestions(db, submission.id),
+    submission.assignment ? getStudentNumbers(db, submission.student_id, submission.assignment.id) : null,
+  ]);
+  const evidence = vivaEvidence({
+    pasteRatio: submission.report?.paste_ratio ?? null,
+    activeMinutes: submission.report?.active_minutes ?? null,
+    finalChars: measureHtml(submission.content).chars,
+    pasteSizes: replay.events.filter((e) => e.type === "paste").map((e) => e.size),
+  });
+  const expected = numbers ? expectedAnswer(numbers.set, numbers.values) : null;
 
   return (
     <>
@@ -90,6 +113,46 @@ async function Replay({ params }: Pick<PageProps<"/teacher/submissions/[submissi
               <p>The evidence summary isn&apos;t ready yet.</p>
             )
           }
+        />
+
+        {numbers ? (
+          <section aria-labelledby="numbers-heading" className="grid gap-3 rounded-lg border bg-surface p-4 sm:p-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h2 id="numbers-heading" className="text-title">
+                Their numbers
+              </h2>
+              <CheckBadge result={checkStudentAnswer(numbers)} />
+            </div>
+            <dl className="grid gap-x-6 gap-y-2 font-mono text-mono sm:grid-cols-2 lg:grid-cols-3">
+              {numbers.set.variables.map((v) => (
+                <div key={v.name}>
+                  <dt className="font-sans text-small text-muted-foreground">{v.label || v.name}</dt>
+                  <dd>
+                    {v.name} = {numbers.values[v.name].toFixed(v.decimals)}
+                    {v.unit ? ` ${v.unit}` : ""}
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            <p className="text-small">
+              {numbers.set.answerLabel || "Answer"}: expected{" "}
+              <span className="font-mono text-mono">
+                {expected === null ? "—" : formatNumber(expected)}
+                {numbers.set.answerUnit ? ` ${numbers.set.answerUnit}` : ""}
+              </span>
+              , given <span className="font-mono text-mono">{numbers.answer?.text ?? "none"}</span> (within{" "}
+              {numbers.set.tolerancePct}%).
+            </p>
+          </section>
+        ) : null}
+
+        <VivaQuestions
+          submissionId={submission.id}
+          title={submission.assignment?.title ?? "Submission"}
+          initial={viva}
+          evidence={evidence}
+          configured={aiStatus().chat}
+          canEdit={user.role === "teacher"}
         />
 
         <section aria-labelledby="replay-heading" className="grid gap-4">

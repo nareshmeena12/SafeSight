@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
-import { ChevronLeft, ClipboardList, FileText, MessagesSquare, Pencil, Plus, Users } from "lucide-react";
+import { ChevronLeft, ClipboardList, FileText, MessagesSquare, Pencil, Plus, Users, Variable } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { EmptyState } from "@/components/product/empty-state";
@@ -138,6 +138,15 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                           title="Preview Sage"
                         >
                           <MessagesSquare aria-hidden="true" />
+                        </Link>
+                      </Button>
+                      <Button asChild variant="ghost" size="icon">
+                        <Link
+                          href={`/teacher/courses/${course.id}/assignments/${a.id}/numbers`}
+                          aria-label={`Per-student numbers for ${a.title}`}
+                          title="Per-student numbers"
+                        >
+                          <Variable aria-hidden="true" />
                         </Link>
                       </Button>
                       <AssignmentDialog
