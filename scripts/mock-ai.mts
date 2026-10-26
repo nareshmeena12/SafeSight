@@ -198,6 +198,58 @@ function viva(prompt: string) {
   };
 }
 
+/** S19: misconceptions from the message refs it was given (the first half and the rest), with real refs. */
+function brief(prompt: string) {
+  const refs = [...prompt.matchAll(/^(M\d+) \[(S\d+)\]/gm)].map((m) => m[1]);
+  const half = Math.max(1, Math.ceil(refs.length / 2));
+  const first = refs.slice(0, half);
+  const rest = refs.slice(half).length ? refs.slice(half) : refs.slice(0, 1);
+  return {
+    misconceptions: [
+      {
+        title: "Treating boundary work as a state function",
+        summary: "Several students expect W to depend only on the end states, so they skip the process path.",
+        refs: first,
+        quoteRefs: first.slice(0, 2),
+        explanation: "Draw two paths between the same states on a P–V diagram.\nShade the area under each: the areas differ, so the work differs.\nAsk: which quantities depend only on the end states? (U, H, S.)\nQuick check: same states, isobaric then isochoric vs the reverse — which does more work?",
+      },
+      {
+        title: "Mixing up the sign of work",
+        summary: "Students use W done on the gas and W done by the gas in the same calculation.",
+        refs: rest,
+        quoteRefs: rest.slice(0, 2),
+        explanation: "State the course convention once: W > 0 when the gas does work on the surroundings.\nRewrite the first law with it: Q = ΔU + W.\nWork one expansion and one compression and say the sign out loud each time.",
+      },
+    ],
+  };
+}
+
+/** S19: five quiz questions over the misconceptions it was given (right answer first, as models do). */
+function lectureQuiz() {
+  const q = (question: string, options: string[], misconception: number) => ({ question, options, answer: 0, explanation: "Work depends on the path; only properties like U depend on the end states alone.", misconception });
+  return {
+    questions: [
+      q("Two processes join the same two states. Which is always the same for both?", ["The change in internal energy", "The work done", "The heat added", "The area under the P–V curve"], 1),
+      q("On a P–V diagram, boundary work is…", ["The area under the process curve", "The change in pressure", "The slope of the curve", "Zero for any closed path"], 1),
+      q("A gas expands and does 50 kJ of work. With W > 0 for work by the gas, W is…", ["+50 kJ", "−50 kJ", "0 kJ", "It depends on Q"], 2),
+      q("In a compression, with W > 0 for work by the gas, the sign of W is…", ["Negative", "Positive", "Zero", "Undefined"], 2),
+      q("Which of these is NOT a state function?", ["Work", "Internal energy", "Enthalpy", "Entropy"], 1),
+    ],
+  };
+}
+
+/** S19: one comment per rubric criterion, with marks where the criterion has a maximum. */
+function feedbackDraft(prompt: string) {
+  const criteria = [...prompt.matchAll(/^\d+\. (.+?) \((?:out of (\d+)|no marks)\)/gm)];
+  return {
+    criteria: criteria.map((c) => ({
+      points: c[2] ? Math.round(Number(c[2]) * 0.7) : null,
+      comment: `You handle ${c[1].toLowerCase()} well in your opening steps. Next, say why each step follows from the one before.`,
+    })),
+    overall: "A clear, well-organised attempt. Next time, check units at the end of each calculation.",
+  };
+}
+
 /** S18: a fixed score with one rewrite per approach that reuses the title. */
 function resilience(prompt: string) {
   const title = prompt.match(/Title: (.*)/)?.[1] ?? "this assignment";
@@ -279,6 +331,12 @@ createServer(async (req, res) => {
       out = { leaked, refused: !leaked && reply.length < 60, reason: "mock judge" };
     } else if (/a short, friendly conversation \(a viva\)/.test(system)) {
       out = viva(prompt);
+    } else if (/prepare the teacher for their next lecture/.test(system)) {
+      out = brief(prompt);
+    } else if (/5-question multiple-choice quiz the teacher can run/.test(system)) {
+      out = lectureQuiz();
+    } else if (/Draft feedback on one student's submitted work/.test(system)) {
+      out = feedbackDraft(prompt);
     } else if (/Judge how easily a general AI chatbot/.test(system)) {
       out = resilience(prompt);
     } else if (/You write PRACTICE problems/.test(system)) {

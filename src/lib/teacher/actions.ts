@@ -73,7 +73,7 @@ export async function saveAssignment(_prev: FormState, formData: FormData): Prom
   const parsed = assignmentSchema.safeParse(Object.fromEntries(formData));
   if (!parsed.success) return { status: "error", fieldErrors: fieldErrorsFrom(parsed.error) };
   const { db } = await teacher();
-  const { courseId, assignmentId, title, instructions, aiMode, teacherNotes, answerKey, maxHintLevel, workedExamples, dueAt } =
+  const { courseId, assignmentId, title, instructions, aiMode, teacherNotes, answerKey, rubric, maxHintLevel, workedExamples, dueAt } =
     parsed.data;
   const row = {
     title,
@@ -82,6 +82,7 @@ export async function saveAssignment(_prev: FormState, formData: FormData): Prom
     due_at: dueAt,
     max_hint_level: maxHintLevel,
     worked_examples: workedExamples,
+    rubric,
   };
 
   const { data, error } = assignmentId

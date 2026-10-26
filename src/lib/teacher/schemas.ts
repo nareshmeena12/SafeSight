@@ -53,6 +53,8 @@ export const assignmentSchema = z.object({
   teacherNotes: optionalText(4_000, "Keep the notes under 4,000 characters."),
   /** Teacher-only answer key: Sage's output guard checks every reply against it. */
   answerKey: optionalText(8_000, "Keep the answer key under 8,000 characters."),
+  /** Optional rubric, one criterion per line; Draft feedback follows it. Students may read it. */
+  rubric: optionalText(6_000, "Keep the rubric under 6,000 characters."),
   /** Highest hint-ladder step Sage may unlock (1 Clarify … 4 Parallel example). */
   maxHintLevel: z.coerce.number<string>("Choose how far Sage may go.").int().min(1).max(4).default(4),
   /** Radix Switch posts "on" when checked and nothing when not. */

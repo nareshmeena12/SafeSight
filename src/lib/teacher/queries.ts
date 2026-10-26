@@ -85,6 +85,7 @@ export type CourseDetail = {
     teacherNotes: string;
     /** Teacher-only. */
     answerKey: string;
+    rubric: string;
     maxHintLevel: number;
     workedExamples: boolean;
     dueAt: string | null;
@@ -106,7 +107,7 @@ export async function getCourseDetail(
     db
       .from("assignments")
       .select(
-        "id, title, instructions, ai_mode, due_at, created_at, max_hint_level, worked_examples, notes:assignment_teacher_notes(notes, answer_key)",
+        "id, title, instructions, ai_mode, due_at, created_at, max_hint_level, worked_examples, rubric, notes:assignment_teacher_notes(notes, answer_key)",
       )
       .eq("course_id", courseId)
       .order("due_at", { ascending: true, nullsFirst: false }),
@@ -130,6 +131,7 @@ export async function getCourseDetail(
         aiMode: a.ai_mode,
         teacherNotes: secret?.notes ?? "",
         answerKey: secret?.answer_key ?? "",
+        rubric: a.rubric,
         maxHintLevel: a.max_hint_level,
         workedExamples: a.worked_examples,
         dueAt: a.due_at,

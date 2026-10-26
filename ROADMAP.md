@@ -83,7 +83,7 @@ Read CLAUDE.md, PLAN.md, SESSIONS.md and ROADMAP.md. Do session S<N> from ROADMA
 - **Weekly email digest** to teachers (Monday morning) summarising the brief, flags and Reliance Score trend, using the configured SMTP / Resend. If email isn't configured, show it in-app only.
 - Only touch teacher overview, a new brief page, feedback on the replay page, email code and new tables.
 
-- [ ] S19 done
+- [x] S19 done (2026-10-26)
 
 ---
 
