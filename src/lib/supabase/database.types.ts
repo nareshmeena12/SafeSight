@@ -506,6 +506,101 @@ export type Database = {
           },
         ]
       }
+      assessment_marks: {
+        Row: {
+          absent: boolean
+          assessment_id: string
+          course_id: string
+          created_at: string
+          email: string | null
+          id: string
+          marks: Json
+          roll_number: string | null
+          row_key: string
+          student_id: string | null
+          student_name: string
+        }
+        Insert: {
+          absent?: boolean
+          assessment_id: string
+          course_id: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          marks?: Json
+          roll_number?: string | null
+          row_key: string
+          student_id?: string | null
+          student_name?: string
+        }
+        Update: {
+          absent?: boolean
+          assessment_id?: string
+          course_id?: string
+          created_at?: string
+          email?: string | null
+          id?: string
+          marks?: Json
+          roll_number?: string | null
+          row_key?: string
+          student_id?: string | null
+          student_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_marks_assessment_id_course_id_fkey"
+            columns: ["assessment_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "course_assessments"
+            referencedColumns: ["id", "course_id"]
+          },
+          {
+            foreignKeyName: "assessment_marks_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assessment_questions: {
+        Row: {
+          assessment_id: string
+          course_id: string
+          id: string
+          label: string
+          max_marks: number
+          outcome_ids: string[]
+          position: number
+        }
+        Insert: {
+          assessment_id: string
+          course_id: string
+          id?: string
+          label: string
+          max_marks: number
+          outcome_ids?: string[]
+          position: number
+        }
+        Update: {
+          assessment_id?: string
+          course_id?: string
+          id?: string
+          label?: string
+          max_marks?: number
+          outcome_ids?: string[]
+          position?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assessment_questions_assessment_id_course_id_fkey"
+            columns: ["assessment_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "course_assessments"
+            referencedColumns: ["id", "course_id"]
+          },
+        ]
+      }
       assignment_number_sets: {
         Row: {
           answer_label: string
@@ -723,6 +818,48 @@ export type Database = {
           },
         ]
       }
+      co_po_mappings: {
+        Row: {
+          course_id: string
+          justification: string
+          level: number
+          outcome_id: string
+          program_outcome_id: string
+          updated_at: string
+        }
+        Insert: {
+          course_id: string
+          justification?: string
+          level: number
+          outcome_id: string
+          program_outcome_id: string
+          updated_at?: string
+        }
+        Update: {
+          course_id?: string
+          justification?: string
+          level?: number
+          outcome_id?: string
+          program_outcome_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "co_po_mappings_outcome_id_course_id_fkey"
+            columns: ["outcome_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "course_outcomes"
+            referencedColumns: ["id", "course_id"]
+          },
+          {
+            foreignKeyName: "co_po_mappings_program_outcome_id_fkey"
+            columns: ["program_outcome_id"]
+            isOneToOne: false
+            referencedRelation: "program_outcomes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       conversations: {
         Row: {
           assignment_id: string | null
@@ -768,6 +905,107 @@ export type Database = {
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_assessments: {
+        Row: {
+          assignment_id: string | null
+          course_id: string
+          created_at: string
+          held_on: string | null
+          id: string
+          kind: string
+          outcome_ids: string[]
+          title: string
+          updated_at: string
+          weight: number
+        }
+        Insert: {
+          assignment_id?: string | null
+          course_id: string
+          created_at?: string
+          held_on?: string | null
+          id?: string
+          kind: string
+          outcome_ids?: string[]
+          title: string
+          updated_at?: string
+          weight?: number
+        }
+        Update: {
+          assignment_id?: string | null
+          course_id?: string
+          created_at?: string
+          held_on?: string | null
+          id?: string
+          kind?: string
+          outcome_ids?: string[]
+          title?: string
+          updated_at?: string
+          weight?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_assessments_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: true
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_assessments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_attainment_settings: {
+        Row: {
+          academic_year: string
+          course_id: string
+          level1_pct: number
+          level2_pct: number
+          level3_pct: number
+          mock_weight: number
+          practice_weight: number
+          target_level: number
+          target_pct: number
+          updated_at: string
+        }
+        Insert: {
+          academic_year?: string
+          course_id: string
+          level1_pct?: number
+          level2_pct?: number
+          level3_pct?: number
+          mock_weight?: number
+          practice_weight?: number
+          target_level?: number
+          target_pct?: number
+          updated_at?: string
+        }
+        Update: {
+          academic_year?: string
+          course_id?: string
+          level1_pct?: number
+          level2_pct?: number
+          level3_pct?: number
+          mock_weight?: number
+          practice_weight?: number
+          target_level?: number
+          target_pct?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_attainment_settings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
             referencedColumns: ["id"]
           },
         ]
@@ -938,6 +1176,49 @@ export type Database = {
           },
         ]
       }
+      course_programs: {
+        Row: {
+          course_id: string
+          created_at: string
+          linked_by: string | null
+          program_id: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          linked_by?: string | null
+          program_id: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          linked_by?: string | null
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_programs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: true
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_programs_linked_by_fkey"
+            columns: ["linked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_programs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_syllabi: {
         Row: {
           applied_at: string | null
@@ -1036,6 +1317,39 @@ export type Database = {
           },
           {
             foreignKeyName: "course_topic_materials_topic_id_course_id_fkey"
+            columns: ["topic_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "course_topics"
+            referencedColumns: ["id", "course_id"]
+          },
+        ]
+      }
+      course_topic_outcomes: {
+        Row: {
+          course_id: string
+          outcome_id: string
+          topic_id: string
+        }
+        Insert: {
+          course_id: string
+          outcome_id: string
+          topic_id: string
+        }
+        Update: {
+          course_id?: string
+          outcome_id?: string
+          topic_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_topic_outcomes_outcome_id_course_id_fkey"
+            columns: ["outcome_id", "course_id"]
+            isOneToOne: false
+            referencedRelation: "course_outcomes"
+            referencedColumns: ["id", "course_id"]
+          },
+          {
+            foreignKeyName: "course_topic_outcomes_topic_id_course_id_fkey"
             columns: ["topic_id", "course_id"]
             isOneToOne: false
             referencedRelation: "course_topics"
@@ -2478,6 +2792,92 @@ export type Database = {
           },
           {
             foreignKeyName: "profiles_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      program_outcomes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          id: string
+          kind: string
+          position: number
+          program_id: string
+          title: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          id?: string
+          kind: string
+          position: number
+          program_id: string
+          title?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          id?: string
+          kind?: string
+          position?: number
+          program_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_outcomes_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      programs: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          department: string
+          id: string
+          institution_id: string | null
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          id?: string
+          institution_id?: string | null
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          department?: string
+          id?: string
+          institution_id?: string | null
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "programs_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "programs_institution_id_fkey"
             columns: ["institution_id"]
             isOneToOne: false
             referencedRelation: "institutions"

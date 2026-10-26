@@ -404,6 +404,12 @@ function Header() {
       eyebrow="My learning"
       title="Your learning so far"
       description="Everything SafeSight records about your learning is here, and you can see all of it."
+      actions={
+        <Button asChild variant="outline">
+          {/* S24: marks your teacher imported for tests and exams. */}
+          <Link href="/student/learning/marks">Test marks</Link>
+        </Button>
+      }
     />
   );
 }

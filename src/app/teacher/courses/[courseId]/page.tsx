@@ -12,6 +12,7 @@ import {
   MessagesSquare,
   Pencil,
   Plus,
+  Target,
   UserPlus,
   Users,
   Variable,
@@ -154,6 +155,13 @@ async function CourseContent({ params }: Pick<PageProps<"/teacher/courses/[cours
                 <Link href={`/teacher/courses/${course.id}/setup`}>
                   <ListTree aria-hidden="true" />
                   Syllabus and topics
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                {/* S24: COs, CO–PO mapping and attainment reports. */}
+                <Link href={`/teacher/courses/${course.id}/outcomes`}>
+                  <Target aria-hidden="true" />
+                  Outcomes and attainment
                 </Link>
               </Button>
             </div>
