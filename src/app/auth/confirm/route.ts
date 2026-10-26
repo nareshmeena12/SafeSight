@@ -1,7 +1,7 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
-import { joinPendingCourse } from "@/lib/auth/join";
-import { redirectAfterLogin, roleSchema } from "@/lib/auth/roles";
+import { finishSignIn } from "@/lib/auth/finish";
+import { redirectAfterLogin } from "@/lib/auth/roles";
 import { createClient } from "@/lib/supabase/server";
 
 /**
@@ -24,18 +24,12 @@ export async function GET(request: NextRequest) {
 
   if (error) return NextResponse.redirect(new URL("/login?error=confirm", origin));
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const { data: profile } = user
-    ? await supabase.from("profiles").select("role").eq("id", user.id).maybeSingle()
-    : { data: null };
-  const role = roleSchema.safeParse(profile?.role);
-  if (!role.success) return NextResponse.redirect(new URL("/login", origin));
-  // A class code typed at sign-up is joined once the email is confirmed.
-  if (role.data === "student") await joinPendingCourse(supabase);
+  // Staff invites and the email domain's institution (S25) apply once the
+  // email is confirmed; a class code typed at sign-up is joined too.
+  const role = await finishSignIn(supabase);
+  if (!role) return NextResponse.redirect(new URL("/login", origin));
 
   return NextResponse.redirect(
-    new URL(redirectAfterLogin(role.data, searchParams.get("next")), origin),
+    new URL(redirectAfterLogin(role, searchParams.get("next")), origin),
   );
 }

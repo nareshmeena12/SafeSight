@@ -76,15 +76,18 @@ export function splitCsv(text: string): { cells: string[]; line: number }[] {
     .filter((r) => r.cells.some((c) => c !== ""));
 }
 
-type Column = "name" | "email" | "roll" | "first" | "last";
+type Column = "name" | "email" | "roll" | "first" | "last" | "role";
 
 function headerColumn(cell: string): Column | null {
   const h = cell.toLowerCase().replace(/[^a-z ]/g, " ").replace(/\s+/g, " ").trim();
   if (!h) return null;
   if (/^(e ?mail|email address|e mail id|email id|mail|mail id)$/.test(h) || h.includes("email")) return "email";
-  if (/^(first name|given name|first)$/.test(h)) return "first";
-  if (/^(last name|surname|family name|last)$/.test(h)) return "last";
-  if (/\b(roll|usn|reg|registration|enrol+ment|admission|prn|student id|id no)\b/.test(h)) return "roll";
+  if (/^(first name|firstname|given name|first)$/.test(h)) return "first";
+  if (/^(last name|lastname|surname|family name|last)$/.test(h)) return "last";
+  if (/\b(roll|usn|reg|registration|enrol+ment|admission|prn|student id|id no|id number|idnumber)\b/.test(h)) return "roll";
+  // Moodle's participants export lists everyone's course roles ("Student", "Teacher, Manager").
+  if (/^(roles?|course roles?)$/.test(h)) return "role";
+  if (/^(username|user name)$/.test(h)) return null;
   if (/\bname\b/.test(h) || h === "student") return "name";
   return null;
 }
@@ -133,6 +136,7 @@ export function parseRoster(text: string): ParsedRoster {
     let name = "";
     let email = "";
     let roll = "";
+    let roles = "";
     if (header) {
       const first: string[] = [];
       const last: string[] = [];
@@ -141,11 +145,17 @@ export function parseRoster(text: string): ParsedRoster {
         if (col === "email" && !email) email = v;
         else if (col === "roll" && !roll) roll = v;
         else if (col === "name" && !name) name = v;
+        else if (col === "role" && !roles) roles = v;
         else if (col === "first") first.push(v);
         else if (col === "last") last.push(v);
       });
       if (!name) name = [...first, ...last].filter(Boolean).join(" ");
     } else ({ name, email, roll } = guessRow(cells));
+
+    if (roles && !/\b(student|learner)\b/i.test(roles)) {
+      warnings.push({ line, message: `${email || "This person"} is listed as “${roles.slice(0, 40)}”, not a student, so they were left out.` });
+      continue;
+    }
 
     email = email.replace(/^mailto:/i, "").replace(/^<|>$/g, "").trim().toLowerCase();
     if (!email) {

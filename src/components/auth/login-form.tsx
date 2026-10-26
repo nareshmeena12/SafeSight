@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useActionState, useState } from "react";
 import { login, sendMagicLink } from "@/lib/auth/actions";
 import type { AuthFormState } from "@/lib/auth/schemas";
+import type { SsoProvider } from "@/lib/auth/sso-shared";
 import { CheckInbox, emailError, FieldError, FormMessage, PasswordInput } from "./field";
+import { SsoButtons } from "./sso-buttons";
 
 const initial: AuthFormState = { status: "idle" };
 
@@ -13,7 +15,16 @@ const initial: AuthFormState = { status: "idle" };
  * Log in with email + password, or ask for a one-time sign-in link
  * ("Email me a sign-in link" and "Forgot password?" both send one).
  */
-export function LoginForm({ next, notice }: { next?: string; notice?: string }) {
+export function LoginForm({
+  next,
+  notice,
+  sso = [],
+}: {
+  next?: string;
+  notice?: string;
+  /** S25: providers switched on in Supabase Auth. */
+  sso?: readonly SsoProvider[];
+}) {
   const [loginState, loginAction, loggingIn] = useActionState(login, initial);
   const [linkState, linkAction, sendingLink] = useActionState(sendMagicLink, initial);
   const [email, setEmail] = useState("");
@@ -68,6 +79,7 @@ export function LoginForm({ next, notice }: { next?: string; notice?: string }) 
       </h1>
       <p className="auth-p">Log in to continue with your courses.</p>
       <FormMessage message={message} />
+      <SsoButtons providers={sso} next={next} />
       {next ? <input type="hidden" name="next" value={next} /> : null}
       <div className="fields">
         <div className={emailMsg ? "field has-err" : "field"}>

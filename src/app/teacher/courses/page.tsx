@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { ArrowRight, Library, Plus } from "lucide-react";
+import { ArrowRight, Download, Library, Plus } from "lucide-react";
 import { PageHeader } from "@/components/app/page-header";
 import { PageSkeleton } from "@/components/app/page-skeleton";
 import { EmptyState } from "@/components/product/empty-state";
@@ -25,14 +25,23 @@ async function CoursesContent() {
   const user = await requireRole(["teacher", "admin"]);
   const courses = await listCourses(await createClient(), user.id);
   const newCourse = (
-    <CourseDialog
-      trigger={
-        <Button>
-          <Plus aria-hidden="true" />
-          New course
-        </Button>
-      }
-    />
+    <div className="flex flex-wrap gap-3">
+      {/* S25: Google Classroom / Moodle import. */}
+      <Button asChild variant="outline">
+        <Link href="/teacher/integrations">
+          <Download aria-hidden="true" />
+          Import from Classroom or Moodle
+        </Link>
+      </Button>
+      <CourseDialog
+        trigger={
+          <Button>
+            <Plus aria-hidden="true" />
+            New course
+          </Button>
+        }
+      />
+    </div>
   );
 
   return (
@@ -47,7 +56,7 @@ async function CoursesContent() {
         <EmptyState
           icon={Library}
           title="No courses yet"
-          description="Create a course, then share its join code with your class."
+          description="Create a course and share its join code, or import your classes from Google Classroom or Moodle."
           action={newCourse}
         />
       ) : (

@@ -731,6 +731,54 @@ export type Database = {
           },
         ]
       }
+      course_external_links: {
+        Row: {
+          course_id: string
+          created_at: string
+          created_by: string | null
+          external_id: string
+          external_name: string
+          id: string
+          last_imported_at: string
+          provider: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          created_by?: string | null
+          external_id: string
+          external_name?: string
+          id?: string
+          last_imported_at?: string
+          provider: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          created_by?: string | null
+          external_id?: string
+          external_name?: string
+          id?: string
+          last_imported_at?: string
+          provider?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_external_links_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_external_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       course_invites: {
         Row: {
           course_id: string
@@ -1329,24 +1377,63 @@ export type Database = {
           },
         ]
       }
+      institution_email_domains: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          domain: string
+          institution_id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          domain: string
+          institution_id: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          domain?: string
+          institution_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "institution_email_domains_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "institution_email_domains_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       institutions: {
         Row: {
           city: string
           created_at: string
           id: string
           name: string
+          sign_up_domains_only: boolean
         }
         Insert: {
           city?: string
           created_at?: string
           id?: string
           name: string
+          sign_up_domains_only?: boolean
         }
         Update: {
           city?: string
           created_at?: string
           id?: string
           name?: string
+          sign_up_domains_only?: boolean
         }
         Relationships: []
       }
@@ -2524,6 +2611,73 @@ export type Database = {
           },
         ]
       }
+      staff_invites: {
+        Row: {
+          accepted_at: string | null
+          created_at: string
+          email: string
+          email_status: string
+          full_name: string
+          id: string
+          institution_id: string
+          invited_by: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          created_at?: string
+          email: string
+          email_status?: string
+          full_name?: string
+          id?: string
+          institution_id: string
+          invited_by?: string | null
+          role: Database["public"]["Enums"]["user_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          created_at?: string
+          email?: string
+          email_status?: string
+          full_name?: string
+          id?: string
+          institution_id?: string
+          invited_by?: string | null
+          role?: Database["public"]["Enums"]["user_role"]
+          status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "staff_invites_institution_id_fkey"
+            columns: ["institution_id"]
+            isOneToOne: false
+            referencedRelation: "institutions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invites_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "staff_invites_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       submissions: {
         Row: {
           assignment_id: string
@@ -2834,6 +2988,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_account_claims: { Args: never; Returns: Json }
       claim_course_invites: { Args: never; Returns: number }
       find_user_by_email: {
         Args: { p_email: string }

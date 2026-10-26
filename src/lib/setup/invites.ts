@@ -4,7 +4,7 @@ import { emailConfigured, sendEmail } from "@/lib/email/send";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Db } from "@/lib/teacher/queries";
 import { inviteHtml, inviteSubject, inviteText } from "./invite-email";
-import { parseRoster, type RosterIssue } from "./roster";
+import { parseRoster, type ParsedRoster, type RosterIssue } from "./roster";
 import type { TeacherCourse } from "./server";
 
 /**
@@ -38,7 +38,15 @@ export type ImportSummary = {
 };
 
 export async function importRoster(course: TeacherCourse, userId: string, csv: string): Promise<ImportSummary | { error: string }> {
-  const parsed = parseRoster(csv);
+  return importRosterRows(course, userId, parseRoster(csv));
+}
+
+/** The same import for a list read elsewhere (S25: Google Classroom, Moodle). */
+export async function importRosterRows(
+  course: Pick<TeacherCourse, "id">,
+  userId: string,
+  parsed: ParsedRoster,
+): Promise<ImportSummary | { error: string }> {
   if (!parsed.rows.length) {
     return { error: parsed.errors[0]?.message ?? "We couldn't find any email addresses in that list." };
   }
